@@ -1,0 +1,410 @@
+Aquí tienes una **nueva Product Spec unificada**, construida a partir de todos los documentos que has compartido, manteniendo el espíritu del `product_spec.md` pero incorporando toda la lógica potente del modelo ganadero + financiero.
+
+He priorizado:
+
+* claridad conceptual (modelo mental limpio)
+* enfoque educativo (explicando el *por qué*)
+* consistencia con invariantes
+* UX guiada (no dejar al usuario “romper” el sistema)
+
+---
+
+# 🧾 Product Spec
+
+---
+
+## 1. Overview
+
+Aplicación web para la **gestión integral de explotaciones ganaderas**, que conecta:
+
+* 🐄 realidad física (animales, lotes, eventos)
+* 💼 operación comercial (ventas)
+* 💰 impacto económico (transacciones)
+* 🧾 documentación legal (facturas)
+
+El sistema está diseñado para:
+
+* ser **fuente única de verdad basada en eventos** 
+* evitar incoherencias mediante **invariantes fuertes**
+* guiar al usuario con una UX que **previene errores estructurales**
+* ser **modular, escalable y didáctico** (aprendizaje progresivo del sistema)
+
+👉 Usuario objetivo: ganaderos que necesitan control operativo + económico sin complejidad innecesaria.
+
+---
+
+## 2. Core Features
+
+### 🐄 Gestión Ganadera (core absoluto)
+
+* Gestión de animales (vacuno, porcino reproductor)
+* Gestión de lotes (porcino productivo)
+* Registro de eventos (parto, venta, muerte, traslado…)
+* Control automático de estados (vital, reproductivo, sanitario)
+* Ciclo reproductivo completo
+
+👉 Todo parte de aquí: **los eventos son la base del sistema** 
+
+---
+
+### 🔄 Sistema de Eventos (motor del sistema)
+
+* Tabla única de eventos
+* Acciones UX → generan eventos (no al revés)
+* Eventos inmutables (solo compensación)
+
+👉 Esto evita corrupción histórica y permite trazabilidad total.
+
+---
+
+### 🔗 Puente Ganadero ↔ Financiero
+
+* `venta_linea` conecta:
+
+  * evento (realidad)
+  * venta (negocio)
+  * factura (dinero)
+
+👉 Es la pieza más crítica del sistema 
+
+---
+
+### 💼 Gestión Comercial (Ventas)
+
+* Creación manual de ventas (NO automáticas)
+* Agrupación de eventos en una operación comercial
+* Estados:
+
+  * abierta
+  * parcial
+  * facturada
+
+👉 La venta es la **unidad de negocio**, no el evento 
+
+---
+
+### 🧾 Facturación
+
+* Registro de facturas externas
+* Líneas de factura con trazabilidad a venta_linea
+* Nivel granular opcional (detalle por animal)
+
+👉 La factura es la **fuente de verdad económica**
+
+---
+
+### 💰 Sistema Financiero (transacciones)
+
+* Transacciones como capa de dinero simplificada
+* Tipos:
+
+  * real (desde factura)
+  * previsión (futuro)
+  * manual (gastos)
+
+👉 Hoy: transacción = espejo de factura
+👉 Futuro: previsión vs realidad
+
+---
+
+### 🧾 Gestión documental
+
+* Tabla única de documentos desacoplada 
+* Soporta:
+
+  * imágenes
+  * tickets
+  * PDFs
+* Asociable a cualquier entidad
+
+---
+
+### 📊 Categorías financieras
+
+* Sistema jerárquico (árbol)
+* Permite análisis:
+
+  * global
+  * detallado
+
+👉 Sin duplicar datos ni lógica compleja 
+
+---
+
+## 3. User Flows
+
+### 🐄 Flujo principal (ingresos)
+
+1. Usuario registra evento (venta animales)
+2. Sistema crea automáticamente:
+   → venta_linea
+3. Usuario crea o selecciona venta
+4. Llega factura
+5. Usuario la registra
+6. Sistema:
+   → crea factura_linea
+   → crea transacción automática
+
+👉 Flujo real:
+
+```
+EVENTO → VENTA_LINEA → VENTA → FACTURA → TRANSACCIÓN
+```
+
+---
+
+### 🔴 Flujo alternativo (factura primero)
+
+1. Llega factura
+2. Usuario:
+   → crea venta
+   → crea evento
+3. Luego registra factura
+
+👉 Regla clave:
+**NO puede existir factura sin venta previa** 
+
+---
+
+### 💸 Flujo gastos
+
+Casos:
+
+1. Con factura:
+   → factura → transacción
+
+2. Con ticket:
+   → transacción + documento
+
+3. Sin documento:
+   → transacción manual
+
+👉 Nunca se crean “facturas falsas”
+
+---
+
+### 🔄 Flujo eventos (ejemplo: destete)
+
+1. Usuario pulsa acción (UX)
+2. Backend:
+
+   * valida
+   * crea evento
+   * crea movimiento
+   * crea entrada/salida
+   * actualiza estados
+
+👉 UX nunca expone eventos directamente 
+
+---
+
+## 4. UX Principles
+
+### 🎯 Principios clave
+
+#### 1. UX guiada (no libre)
+
+El sistema **dirige al usuario** para evitar incoherencias:
+
+* sugerir ventas existentes
+* bloquear acciones inválidas
+
+---
+
+#### 2. No exponer complejidad interna
+
+Usuario ve:
+
+* “destetar”
+* “vender”
+
+Sistema ejecuta:
+
+* múltiples eventos + lógica
+
+---
+
+#### 3. Estados no editables
+
+* derivados de eventos
+* nunca editables manualmente 
+
+---
+
+#### 4. Inmutabilidad conceptual
+
+* eventos → no se editan
+* transacciones → no se editan
+
+👉 solo compensaciones
+
+---
+
+#### 5. Consistencia antes que velocidad
+
+* validar siempre antes de persistir 
+* evitar estados imposibles
+
+---
+
+#### 6. UX educativa
+
+El sistema debe:
+
+* enseñar el modelo mental
+* explicar decisiones
+* hacer visible el “por qué”
+
+---
+
+## 5. Tech Decisions
+
+### 🧱 Stack
+
+* Frontend: Next.js
+* UI: Tailwind + shadcn/ui
+* Backend lógico: Next.js (server actions / API routes)
+* DB: Supabase (PostgreSQL)
+* Storage: Supabase Storage
+* Deploy: Vercel
+
+---
+
+### 🧠 Arquitectura
+
+#### Backend (cerebro)
+
+* lógica de negocio
+* validaciones
+* flujos
+
+#### Base de datos (guardian)
+
+* constraints
+* integridad
+* invariantes mínimas
+
+#### Triggers (mínimos)
+
+* solo protección
+* nunca lógica compleja 
+
+---
+
+### ⚙️ Principios técnicos
+
+* eventos como source of truth
+* arquitectura modular
+* bajo acoplamiento
+* sin lógica duplicada
+
+---
+
+## 6. Data Model (high level)
+
+### 🧠 Núcleo conceptual
+
+```
+EVENTO → realidad
+VENTA → negocio
+FACTURA → documento
+TRANSACCIÓN → dinero
+```
+
+---
+
+### 🔗 Relaciones clave
+
+* evento → venta_linea (1:1)
+* venta_linea → venta (N:1)
+* venta → factura (1:N)
+* factura → transacción (1:1)
+* factura_linea → venta_linea
+
+---
+
+### 🧱 Entidades principales
+
+* animal / lote
+* evento
+* venta_linea 🔥
+* venta
+* factura
+* factura_linea
+* transacción
+* tercero
+* categoria_financiera
+* documento
+
+---
+
+### 🧬 Regla de oro
+
+👉 Todo deriva de eventos
+👉 Nada contradice eventos
+
+
+
+---
+
+## 7. Edge Cases
+
+### ⚠️ Críticos
+
+* stock negativo → prohibido
+* múltiples ciclos abiertos → prohibido
+* factura sin venta → prohibido
+* venta con transacciones editable → prohibido
+
+---
+
+### ⚠️ Operativos
+
+* destete parcial
+* facturas múltiples por venta
+* gastos sin factura
+* eventos fuera de orden temporal
+
+---
+
+### ⚠️ Complejidad controlada
+
+* trazabilidad parcial de lotes (simplificada)
+* sin reconciliación financiera (por ahora)
+
+---
+
+## 8. Future Scope (muy importante)
+
+### ❌ NO hacemos ahora
+
+* conciliación financiera compleja
+* estimaciones económicas automáticas
+* lógica avanzada de previsión
+* trazabilidad granular de lotes (composición completa)
+* sistema paralelo de compras
+* automatismos excesivos en UX
+
+---
+
+### ✅ Preparado para futuro
+
+* transacciones de previsión
+* reconciliación
+* analítica avanzada
+* multi-especie completa
+* permisos avanzados
+
+---
+
+# 🧠 Cierre
+
+Lo que tienes aquí no es solo una spec. Es un sistema con columna vertebral:
+
+* eventos como ADN
+* invariantes como sistema inmunológico
+* UX como guía, no como campo abierto
+
+Si lo construyes respetando esto, el sistema será difícil de romper incluso con usuarios “creativos”.
+
+---

@@ -1,0 +1,55 @@
+db/
+
+# 🔑 Credenciales y secretos (¡CRÍTICO!)
+.key
+credentials.key
+.env
+.env.local
+.env.test
+.env.production
+
+.env.development
+# Nota: .env.example NO se suele ignorar, se sube como "plantilla" vacía para que otros sepan qué variables crear.
+
+# 📦 Dependencias de Node
+node_modules/
+package-lock.json # Opcional: Ignóralo sólo si prefieres usar yarn/pnpm o si es una librería. En apps finales suele subirse.
+
+# 🏗️ Archivos de Build y compilación (TypeScript)
+dist/
+build/
+out/
+.pnp
+.pnp.js
+
+# 🧪 Cobertura de tests e informes (Vitest, Jest)
+coverage/
+.nyc_output/
+
+# 📝 Logs y depuración
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# 💻 Archivos de Sistema Operativo y Editores (Mac/Windows/VSCode)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# archivos de documentación:
+CHAT*.txt
+00 - Temas Pendientes.txt
+notas.txt
+transaccion vs factura.txt

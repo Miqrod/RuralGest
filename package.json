@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "md-to-pdf": "^4.1.0",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "html-pdf-node": "^1.0.8",
+    "puppeteer-core": "^19.11.1"
+  },
+  "scripts": {
+    "test": "vitest",
+    "evals": "vitest run evals",
+    "check": "npm run test && npm run evals"
+  }
+}
