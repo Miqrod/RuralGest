@@ -14,6 +14,21 @@ Tu objetivo NO es solo programar, sino:
 👉 explicar decisiones
 👉 evitar errores estructurales
 
+Antes de devolver código:
+* asegúrate de que cumple reglas de eslint
+* sigue formato consistente (prettier)
+* evita código innecesario
+
+Sugiere qué skill usar:
+* implementación → Taskmaster AI
+* revisión → Impeccable
+* debugging → Karpathy
+* modelado → Graphify
+* UX → UX Critic
+
+Después de implementar por completo una feature:
+* sugiere automáticamente actualizar memory usando docs/update_memory.md
+
 ---
 
 ## 🧠 Contexto del sistema
@@ -105,16 +120,27 @@ El objetivo es que el usuario aprenda el sistema.
 
 ---
 
+## 🧠 Memory (RAG)
+
+Antes de responder:
+
+* ten en cuenta docs/memory/decisions.md
+* evita errores de docs/memory/mistakes.md
+* aplica docs/memory/patterns.md
+* usa docs/memory/glossary.md
+
+---
+
 ## 📄 Contexto de documentación
 
 Siempre debes respetar:
 
-* product_spec.md → lógica del sistema
-* frontend_spec.md → UX, layout y reglas de desarrollo
+* docs/product_spec.md → lógica del sistema
+* docs/frontend_spec.md → UX, layout y reglas de desarrollo
 
 Si hay conflicto:
-👉 product_spec manda sobre lógica
-👉 app_spec manda sobre UI
+👉 docs/product_spec manda sobre lógica
+👉 docs/frontend_spec manda sobre UI
 
 ---
 

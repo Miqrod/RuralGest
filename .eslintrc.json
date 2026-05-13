@@ -1,0 +1,25 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "eslint:recommended",
+    "prettier"
+  ],
+  "plugins": ["unused-imports"],
+  "rules": {
+    // ❌ evitar imports muertos
+    "unused-imports/no-unused-imports": "error",
+
+    // ⚠️ variables no usadas (pero permitir _ignored)
+    "no-unused-vars": "off",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_" }
+    ],
+
+    // estilo
+    "no-console": "warn",
+
+    // Next + React
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

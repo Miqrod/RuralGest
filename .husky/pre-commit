@@ -1,4 +1,11 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+echo "🔍 Linting..."
+npm run lint
+
+echo "🎨 Formatting..."
+npm run format
+
+echo "🧪 Running tests..."
 npm run check

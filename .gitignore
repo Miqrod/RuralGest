@@ -1,4 +1,5 @@
 db/
+.next/
 
 # 🔑 Credenciales y secretos (¡CRÍTICO!)
 .key
@@ -13,7 +14,6 @@ credentials.key
 
 # 📦 Dependencias de Node
 node_modules/
-package-lock.json # Opcional: Ignóralo sólo si prefieres usar yarn/pnpm o si es una librería. En apps finales suele subirse.
 
 # 🏗️ Archivos de Build y compilación (TypeScript)
 dist/
@@ -21,6 +21,7 @@ build/
 out/
 .pnp
 .pnp.js
+tsconfig.tsbuildinfo
 
 # 🧪 Cobertura de tests e informes (Vitest, Jest)
 coverage/
@@ -53,3 +54,29 @@ CHAT*.txt
 00 - Temas Pendientes.txt
 notas.txt
 transaccion vs factura.txt
+
+# Logs
+logs
+dev-debug.log
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/
+
+# Herramientas locales de IA y contexto generado
+.taskmaster/
+.agent/
+.agents/
+.claude/
+graphify-out/
+context.generated.md
+skills-lock.json
+
+# Bocetos y prototipos de diseño
+bocetos/
