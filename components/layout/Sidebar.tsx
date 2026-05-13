@@ -262,7 +262,7 @@ export function Sidebar() {
   }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delay={200}>
       <aside
         className={cn(
           'fixed left-0 top-0 h-full z-50 flex flex-col',
