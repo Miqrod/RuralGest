@@ -1,5 +1,3 @@
-## 📄 `ganadero.md`
-
 # 🐄 Modelo Ganadero
 
 ## Objetivo

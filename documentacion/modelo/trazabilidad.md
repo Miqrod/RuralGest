@@ -1,4 +1,4 @@
-## 📄 `trazabilidad.md`
+## 📄 Modelo de Trazabilidad
 
 # 🔗 Modelo de Trazabilidad
 

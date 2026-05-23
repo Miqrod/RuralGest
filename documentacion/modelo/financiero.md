@@ -1,4 +1,4 @@
-## 📄 `financiero.md`
+## 📄 Modelo Financiero
 
 # 💰 Modelo Financiero
 

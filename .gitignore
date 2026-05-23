@@ -8,7 +8,7 @@ credentials.key
 .env.local
 .env.test
 .env.production
-
+.env.prod
 .env.development
 # Nota: .env.example NO se suele ignorar, se sube como "plantilla" vacía para que otros sepan qué variables crear.
 
@@ -80,3 +80,6 @@ skills-lock.json
 
 # Bocetos y prototipos de diseño
 bocetos/
+
+# Supabase (el .gitignore interno de supabase/ ya excluye .temp y .branches)
+supabase/.temp/

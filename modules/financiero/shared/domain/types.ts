@@ -1,0 +1,6 @@
+export type TipoFinanciero = 'ingreso' | 'gasto'
+export type OrigenTransaccion = 'prevision' | 'factura' | 'manual'
+export type EstadoVenta = 'abierta' | 'parcial' | 'facturada'
+export type TipoTercero = 'cliente' | 'proveedor' | 'mixto'
+export type TipoDocumento = 'factura' | 'ticket' | 'imagen' | 'documento'
+export type EntidadDocumento = 'animal' | 'lote' | 'evento' | 'transaccion' | 'factura'

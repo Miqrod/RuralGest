@@ -30,6 +30,16 @@ unpaginated table appears.
 Pendiente: cuando se implementen datepicker y radiobutton, añadir el mismo patrón de hover
 que input/select/textarea: `hover:border-stone-400 dark:hover:border-stone-500 transition-colors duration-200 ease-in`.
 
+## LOGIN PAGE — LOGO Y NOMBRE
+Pendiente: mostrar el logo subido por el usuario y el nombre "Hermanos Rodríguez" con el
+mismo estilo tipográfico que en el sidebar (font-black tracking-tight text-brand).
+Cuando: cuando se implemente la subida de logo / configuración de marca.
+
+## USER MENU — POSICIÓN Y ANIMACIÓN
+Pendiente: ajustar el dropdown de usuario para que (1) no pise el header y aparezca
+claramente por debajo de él, y (2) tenga una animación de entrada suave (fade + slide-down).
+Cuando: al trabajar en la capa de UI/polish del header.
+
 ## DISCARDED HOOKS
 
 Not needed: `useLocalStorage`, `usePrevious`, `useAsync`, `useMediaQuery`.

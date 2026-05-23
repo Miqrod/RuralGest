@@ -1,8 +1,11 @@
 'use client'
 
-import { Bell, CircleUser, Menu, Moon, Search, Sun } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Bell, CircleUser, LogOut, Menu, Moon, Search, Sun } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebar } from '@/providers/SidebarProvider'
+import { createClient } from '@/lib/supabase/client'
 import { WeatherWidget } from './WeatherWidget'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +35,62 @@ function NotificationsButton() {
       {/* Badge — mostrar condicionalmente cuando haya notificaciones */}
       <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-alert" />
     </button>
+  )
+}
+
+// ── User menu ────────────────────────────────────────────────────────────────
+
+function UserMenu() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="p-1 rounded-full text-ink-muted hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+        aria-label="Menú de usuario"
+      >
+        <CircleUser className="w-7 h-7" />
+      </button>
+
+      {open && (
+        <div
+          className={cn(
+            'absolute right-0 top-full mt-2 w-52 z-50',
+            'bg-canvas rounded-xl border border-divider/30',
+            'shadow-[0_8px_32px_0_rgba(0,0,0,0.12)]',
+            'overflow-hidden',
+          )}
+        >
+          <div className="p-1">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-ink-muted hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -87,9 +146,7 @@ export function Header() {
 
         <div className="w-px h-6 bg-divider mx-2" />
 
-        <button className="p-1 rounded-full text-ink-muted hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-          <CircleUser className="w-7 h-7" />
-        </button>
+        <UserMenu />
       </div>
     </header>
   )

@@ -14,12 +14,15 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
     "prettier": "^3.8.3",
+    "supabase": "^2.98.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/postcss": "^4.3.0",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
@@ -52,6 +55,9 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "vitest"
+    "test": "vitest",
+    "db:types": "supabase gen types typescript --local 2>/dev/null > modules/shared/db/database.types.ts",
+    "env:local": "cp .env.local.local .env.local",
+    "env:prod": "cp .env.prod .env.local"
   }
 }
