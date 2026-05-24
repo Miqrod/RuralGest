@@ -54,6 +54,19 @@
 - La lógica de protección de rutas vive en `proxy.ts`. No añadir lógica entre `createServerClient` y `getUser()`.
 - `PUBLIC_PATHS` usa comparación exacta (`includes`), nunca `startsWith` (evita que `/login123` sea tratada como pública).
 
+## Seed de desarrollo vs migraciones
+
+- `supabase/seed.sql` es para datos de desarrollo — se ejecuta con `supabase db reset`, nunca con `supabase db push`.
+- Las migraciones son para estructura y catálogos del sistema (datos que van a producción).
+- `db reset` borra también `auth.users` → recrear usuario dev con `node scripts/create-dev-user.mjs` tras cada reset.
+- UUIDs fijos en seed para poder referenciar FKs dentro del mismo INSERT (mismo patrón que seed_catalogo).
+
+## AnimalListItem como proyección de UI
+
+- La UI nunca recibe `Animal` completo ni `DbRow`. Recibe `AnimalListItem`, definido en `application/`.
+- Definir la proyección en el use case (no en el dominio ni en la UI) mantiene el desacoplamiento.
+- Si la tabla necesita más o menos campos, solo cambia `AnimalListItem` y el mapeo en el use case.
+
 ## Estrategia de entornos (.env)
 
 - `.env.local` es el archivo activo (gitignored). No editar a mano.

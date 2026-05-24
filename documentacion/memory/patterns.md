@@ -53,6 +53,40 @@ El estado nunca se edita directamente. Siempre hay un evento que lo justifica.
 - `supabase/migrations/seed_*.sql` → datos estructurales del sistema (catálogos)
 - Los datos de usuario (granjas, animales, lotes reales) nunca van en migraciones
 
+## Vertical slice: página de listado SSR
+
+Patrón completo validado en PRD003 para pantallas de solo lectura:
+
+```
+page.tsx (Server Component, async)
+  → useCase/listarX()          — application/
+    → repository/listX()       — infrastructure/
+      → supabase.from(...)
+        → mapXRowToDomain()    — infrastructure/mapper.ts
+  → <XTable data={items} />   — 'use client', en la misma carpeta de la página
+```
+
+- La página es async Server Component: fetch en servidor, HTML poblado al cliente.
+- La tabla es Client Component separado porque DataTable usa hooks.
+- La UI recibe una proyección (`XListItem`), nunca `DbRow` ni el tipo de dominio completo.
+- La proyección se define en `application/` junto al use case que la produce.
+
+## Columnas con accessor compuesto en DataTable
+
+Cuando una columna depende de más de un campo (ej: fecha_nacimiento ?? fecha_nacimiento_estimada):
+
+```tsx
+{
+  id: 'fecha_nacimiento',
+  header: 'F. Nacimiento',
+  accessorFn: (row) => row.fecha_nacimiento ?? row.fecha_nacimiento_estimada,
+  cell: ({ getValue }) => {
+    const val = getValue<string | null>()
+    return val ? formatFecha(val) : <span className="text-ink-muted">—</span>
+  },
+}
+```
+
 ## Auth: protección de rutas
 
 `proxy.ts` en la raíz protege todas las rutas salvo las de `PUBLIC_PATHS`:

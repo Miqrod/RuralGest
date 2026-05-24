@@ -277,3 +277,87 @@ Scripts npm:
 npm run env:local   # cp .env.local.local .env.local
 npm run env:prod    # cp .env.prod .env.local
 ```
+
+---
+
+## PRD003 — Primer vertical slice funcional: listado de animales
+
+**Milestone:** la arquitectura queda validada end-to-end con datos reales de Supabase.
+
+Flujo completo implementado:
+```
+DB → repository → mapper → use case → page (SSR) → DataTable
+```
+
+### Tarea 1 — Seed de desarrollo (`supabase/seed.sql`)
+
+Fichero estándar de Supabase para datos de desarrollo. Se ejecuta automáticamente con `supabase db reset` — **no viaja a producción** con `supabase db push`.
+
+10 animales vacuno que cubren todas las combinaciones relevantes de estado:
+
+| Animal | Sexo | Tipo | Estado vital | Estado reproductivo | Estado sanitario |
+|---|---|---|---|---|---|
+| Estrella | hembra | reproductor | vivo | gestante | sano |
+| Carmela | hembra | reproductor | vivo | lactante | sano |
+| Blanca | hembra | reproductor | vivo | vacia | sano |
+| Rosalía | hembra | normal | vivo | — | sano |
+| Torito | macho | normal | vivo | — | sano |
+| Becerro | macho | normal | vivo | — | sano (sin crotal, madre=Carmela) |
+| La Negra | hembra | reproductor | vivo | vacia | en_tratamiento |
+| Vendida | hembra | normal | vendido | — | sano |
+| Finado | macho | normal | muerto | — | sano |
+| Manchas | hembra | normal | vivo | — | en_observacion |
+
+UUIDs fijos (`aaaaaaaa-000X-...`) para poder referenciar `madre_id` dentro del mismo INSERT.
+
+Nota: `supabase db reset` borra también los usuarios de `auth.users`. Tras cada reset hay que recrear el usuario dev con `node scripts/create-dev-user.mjs`.
+
+### Tarea 2 — Mapper (`modules/ganadero/animales/infrastructure/mapper.ts`)
+
+Función pura `mapAnimalRowToDomain(row: DbRow<'animal'>): Animal`.
+
+- Sin async, sin efectos secundarios — fácilmente testeable.
+- Único cast necesario: `tipo` (`string` en DB con CHECK constraint → `'normal' | 'reproductor'` en dominio).
+- Los tipos enum de DB y dominio tienen los mismos valores — TypeScript los acepta directamente.
+- Es el único punto del sistema que conoce ambas familias de tipos.
+
+### Tarea 3 — Repository (`modules/ganadero/animales/infrastructure/repository.ts`)
+
+Nueva función `listAnimales()` añadida al stub existente:
+```ts
+const { data, error } = await supabase.from('animal').select('*').order('created_at', { ascending: false })
+return data.map(mapAnimalRowToDomain)
+```
+Los stubs `getAnimalById`, `listAnimalesByLote` e `insertAnimal` permanecen para implementación futura.
+
+### Tarea 4 — Use case + proyección (`modules/ganadero/animales/application/listarAnimales.ts`)
+
+Dos responsabilidades en un fichero:
+- `AnimalListItem` — proyección para la UI con solo los campos del listado (subconjunto de `Animal`). La UI nunca trabaja con `Animal` completo ni con `DbRow`.
+- `listarAnimales()` — llama al repository y mapea `Animal[]` → `AnimalListItem[]`.
+
+### Tarea 5 — Página SSR (`app/(main)/vacuno/animales/page.tsx`)
+
+Server Component async que llama a `listarAnimales()` durante el render en servidor. Sin estado client-side, sin React Query, sin loading spinners — HTML ya poblado al llegar al cliente.
+
+```tsx
+export default async function AnimalesPage() {
+  const animales = await listarAnimales()
+  return <PageContainer>...<AnimalesTable data={animales} /></PageContainer>
+}
+```
+
+### Tarea 6 — DataTable conectada (`app/(main)/vacuno/animales/AnimalesTable.tsx`)
+
+Componente `'use client'` separado de la página (DataTable usa hooks internamente).
+
+Columnas: crotal · sexo · tipo · fecha nacimiento · estado vital · reproductivo · sanitario · origen.
+
+- Búsqueda por crotal con `searchColumn="crotal"`.
+- Columna "F. Nacimiento" con `accessorFn` que resuelve `fecha_nacimiento ?? fecha_nacimiento_estimada`.
+- Valores nulos (crotal del becerro, estado reproductivo de animales no reproductores) muestran `—`.
+- Formato de fechas con `formatFecha()` de `lib/format.ts`.
+
+### Tarea 7 — Navegación
+
+La ruta `/vacuno/animales` ya estaba configurada en `lib/navigation.ts`. No requirió cambios. El ítem del sidebar queda resaltado automáticamente al navegar a la ruta.
