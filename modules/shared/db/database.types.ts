@@ -57,8 +57,8 @@ export type Database = {
           num_hierro: string | null
           origen: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id: string | null
-          sexo: Database["public"]["Enums"]["sexo_enum"]
           raza_id: string | null
+          sexo: Database["public"]["Enums"]["sexo_enum"]
           tipo: string
           ubicacion_actual_id: string | null
           updated_at: string
@@ -173,27 +173,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      raza: {
-        Row: {
-          activa: boolean
-          especie: Database["public"]["Enums"]["especie_enum"]
-          id: string
-          nombre: string
-        }
-        Insert: {
-          activa?: boolean
-          especie: Database["public"]["Enums"]["especie_enum"]
-          id?: string
-          nombre: string
-        }
-        Update: {
-          activa?: boolean
-          especie?: Database["public"]["Enums"]["especie_enum"]
-          id?: string
-          nombre?: string
-        }
-        Relationships: []
       }
       categoria_financiera: {
         Row: {
@@ -698,6 +677,27 @@ export type Database = {
           id?: string
           tipo_movimiento?: string
           usuario_id?: string | null
+        }
+        Relationships: []
+      }
+      raza: {
+        Row: {
+          activa: boolean
+          especie: Database["public"]["Enums"]["especie_enum"]
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activa?: boolean
+          especie: Database["public"]["Enums"]["especie_enum"]
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activa?: boolean
+          especie?: Database["public"]["Enums"]["especie_enum"]
+          id?: string
+          nombre?: string
         }
         Relationships: []
       }
