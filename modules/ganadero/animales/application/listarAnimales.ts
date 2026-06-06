@@ -10,6 +10,7 @@ export interface AnimalListItem {
   sexo: Sexo
   especie: Especie
   tipo: 'normal' | 'reproductor'
+  raza_nombre: string | null
   origen: OrigenAnimal
   fecha_nacimiento: ISODate | null
   fecha_nacimiento_estimada: ISODate | null
@@ -26,6 +27,7 @@ export async function listarAnimales(): Promise<AnimalListItem[]> {
     sexo:                      a.sexo,
     especie:                   a.especie,
     tipo:                      a.tipo,
+    raza_nombre:               a.raza_nombre,
     origen:                    a.origen,
     fecha_nacimiento:          a.fecha_nacimiento,
     fecha_nacimiento_estimada: a.fecha_nacimiento_estimada,

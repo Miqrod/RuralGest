@@ -49,6 +49,9 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
       <div className="flex flex-wrap gap-2 mt-3">
         <span className={pill}>{SEXO_LABEL[animal.sexo] ?? animal.sexo}</span>
         <span className={pill}>{TIPO_LABEL[animal.tipo] ?? animal.tipo}</span>
+        {animal.raza_nombre && (
+          <span className={pill}>{animal.raza_nombre}</span>
+        )}
       </div>
     </div>
   )

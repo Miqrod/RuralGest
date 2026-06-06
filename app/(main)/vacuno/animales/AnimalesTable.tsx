@@ -33,6 +33,14 @@ const columns: ColumnDef<AnimalListItem, unknown>[] = [
     header: 'Tipo',
   },
   {
+    accessorKey: 'raza_nombre',
+    header: 'Raza',
+    cell: ({ getValue }) => {
+      const raza = getValue<string | null>()
+      return raza ?? <span className="text-ink-muted">—</span>
+    },
+  },
+  {
     id: 'fecha_nacimiento',
     header: 'F. Nacimiento',
     accessorFn: (row) => row.fecha_nacimiento ?? row.fecha_nacimiento_estimada,

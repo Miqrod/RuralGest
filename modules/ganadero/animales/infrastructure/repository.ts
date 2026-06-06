@@ -5,21 +5,24 @@ import type { Animal, CrearAnimalInput } from '../domain/types'
 
 export async function listAnimales(): Promise<Animal[]> {
   const supabase = await createServerClient()
-  const { data, error } = await supabase.from('animal').select('*').order('created_at', { ascending: false })
+  const { data, error } = await supabase
+    .from('animal')
+    .select('*, raza(nombre)')
+    .order('created_at', { ascending: false })
   if (error) throw error
-  return data.map(mapAnimalRowToDomain)
+  return (data as Parameters<typeof mapAnimalRowToDomain>[0][]).map(mapAnimalRowToDomain)
 }
 
 export async function getAnimalById(id: UUID): Promise<Animal | null> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
     .from('animal')
-    .select('*')
+    .select('*, raza(nombre)')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
-  return mapAnimalRowToDomain(data)
+  return mapAnimalRowToDomain(data as Parameters<typeof mapAnimalRowToDomain>[0])
 }
 
 export async function getAnimalCrotal(id: UUID): Promise<string | null> {

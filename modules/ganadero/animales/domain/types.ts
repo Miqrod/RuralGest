@@ -10,6 +10,8 @@ export interface Animal {
   tipo: 'normal' | 'reproductor'
   crotal: string | null
   num_hierro: string | null
+  raza_id: UUID | null
+  raza_nombre: string | null
   fecha_nacimiento: ISODate | null
   fecha_nacimiento_estimada: ISODate | null
   sexo: Sexo
@@ -40,6 +42,7 @@ export interface CrearAnimalInput {
   fecha_nacimiento_estimada?: ISODate
   crotal?: string
   num_hierro?: string
+  raza_id?: UUID
   madre_id?: UUID
   padre_id?: UUID
   lote_id?: UUID

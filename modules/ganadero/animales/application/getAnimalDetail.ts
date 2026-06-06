@@ -14,6 +14,7 @@ export interface AnimalDetail {
   especie: Especie
   sexo: Sexo
   tipo: 'normal' | 'reproductor'
+  raza_nombre: string | null
   es_reproductora: boolean
   estado_vital: EstadoVital
   estado_reproductivo: EstadoReproductivo | null
@@ -46,6 +47,7 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
     especie:                   animal.especie,
     sexo:                      animal.sexo,
     tipo:                      animal.tipo,
+    raza_nombre:               animal.raza_nombre,
     es_reproductora:           animal.es_reproductora,
     estado_vital:              animal.estado_vital,
     estado_reproductivo:       animal.estado_reproductivo,
