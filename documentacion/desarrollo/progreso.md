@@ -516,3 +516,42 @@ cell: ({ row, getValue }) => {
 ```
 
 Los badges de estado (`EstadoVitalBadge`, etc.) también se adoptaron en la tabla, reemplazando los valores de texto plano anteriores.
+
+---
+
+## Post-PRD004 — Catálogo de razas por especie
+
+Modelo de datos y propagación completa de `raza` a través de todas las capas.
+
+### Migración (`supabase/migrations/20260606000000_raza.sql`)
+
+```sql
+CREATE TABLE raza (
+  id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre  TEXT NOT NULL,
+  especie especie_enum NOT NULL,
+  activa  BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE (nombre, especie)
+);
+ALTER TABLE animal ADD COLUMN raza_id UUID REFERENCES raza(id) ON DELETE RESTRICT;
+```
+
+Catálogo inicial: Morucha, Charolesa, Limusina, Cruzada (vacuno) · Ibérico, Duroc (porcino). UUIDs fijos (`bb000001-…`) para referenciarlos desde el seed.
+
+`ON DELETE RESTRICT`: no se puede borrar una raza si algún animal la referencia. La desactivación (`activa = false`) es el mecanismo de baja sin romper integridad.
+
+RLS habilitada con política `authenticated` igual que el resto de tablas.
+
+### Propagación por capas
+
+- **`domain/types.ts`** — `Animal` gana `raza_id: UUID | null` y `raza_nombre: string | null`.
+- **`infrastructure/mapper.ts`** — tipo local `AnimalRowWithRaza = DbRow<'animal'> & { raza: { nombre: string } | null }`. El mapper resuelve `raza_nombre` desde el JOIN en el mismo paso de mapeo.
+- **`infrastructure/repository.ts`** — todas las queries cambian a `select('*, raza(nombre)')`. El JOIN es la única consulta; no hay N+1.
+- **`application/listarAnimales.ts`** — `AnimalListItem` añade `raza_nombre: string | null`.
+- **`application/getAnimalDetail.ts`** — `AnimalDetail` añade `raza_nombre: string | null`.
+- **`ui/ficha/AnimalHeader.tsx`** — pill de raza condicional junto a sexo y tipo.
+- **`AnimalesTable.tsx`** — columna "Raza" con `—` cuando es null.
+
+### `.gitignore` corregido
+
+La regla `db/` (sin anclar) ignoraba `modules/shared/db/`. Corregida a `/db/`. `database.types.ts`, `helpers.ts` e `index.ts` pasan a estar en git.

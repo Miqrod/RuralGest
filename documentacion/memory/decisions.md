@@ -95,6 +95,13 @@ Usar `.maybeSingle()` cuando el registro puede no existir (retorna `null` sin la
 
 En Next.js 16, `params` en páginas y layouts es `Promise<{...}>` y debe ser awaiteado antes de usarse. Tiparlo como `Promise<{ id: string }>` y hacer `const { id } = await params`.
 
+## Razas: catálogo por especie, no texto libre
+
+- Tabla `raza(id, nombre, especie, activa)` con `UNIQUE(nombre, especie)`.
+- FK `animal.raza_id → raza(id) ON DELETE RESTRICT`: no se puede borrar una raza referenciada. La baja se hace con `activa = false`, que la excluye del selector pero preserva el histórico.
+- `raza_nombre` se resuelve con un JOIN en el repositorio (`select('*, raza(nombre)')`), no con una consulta separada. Evita N+1 en listados.
+- El nombre resuelto viaja como `raza_nombre: string | null` en `Animal`, `AnimalListItem` y `AnimalDetail`. El mapper es el único punto que conoce el JOIN.
+
 ## Cabecera de ficha con color de mundo
 
 `AnimalHeader` usa `var(--world-accent-soft)` como fondo y `border-world` como borde para anclar visualmente la ficha al mundo activo (vacuno, porcino…). Este es el patrón para cabeceras de identidad en fichas de entidad.

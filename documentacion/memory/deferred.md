@@ -1,19 +1,10 @@
 # ⏳ Deferred
 
-## SPECIES & BREEDS IN DATABASE
+## GESTIÓN DE RAZAS POR USUARIO
 
-Pending: species (vacuno, porcino…) and breeds must live in DB tables, not code.
-When: designing the animal data model in Supabase.
-
-## RAZA DEL ANIMAL — CAMPO EN DB Y FICHA
-
-Pendiente: añadir campo `raza` (o FK a tabla `raza`) en la tabla `animal`.
-Mostrar la raza en la cabecera de la ficha (`AnimalHeader`) como pill, junto a sexo y tipo.
-Consideraciones antes de implementar:
-- Decidir si es texto libre o catálogo por especie (morucha, charolesa, mixta… para vacuno)
-- Si es catálogo: crear tabla `raza` con columnas `id, nombre, especie` y FK en `animal.raza_id`
-- Si es texto libre: `ALTER TABLE animal ADD COLUMN raza TEXT NULL`
-Cuando: al diseñar el módulo de configuración o al ampliar el modelo de animal.
+Pendiente: interfaz para que el usuario pueda añadir, renombrar y desactivar razas por especie.
+La tabla `raza` ya existe con columna `activa`. La desactivación oculta la raza del selector sin borrarla (ON DELETE RESTRICT protege animales existentes).
+Cuando: al construir el módulo de configuración.
 
 ## SERVER-SIDE SEARCH + DEBOUNCE
 
