@@ -361,3 +361,158 @@ Columnas: crotal · sexo · tipo · fecha nacimiento · estado vital · reproduc
 ### Tarea 7 — Navegación
 
 La ruta `/vacuno/animales` ya estaba configurada en `lib/navigation.ts`. No requirió cambios. El ítem del sidebar queda resaltado automáticamente al navegar a la ruta.
+
+---
+
+## PRD004 — Ficha de detalle del animal
+
+**Milestone:** segundo vertical slice funcional — navegación desde la tabla al detalle de un animal individual.
+
+Flujo completo implementado:
+```
+AnimalesTable (crotal link) → /vacuno/animales/[id] → getAnimalDetail → FichaAnimal
+```
+
+### Tarea 1 — `getAnimalById` en el repositorio
+
+Nueva función en `modules/ganadero/animales/infrastructure/repository.ts`:
+
+```ts
+export async function getAnimalById(id: UUID): Promise<Animal | null> {
+  const { data, error } = await supabase.from('animal').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return mapAnimalRowToDomain(data)
+}
+```
+
+Usa `.maybeSingle()` en lugar de `.single()` para retornar `null` sin lanzar error cuando el animal no existe.
+
+### Tarea 2 — `getAnimalCrotal` en el repositorio
+
+Consulta optimizada que carga solo el `crotal` de un animal por su ID:
+
+```ts
+export async function getAnimalCrotal(id: UUID): Promise<string | null> {
+  const { data } = await supabase.from('animal').select('crotal').eq('id', id).maybeSingle()
+  return data?.crotal ?? null
+}
+```
+
+Se usa exclusivamente para resolver etiquetas de madre/padre sin cargar el registro completo.
+
+### Tarea 3 — Proyección `AnimalDetail` y use case `getAnimalDetail`
+
+`modules/ganadero/animales/application/getAnimalDetail.ts`
+
+`AnimalDetail` es una proyección separada de `AnimalListItem`. Añade los campos propios de la ficha (`num_hierro`, `es_reproductora`, `fecha_nacimiento_estimada`, `lote_id`) y resuelve los crotales de progenitores:
+
+```ts
+const [madre_crotal, padre_crotal] = await Promise.all([
+  animal.madre_id ? getAnimalCrotal(animal.madre_id) : Promise.resolve(null),
+  animal.padre_id ? getAnimalCrotal(animal.padre_id) : Promise.resolve(null),
+])
+```
+
+Las dos consultas de crotales se ejecutan en paralelo con `Promise.all`.
+
+### Tarea 4 — Badges de estado (`EstadosBadges.tsx`)
+
+`modules/ganadero/animales/ui/ficha/EstadosBadges.tsx`
+
+Tres Server Components: `EstadoVitalBadge`, `EstadoReproductivoBadge`, `EstadoSanitarioBadge`.
+
+Patrón de configuración con `Record<Enum, { label, className }>` en lugar de switch:
+
+```ts
+const VITAL_CONFIG: Record<EstadoVital, { label: string; className: string }> = {
+  vivo:    { label: 'Vivo',    className: 'bg-success-soft text-success' },
+  muerto:  { label: 'Muerto',  className: 'bg-alert-soft text-alert' },
+  vendido: { label: 'Vendido', className: 'bg-surface-alt text-ink-muted' },
+}
+```
+
+`EstadoReproductivoBadge` acepta `null` y muestra `—` (no lanza). `className` adicional en todos para componer desde el exterior.
+
+Reutilizados también en `AnimalesTable` para las columnas de estado.
+
+### Tarea 5 — `FichaSection`
+
+`modules/ganadero/animales/ui/ficha/FichaSection.tsx`
+
+Contenedor de sección reutilizable: `rounded-lg border border-divider bg-surface-base p-5` con título en `text-sm font-semibold text-ink-muted uppercase tracking-wide`. Punto de extensión para añadir secciones futuras sin tocar la estructura principal.
+
+### Tarea 6 — `AnimalHeader`
+
+`modules/ganadero/animales/ui/ficha/AnimalHeader.tsx`
+
+Cabecera de identidad del animal. Lógica de identificador:
+- Identificador principal: `crotal ?? num_hierro`
+- Subtítulo (`Hierro: ...`): solo aparece cuando existen ambos, para no repetir el identificador
+- Sin identificador: muestra "Sin crotal" en itálica y `text-ink-muted`
+
+Estilo de la tarjeta: fondo `var(--world-accent-soft)` + borde `border-world` + `shadow-sm` para dar énfasis de identidad al contexto del mundo activo.
+
+### Tarea 7 — `SeccionEstados`
+
+`modules/ganadero/animales/ui/ficha/SeccionEstados.tsx`
+
+Muestra los tres estados del animal usando `FichaSection` y los badges. El estado reproductivo solo aparece si `animal.es_reproductora === true`.
+
+### Tarea 8 — `SeccionOrigen`
+
+`modules/ganadero/animales/ui/ficha/SeccionOrigen.tsx`
+
+Muestra procedencia, fecha de nacimiento con edad calculada, y links a progenitores.
+
+`calcularEdad` es una función de presentación (no regla de dominio) definida en el componente. Devuelve formato humanizado: días / meses / "N años y M meses".
+
+`ProgenitorLink`: si hay `madre_id` / `padre_id`, renderiza `<Link>` a la ficha del progenitor con `crotal ?? #${id.slice(0, 8)}` como etiqueta.
+
+La fecha usa `fecha_nacimiento ?? fecha_nacimiento_estimada`. Si es estimada, el label cambia a "F. nacimiento (est.)".
+
+### Tarea 9 — `FichaAnimal`
+
+`modules/ganadero/animales/ui/ficha/FichaAnimal.tsx`
+
+Orquestador de composición: `AnimalHeader` + grid 1→2 columnas con `SeccionEstados` y `SeccionOrigen`. No contiene lógica, solo composición. Punto de extensión para secciones futuras (genealogía, eventos, finanzas).
+
+### Tarea 10 — Página de detalle SSR
+
+`app/(main)/vacuno/animales/[id]/page.tsx`
+
+```tsx
+export default async function AnimalDetailPage({ params }: Props) {
+  const { id } = await params   // Next.js 16: params es una Promise
+  const animal = await getAnimalDetail(id)
+  if (!animal) notFound()
+  return <PageContainer>...<FichaAnimal animal={animal} /></PageContainer>
+}
+```
+
+`params` debe ser `Promise<{ id: string }>` y awaiteado — patrón obligatorio en Next.js 16.
+
+### Tarea 11 — Estados de UI de la ruta
+
+`app/(main)/vacuno/animales/[id]/`
+
+- `loading.tsx` — Server Component. Skeleton con `animate-pulse` que replica la estructura visual de la ficha (cabecera + grid de dos secciones).
+- `error.tsx` — **Client Component** (`'use client'` obligatorio para acceder a `reset()`). Muestra mensaje de error con botón para reintentar.
+- `not-found.tsx` — Server Component. Mensaje "Animal no encontrado" con link de vuelta al listado.
+
+### Tarea 12 — Navegación desde `AnimalesTable`
+
+La columna `crotal` de `AnimalesTable` se convirtió en un `<Link>` a `/vacuno/animales/${id}`:
+
+```tsx
+cell: ({ row, getValue }) => {
+  const crotal = getValue<string | null>()
+  return (
+    <Link href={`/vacuno/animales/${row.original.id}`} className="font-medium text-world hover:underline underline-offset-2">
+      {crotal ?? <span className="text-ink-muted font-normal">Sin crotal</span>}
+    </Link>
+  )
+}
+```
+
+Los badges de estado (`EstadoVitalBadge`, etc.) también se adoptaron en la tabla, reemplazando los valores de texto plano anteriores.

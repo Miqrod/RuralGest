@@ -53,6 +53,8 @@
     /* ── App color system ── */
     /* World accent: text-world / bg-world / border-world */
     --color-world: var(--world-accent);
+    /* World soft background: bg-world-soft (color del mundo al 10% sobre blanco — sin transparencia) */
+    --color-world-soft: var(--world-accent-soft);
     /* Nav item world colors (fijos por mundo, independientes de la ruta activa) */
     --color-nav-default:    var(--nav-world-default);
     --color-nav-vacuno:     var(--nav-world-vacuno);
@@ -190,6 +192,8 @@
    ──────────────────────────────────────────────────────────────────────────── */
 :root {
   --world-accent: #166534; /* default — sigue la ruta activa */
+  --world-accent-soft: #E8F0EB; /* #166534 al 10% sobre blanco */
+  --color-world-soft: var(--world-accent-soft); /* necesario: Tailwind bg-world-soft referencia esta var */
 
   /* Colores fijos por mundo — para el sidebar (independiente de la ruta activa) */
   --nav-world-default:    #166534;
@@ -197,22 +201,23 @@
   --nav-world-porcino:    #ff7700;
   --nav-world-financiero: #3377aa;
 }
-[data-world='vacuno']     { --world-accent: #800000; }
-[data-world='porcino']    { --world-accent: #ff7700; }
-[data-world='financiero'] { --world-accent: #3377aa; }
+[data-world='vacuno']     { --world-accent: #800000; --world-accent-soft: #F2E6E6; }
+[data-world='porcino']    { --world-accent: #ff7700; --world-accent-soft: #FFF1E6; }
+[data-world='financiero'] { --world-accent: #3377aa; --world-accent-soft: #EBF1F7; }
 
 /* Dark mode world accents (colores más claros para legibilidad sobre fondos oscuros) */
 .dark {
   --world-accent: #34d399;
+  --world-accent-soft: #0d2b22; /* #34d399 al 10% sobre #292524 (canvas dark) */
 
   --nav-world-default:    #34d399;
   --nav-world-vacuno:     #f87171;
   --nav-world-porcino:    #fb923c;
   --nav-world-financiero: #60a5fa;
 }
-.dark [data-world='vacuno']        { --world-accent: #f87171; }
-.dark [data-world='porcino']       { --world-accent: #fb923c; }
-.dark [data-world='financiero']    { --world-accent: #60a5fa; }
+.dark [data-world='vacuno']        { --world-accent: #f87171; --world-accent-soft: #2e1a1a; }
+.dark [data-world='porcino']       { --world-accent: #fb923c; --world-accent-soft: #2e1e10; }
+.dark [data-world='financiero']    { --world-accent: #60a5fa; --world-accent-soft: #101e2e; }
 
 @layer base {
   * {

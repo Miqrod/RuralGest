@@ -123,6 +123,71 @@ Patrón reutilizable para menús flotantes anclados a un botón:
 - El panel usa `absolute right-0 top-full mt-2` para posicionarse debajo del trigger.
 - Estilos: `bg-canvas rounded-xl border border-divider/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.12)]`.
 
+## Vertical slice: página de detalle SSR
+
+Patrón validado en PRD004 para pantallas de detalle de una entidad:
+
+```
+page.tsx (Server Component, async)
+  → useCase/getXDetail(id)       — application/
+    → repository/getXById(id)   — infrastructure/, usa .maybeSingle()
+    → repository/getXLabel(id)  — consulta ligera para resolver etiquetas de relacionados
+  → if (!entity) notFound()
+  → <FichaX entity={entity} />  — ui/ficha/, Server Components
+```
+
+- `params` es `Promise<{ id: string }>` en Next.js 16 — siempre awaitearlo.
+- `.maybeSingle()` retorna `null` sin lanzar cuando el registro no existe; `.single()` lanza.
+- `notFound()` delega a `not-found.tsx` de la ruta.
+
+## Badge con config object
+
+Para badges con variantes por enum, usar `Record<Enum, { label, className }>` en lugar de switch:
+
+```ts
+const CONFIG: Record<EstadoVital, { label: string; className: string }> = {
+  vivo:    { label: 'Vivo',    className: 'bg-success-soft text-success' },
+  muerto:  { label: 'Muerto',  className: 'bg-alert-soft text-alert' },
+  vendido: { label: 'Vendido', className: 'bg-surface-alt text-ink-muted' },
+}
+export function XBadge({ estado }: { estado: EstadoVital }) {
+  const { label, className } = CONFIG[estado]
+  return <span className={cn(base, className)}>{label}</span>
+}
+```
+
+Acepta `className` extra para componer desde el exterior. Si el valor puede ser `null`, manejar antes de acceder al config.
+
+## Consulta ligera para resolver etiquetas
+
+Cuando solo se necesita un campo de una entidad relacionada (ej: el crotal de la madre), hacer una consulta ligera en lugar de cargar el registro completo:
+
+```ts
+export async function getAnimalCrotal(id: UUID): Promise<string | null> {
+  const { data } = await supabase.from('animal').select('crotal').eq('id', id).maybeSingle()
+  return data?.crotal ?? null
+}
+```
+
+Si hay varios relacionados, resolverlos en paralelo con `Promise.all`.
+
+## Cálculo de presentación en el componente UI
+
+Las funciones de formato humanizado (edades, duraciones, etiquetas derivadas de valores brutos) viven en el componente que las muestra, no en `domain/`:
+
+```ts
+function calcularEdad(fechaIso: string): string { ... }  // en SeccionOrigen.tsx
+```
+
+Solo van al dominio si son reglas de negocio (validaciones, invariantes). El formato de pantalla no lo es.
+
+## Estados de ruta Next.js (loading / error / not-found)
+
+Cada ruta con fetch async debe tener los tres archivos:
+- `loading.tsx` — Server Component, skeleton con `animate-pulse` que imita la estructura visual de la página.
+- `error.tsx` — **Client Component** (`'use client'` obligatorio), recibe `{ error, reset }`, muestra mensaje con botón de reintento.
+- `not-found.tsx` — Server Component, se activa con `notFound()` en la página.
+
 ## Tests
 
 - caso válido → resultado esperado

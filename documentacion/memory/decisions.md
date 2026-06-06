@@ -79,3 +79,22 @@
 - Las transacciones son hechos históricos, no se editan
 - Las correcciones crean nuevas transacciones
 - `importe` siempre >= 0; la dirección del dinero la da el campo `tipo` (ingreso/gasto)
+
+## Una proyección por vista
+
+Cada vista define exactamente los campos que necesita. `AnimalListItem` (listado) y `AnimalDetail` (ficha) son proyecciones separadas aunque compartan campos. No existe un tipo de dominio "universal" para la UI.
+
+- Las proyecciones se definen en `application/`, junto al use case que las produce.
+- Si la vista cambia de necesidades, solo cambia su proyección y el mapeo en el use case.
+
+## `.maybeSingle()` vs `.single()`
+
+Usar `.maybeSingle()` cuando el registro puede no existir (retorna `null` sin lanzar). Usar `.single()` solo cuando la ausencia del registro es un error del sistema. En páginas de detalle, siempre `.maybeSingle()` + `notFound()` explícito.
+
+## `params` como Promise en Next.js 16
+
+En Next.js 16, `params` en páginas y layouts es `Promise<{...}>` y debe ser awaiteado antes de usarse. Tiparlo como `Promise<{ id: string }>` y hacer `const { id } = await params`.
+
+## Cabecera de ficha con color de mundo
+
+`AnimalHeader` usa `var(--world-accent-soft)` como fondo y `border-world` como borde para anclar visualmente la ficha al mundo activo (vacuno, porcino…). Este es el patrón para cabeceras de identidad en fichas de entidad.

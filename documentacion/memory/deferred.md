@@ -5,6 +5,16 @@
 Pending: species (vacuno, porcino…) and breeds must live in DB tables, not code.
 When: designing the animal data model in Supabase.
 
+## RAZA DEL ANIMAL — CAMPO EN DB Y FICHA
+
+Pendiente: añadir campo `raza` (o FK a tabla `raza`) en la tabla `animal`.
+Mostrar la raza en la cabecera de la ficha (`AnimalHeader`) como pill, junto a sexo y tipo.
+Consideraciones antes de implementar:
+- Decidir si es texto libre o catálogo por especie (morucha, charolesa, mixta… para vacuno)
+- Si es catálogo: crear tabla `raza` con columnas `id, nombre, especie` y FK en `animal.raza_id`
+- Si es texto libre: `ALTER TABLE animal ADD COLUMN raza TEXT NULL`
+Cuando: al diseñar el módulo de configuración o al ampliar el modelo de animal.
+
 ## SERVER-SIDE SEARCH + DEBOUNCE
 
 Pending: `useDebounce` for DataTable search once queries hit Supabase.
