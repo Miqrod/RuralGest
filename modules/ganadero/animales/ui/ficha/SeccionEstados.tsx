@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { FichaSection } from './FichaSection'
 import { EstadoVitalBadge, EstadoReproductivoBadge, EstadoSanitarioBadge } from './EstadosBadges'
-import type { AnimalDetail } from '@/modules/ganadero/animales/application/getAnimalDetail'
+import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 
 function FilaEstado({ label, children }: { label: string; children: ReactNode }) {
   return (

@@ -1,7 +1,7 @@
 import { AnimalHeader } from './AnimalHeader'
 import { SeccionEstados } from './SeccionEstados'
 import { SeccionOrigen } from './SeccionOrigen'
-import type { AnimalDetail } from '@/modules/ganadero/animales/application/getAnimalDetail'
+import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 
 export function FichaAnimal({ animal }: { animal: AnimalDetail }) {
   return (

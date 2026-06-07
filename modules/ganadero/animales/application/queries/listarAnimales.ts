@@ -1,6 +1,6 @@
-import type { UUID, ISODate } from '../../../shared/types'
-import type { Especie, Sexo, OrigenAnimal, EstadoVital, EstadoReproductivo, EstadoSanitario } from '../../shared/domain/types'
-import { listAnimales } from '../infrastructure/repository'
+import type { UUID, ISODate } from '../../../../shared/types'
+import type { Especie, Sexo, OrigenAnimal, EstadoVital, EstadoReproductivo, EstadoSanitario } from '../../../shared/domain/types'
+import { listAnimales } from '../../infrastructure/repository'
 
 // Proyección para la UI del listado — subconjunto de Animal.
 // La UI trabaja con este tipo, nunca con DbRow ni con Animal completo.

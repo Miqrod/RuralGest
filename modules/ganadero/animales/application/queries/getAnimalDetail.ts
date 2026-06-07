@@ -1,9 +1,9 @@
-import type { UUID, ISODate, ISOTimestamp } from '../../../shared/types'
+import type { UUID, ISODate, ISOTimestamp } from '../../../../shared/types'
 import type {
   Especie, Sexo, OrigenAnimal,
   EstadoVital, EstadoReproductivo, EstadoSanitario,
-} from '../../shared/domain/types'
-import { getAnimalById, getAnimalCrotal } from '../infrastructure/repository'
+} from '../../../shared/domain/types'
+import { getAnimalById, getAnimalCrotal } from '../../infrastructure/repository'
 
 // Proyección de detalle para la ficha individual del animal.
 // Separada de AnimalListItem: cada vista define los campos que necesita.

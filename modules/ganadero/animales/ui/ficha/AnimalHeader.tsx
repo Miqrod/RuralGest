@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { EstadoVitalBadge } from './EstadosBadges'
-import type { AnimalDetail } from '@/modules/ganadero/animales/application/getAnimalDetail'
+import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 
 const SEXO_LABEL: Record<string, string> = {
   macho:  'Macho',

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { getAnimalDetail } from '@/modules/ganadero/animales/application/getAnimalDetail'
+import { getAnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 import { FichaAnimal } from '@/modules/ganadero/animales/ui/ficha/FichaAnimal'
 
 interface Props {

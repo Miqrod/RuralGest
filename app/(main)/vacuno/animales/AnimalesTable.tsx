@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/data-table/DataTable'
 import { formatFecha } from '@/lib/format'
-import type { AnimalListItem } from '@/modules/ganadero/animales/application/listarAnimales'
+import type { AnimalListItem } from '@/modules/ganadero/animales/application/queries/listarAnimales'
 import type { EstadoVital, EstadoReproductivo, EstadoSanitario } from '@/modules/ganadero/shared/domain/types'
 import { EstadoVitalBadge, EstadoReproductivoBadge, EstadoSanitarioBadge } from '@/modules/ganadero/animales/ui/ficha/EstadosBadges'
 

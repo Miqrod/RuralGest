@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { FichaSection } from './FichaSection'
 import { formatFecha } from '@/lib/format'
-import type { AnimalDetail } from '@/modules/ganadero/animales/application/getAnimalDetail'
+import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 
 const ORIGEN_LABEL: Record<string, string> = {
   interno: 'Nacido en la explotación',

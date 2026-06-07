@@ -1,5 +1,5 @@
 import { PageContainer } from '@/components/layout/PageContainer'
-import { listarAnimales } from '@/modules/ganadero/animales/application/listarAnimales'
+import { listarAnimales } from '@/modules/ganadero/animales/application/queries/listarAnimales'
 import { AnimalesTable } from './AnimalesTable'
 
 export default async function AnimalesPage() {
