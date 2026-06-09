@@ -7,7 +7,8 @@ import type {
 export interface Animal {
   id: UUID
   especie: Especie
-  tipo: 'normal' | 'reproductor'
+  tipo_productivo_id: UUID | null
+  tipo_productivo_nombre: string | null
   crotal: string | null
   num_hierro: string | null
   raza_id: UUID | null
@@ -35,7 +36,7 @@ export interface Animal {
 
 export interface CrearAnimalInput {
   especie: Especie
-  tipo: 'normal' | 'reproductor'
+  tipo_productivo_id?: UUID
   sexo: Sexo
   origen: OrigenAnimal
   fecha_nacimiento?: ISODate
@@ -46,5 +47,4 @@ export interface CrearAnimalInput {
   madre_id?: UUID
   padre_id?: UUID
   lote_id?: UUID
-  es_reproductora?: boolean
 }

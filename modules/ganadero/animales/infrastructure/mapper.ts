@@ -1,16 +1,19 @@
 import type { DbRow } from '../../../shared/db/helpers'
 import type { Animal } from '../domain/types'
 
-// El repositorio hace select('*, raza(nombre)'), por lo que la fila incluye el
-// nombre de la raza resuelto. Este tipo permanece en infrastructure: la capa de
-// dominio no conoce la estructura de la query.
-type AnimalRowWithRaza = DbRow<'animal'> & { raza: { nombre: string } | null }
+// El repositorio hace select('*, raza(nombre), tipo_productivo(nombre)'), por lo
+// que la fila incluye los nombres resueltos. Este tipo permanece en infrastructure.
+type AnimalRowWithJoins = DbRow<'animal'> & {
+  raza:            { nombre: string } | null
+  tipo_productivo: { nombre: string } | null
+}
 
-export function mapAnimalRowToDomain(row: AnimalRowWithRaza): Animal {
+export function mapAnimalRowToDomain(row: AnimalRowWithJoins): Animal {
   return {
     id:                        row.id,
     especie:                   row.especie,
-    tipo:                      row.tipo as 'normal' | 'reproductor',
+    tipo_productivo_id:        row.tipo_productivo_id,
+    tipo_productivo_nombre:    row.tipo_productivo?.nombre ?? null,
     crotal:                    row.crotal,
     num_hierro:                row.num_hierro,
     raza_id:                   row.raza_id,

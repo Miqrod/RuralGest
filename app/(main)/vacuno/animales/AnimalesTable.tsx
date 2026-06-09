@@ -29,8 +29,12 @@ const columns: ColumnDef<AnimalListItem, unknown>[] = [
     header: 'Sexo',
   },
   {
-    accessorKey: 'tipo',
-    header: 'Tipo',
+    accessorKey: 'tipo_productivo_nombre',
+    header: 'Tipo productivo',
+    cell: ({ getValue }) => {
+      const tipo = getValue<string | null>()
+      return tipo ?? <span className="text-ink-muted">—</span>
+    },
   },
   {
     accessorKey: 'raza_nombre',

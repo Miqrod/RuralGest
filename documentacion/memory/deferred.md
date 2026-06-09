@@ -1,5 +1,13 @@
 # ⏳ Deferred
 
+## BASE TYPE PARA INPUTS DE ENTRADA DE ANIMAL
+
+Idea a recuperar cuando se implemente el segundo motivo de entrada (nacimiento u otro):
+usar un `BaseEntradaAnimalInput` no exportado con los campos comunes, y extenderlo
+en un tipo específico por operación (`RegistrarCompraAnimalInput`, `RegistrarNacimientoAnimalInput`…).
+Así cada use case recibe exactamente su tipo sin ifs ni switches, y no se repiten campos.
+Decidido no implementarlo ahora porque aún no sabemos qué campos tendrán los otros motivos.
+
 ## GESTIÓN DE RAZAS POR USUARIO
 
 Pendiente: interfaz para que el usuario pueda añadir, renombrar y desactivar razas por especie.

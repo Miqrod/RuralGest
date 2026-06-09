@@ -10,7 +10,8 @@
 
 INSERT INTO animal (
   id,
-  especie, tipo,
+  especie,
+  tipo_productivo_id,
   crotal, num_hierro,
   raza_id,
   fecha_nacimiento,
@@ -20,10 +21,10 @@ INSERT INTO animal (
   estado_vital, estado_reproductivo, estado_sanitario
 ) VALUES
 
-  -- 1. Estrella — hembra reproductora, gestante, compra (Morucha)
+  -- 1. Estrella — reproductora, gestante, compra (Morucha)
   (
     'aaaaaaaa-0001-0000-0000-000000000001',
-    'vacuno', 'reproductor', 'ES001234567890', 'H-01',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000', 'ES001234567890', 'H-01',
     'bb000001-0000-0000-0000-000000000000',
     '2020-03-15',
     'hembra',
@@ -32,10 +33,10 @@ INSERT INTO animal (
     'vivo', 'gestante', 'sano'
   ),
 
-  -- 2. Carmela — hembra reproductora, lactante (Charolesa)
+  -- 2. Carmela — reproductora, lactante (Charolesa)
   (
     'aaaaaaaa-0002-0000-0000-000000000002',
-    'vacuno', 'reproductor', 'ES001234567891', 'H-02',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000', 'ES001234567891', 'H-02',
     'bb000002-0000-0000-0000-000000000000',
     '2019-06-20',
     'hembra',
@@ -44,10 +45,10 @@ INSERT INTO animal (
     'vivo', 'lactante', 'sano'
   ),
 
-  -- 3. Blanca — hembra reproductora, vacía (Limusina)
+  -- 3. Blanca — reproductora, vacía (Limusina)
   (
     'aaaaaaaa-0003-0000-0000-000000000003',
-    'vacuno', 'reproductor', 'ES001234567892', 'H-03',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000', 'ES001234567892', 'H-03',
     'bb000003-0000-0000-0000-000000000000',
     '2021-01-10',
     'hembra',
@@ -56,10 +57,10 @@ INSERT INTO animal (
     'vivo', 'vacia', 'sano'
   ),
 
-  -- 4. Rosalía — hembra normal (Cruzada)
+  -- 4. Rosalía — hembra en recría (Cruzada)
   (
     'aaaaaaaa-0004-0000-0000-000000000004',
-    'vacuno', 'normal', 'ES001234567893', NULL,
+    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234567893', NULL,
     'bb000004-0000-0000-0000-000000000000',
     '2022-05-08',
     'hembra',
@@ -68,10 +69,10 @@ INSERT INTO animal (
     'vivo', NULL, 'sano'
   ),
 
-  -- 5. Torito — macho, sin raza asignada (cubre el caso NULL)
+  -- 5. Torito — macho engorde, sin raza (cubre el caso NULL)
   (
     'aaaaaaaa-0005-0000-0000-000000000005',
-    'vacuno', 'normal', 'ES001234567894', 'M-01',
+    'vacuno', 'cc000004-0000-0000-0000-000000000000', 'ES001234567894', 'M-01',
     NULL,
     '2021-09-12',
     'macho',
@@ -80,10 +81,10 @@ INSERT INTO animal (
     'vivo', NULL, 'sano'
   ),
 
-  -- 6. Becerro — cría de Carmela, sin crotal ni raza
+  -- 6. Becerro — cría de Carmela, recría, sin crotal ni raza
   (
     'aaaaaaaa-0006-0000-0000-000000000006',
-    'vacuno', 'normal', NULL, NULL,
+    'vacuno', 'cc000001-0000-0000-0000-000000000000', NULL, NULL,
     NULL,
     '2026-02-15',
     'macho',
@@ -92,10 +93,10 @@ INSERT INTO animal (
     'vivo', NULL, 'sano'
   ),
 
-  -- 7. La Negra — hembra reproductora en tratamiento (Morucha)
+  -- 7. La Negra — reproductora en tratamiento (Morucha)
   (
     'aaaaaaaa-0007-0000-0000-000000000007',
-    'vacuno', 'reproductor', 'ES001234567895', 'H-04',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000', 'ES001234567895', 'H-04',
     'bb000001-0000-0000-0000-000000000000',
     '2020-11-30',
     'hembra',
@@ -104,10 +105,10 @@ INSERT INTO animal (
     'vivo', 'vacia', 'en_tratamiento'
   ),
 
-  -- 8. Vendida — hembra ya no presente en la explotación
+  -- 8. Vendida — hembra engorde, ya no presente
   (
     'aaaaaaaa-0008-0000-0000-000000000008',
-    'vacuno', 'normal', 'ES001234567896', NULL,
+    'vacuno', 'cc000004-0000-0000-0000-000000000000', 'ES001234567896', NULL,
     NULL,
     '2018-04-25',
     'hembra',
@@ -116,10 +117,10 @@ INSERT INTO animal (
     'vendido', NULL, 'sano'
   ),
 
-  -- 9. Finado — macho muerto
+  -- 9. Finado — macho engorde, muerto
   (
     'aaaaaaaa-0009-0000-0000-000000000009',
-    'vacuno', 'normal', 'ES001234567897', 'M-02',
+    'vacuno', 'cc000004-0000-0000-0000-000000000000', 'ES001234567897', 'M-02',
     NULL,
     '2019-07-14',
     'macho',
@@ -128,10 +129,10 @@ INSERT INTO animal (
     'muerto', NULL, 'sano'
   ),
 
-  -- 10. Manchas — hembra en observación (Cruzada)
+  -- 10. Manchas — hembra recría en observación (Cruzada)
   (
     'aaaaaaaa-0010-0000-0000-000000000010',
-    'vacuno', 'normal', 'ES001234567898', NULL,
+    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234567898', NULL,
     'bb000004-0000-0000-0000-000000000000',
     '2023-02-18',
     'hembra',

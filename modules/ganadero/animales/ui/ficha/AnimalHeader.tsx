@@ -7,11 +7,6 @@ const SEXO_LABEL: Record<string, string> = {
   hembra: 'Hembra',
 }
 
-const TIPO_LABEL: Record<string, string> = {
-  normal:       'Normal',
-  reproductor:  'Reproductor',
-}
-
 const pill = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-surface-alt text-ink-muted'
 
 export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
@@ -48,7 +43,9 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
 
       <div className="flex flex-wrap gap-2 mt-3">
         <span className={pill}>{SEXO_LABEL[animal.sexo] ?? animal.sexo}</span>
-        <span className={pill}>{TIPO_LABEL[animal.tipo] ?? animal.tipo}</span>
+        {animal.tipo_productivo_nombre && (
+          <span className={pill}>{animal.tipo_productivo_nombre}</span>
+        )}
         {animal.raza_nombre && (
           <span className={pill}>{animal.raza_nombre}</span>
         )}

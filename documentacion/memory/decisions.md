@@ -105,3 +105,23 @@ En Next.js 16, `params` en páginas y layouts es `Promise<{...}>` y debe ser awa
 ## Cabecera de ficha con color de mundo
 
 `AnimalHeader` usa `var(--world-accent-soft)` como fondo y `border-world` como borde para anclar visualmente la ficha al mundo activo (vacuno, porcino…). Este es el patrón para cabeceras de identidad en fichas de entidad.
+
+## `tipo_productivo`: catálogo por especie, FK en animal
+
+`animal.tipo: 'normal' | 'reproductor'` se elimina. En su lugar:
+- Tabla `tipo_productivo(id, nombre, especie, activa)` con `UNIQUE(nombre, especie)`.
+- FK `animal.tipo_productivo_id → tipo_productivo(id) ON DELETE RESTRICT`.
+- Mismo patrón que `raza`: soft-delete con `activa`, `ON DELETE RESTRICT` protege histórico.
+- Valores iniciales: vacuno → recría, reproductora, semental, engorde; porcino → recría, reproductora, cebo, verraco.
+- El nombre resuelto viaja como `tipo_productivo_nombre: string | null` en proyecciones. El mapper usa `select('*, raza(nombre), tipo_productivo(nombre)')`.
+- Los tipos pueden evolucionar per-especie sin cambiar el modelo de `animal`.
+
+## `es_reproductora`: flag interno, solo backend
+
+`es_reproductora` es una derivación computada por el backend, nunca expuesta al usuario ni modificable directamente.
+
+- `true` **únicamente** para hembras con `tipo_productivo.nombre = 'Reproductora'`. Cualquier otro caso → `false`.
+- El cambio es automático cuando el backend actualiza `tipo_productivo_id`.
+- Para machos siempre `false` (el ciclo reproductivo no aplica).
+- Objetivo: todas las validaciones reproductivas usan `if (!animal.es_reproductora)` sin interpretar sexo + tipo + estado.
+- En el dominio `Animal` el campo existe (es útil en reglas de negocio). En cualquier tipo de input del usuario (`RegistrarCompraAnimalInput`, etc.) nunca aparece.

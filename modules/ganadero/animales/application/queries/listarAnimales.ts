@@ -9,7 +9,7 @@ export interface AnimalListItem {
   crotal: string | null
   sexo: Sexo
   especie: Especie
-  tipo: 'normal' | 'reproductor'
+  tipo_productivo_nombre: string | null
   raza_nombre: string | null
   origen: OrigenAnimal
   fecha_nacimiento: ISODate | null
@@ -26,7 +26,7 @@ export async function listarAnimales(): Promise<AnimalListItem[]> {
     crotal:                    a.crotal,
     sexo:                      a.sexo,
     especie:                   a.especie,
-    tipo:                      a.tipo,
+    tipo_productivo_nombre:    a.tipo_productivo_nombre,
     raza_nombre:               a.raza_nombre,
     origen:                    a.origen,
     fecha_nacimiento:          a.fecha_nacimiento,

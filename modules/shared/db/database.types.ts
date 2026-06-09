@@ -59,7 +59,7 @@ export type Database = {
           padre_id: string | null
           raza_id: string | null
           sexo: Database["public"]["Enums"]["sexo_enum"]
-          tipo: string
+          tipo_productivo_id: string | null
           ubicacion_actual_id: string | null
           updated_at: string
           updated_by: string | null
@@ -88,7 +88,7 @@ export type Database = {
           padre_id?: string | null
           raza_id?: string | null
           sexo: Database["public"]["Enums"]["sexo_enum"]
-          tipo: string
+          tipo_productivo_id?: string | null
           ubicacion_actual_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -117,7 +117,7 @@ export type Database = {
           padre_id?: string | null
           raza_id?: string | null
           sexo?: Database["public"]["Enums"]["sexo_enum"]
-          tipo?: string
+          tipo_productivo_id?: string | null
           ubicacion_actual_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -156,6 +156,13 @@ export type Database = {
             columns: ["raza_id"]
             isOneToOne: false
             referencedRelation: "raza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animal_tipo_productivo_id_fkey"
+            columns: ["tipo_productivo_id"]
+            isOneToOne: false
+            referencedRelation: "tipo_productivo"
             referencedColumns: ["id"]
           },
           {
@@ -770,6 +777,27 @@ export type Database = {
           requiere_motivo?: boolean
           tipo_negocio?: string
           tipo_tecnico?: Database["public"]["Enums"]["tipo_tecnico_evento_enum"]
+        }
+        Relationships: []
+      }
+      tipo_productivo: {
+        Row: {
+          activa: boolean
+          especie: Database["public"]["Enums"]["especie_enum"]
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activa?: boolean
+          especie: Database["public"]["Enums"]["especie_enum"]
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activa?: boolean
+          especie?: Database["public"]["Enums"]["especie_enum"]
+          id?: string
+          nombre?: string
         }
         Relationships: []
       }
