@@ -1,5 +1,16 @@
 # ⏳ Deferred
 
+## LADO FINANCIERO DE LA COMPRA DE ANIMAL (precio_compra, proveedor)
+
+`RegistrarCompraAnimalInput` no incluye `precio_compra` ni `proveedor_nombre` porque no
+existe puente GANADERO ↔ FINANCIERO para la dirección de compras. El esquema actual conecta
+`transaccion` con `venta_id` y `factura_id`, pero no con `evento_id`. Crear una `transaccion`
+desvinculada del evento de ENTRADA rompe la trazabilidad.
+
+Antes de implementarlo hay que diseñar el enlace: un campo `evento_id` en `transaccion`,
+una tabla `compra_linea` análoga a `venta_linea`, u otro mecanismo explícito.
+Cuando: al diseñar el módulo financiero de gastos / compras.
+
 ## BASE TYPE PARA INPUTS DE ENTRADA DE ANIMAL
 
 Idea a recuperar cuando se implemente el segundo motivo de entrada (nacimiento u otro):
