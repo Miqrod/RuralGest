@@ -1,5 +1,23 @@
 # Patterns
 
+## Botón principal (CTA)
+
+Los botones de acción principal usan `h-auto py-3 px-8` para que el texto respire:
+
+```tsx
+// Botón nativo (formularios, acciones en página)
+<Button type="submit" className="h-auto py-3 px-8">Guardar</Button>
+
+// Botón-enlace (navegación entre páginas)
+<Link href="/ruta" className={cn(buttonVariants(), 'h-auto py-3 px-8')}>
+  Registrar entrada
+</Link>
+```
+
+`h-auto` es necesario para liberar la altura fija que impone el variant por defecto.
+`cn` + `tailwind-merge` resuelve los conflictos de clase.
+Botones secundarios o inline (filtros, acciones de tabla…) conservan el tamaño por defecto.
+
 ## Use case: flujo estándar
 
 ```

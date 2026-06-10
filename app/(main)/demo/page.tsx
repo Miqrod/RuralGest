@@ -80,7 +80,7 @@ function FormDemo() {
           </Field>
         )} />
 
-        <Button type="submit">Guardar</Button>
+        <Button type="submit" className="h-auto py-3 px-8">Guardar</Button>
       </FieldGroup>
     </form>
   )
