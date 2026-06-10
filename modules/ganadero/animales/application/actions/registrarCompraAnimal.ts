@@ -1,4 +1,5 @@
 import type { RegistrarCompraAnimalInput } from '../../domain/types'
+import { insertarCompraAnimal } from '../../infrastructure/repository'
 
 export type { RegistrarCompraAnimalInput }
 
@@ -24,9 +25,13 @@ export function validateRegistrarCompraAnimal(input: RegistrarCompraAnimalInput)
   }
 }
 
+// Punto de entrada para la UI. Nunca llamar a insertarCompraAnimal directamente desde UI.
+// Valida primero para no gastar una llamada a DB con datos inválidos.
+// Devuelve solo el id: la UI lo usa para redirigir a la ficha; no necesita el Animal completo.
 export async function registrarCompraAnimal(
   input: RegistrarCompraAnimalInput,
 ): Promise<{ id: string }> {
   validateRegistrarCompraAnimal(input)
-  throw new Error('not implemented')
+  const animal = await insertarCompraAnimal(input)
+  return { id: animal.id }
 }
