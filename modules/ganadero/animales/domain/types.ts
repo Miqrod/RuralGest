@@ -48,3 +48,19 @@ export interface CrearAnimalInput {
   padre_id?: UUID
   lote_id?: UUID
 }
+
+export interface RegistrarCompraAnimalInput {
+  // Identidad del animal
+  especie: Especie
+  sexo: Sexo
+  tipo_productivo_id: UUID
+  crotal?: string
+  num_hierro?: string
+  raza_id?: UUID
+  fecha_nacimiento?: ISODate
+  fecha_nacimiento_estimada?: ISODate
+  // Datos de la compra
+  fecha_compra: ISODate
+  // Asignación inicial (opcional)
+  lote_id?: UUID
+}

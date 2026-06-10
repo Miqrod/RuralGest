@@ -1,21 +1,6 @@
-import type { UUID, ISODate } from '../../../../shared/types'
-import type { Especie, Sexo } from '../../../shared/domain/types'
+import type { RegistrarCompraAnimalInput } from '../../domain/types'
 
-export interface RegistrarCompraAnimalInput {
-  // Identidad del animal
-  especie: Especie
-  sexo: Sexo
-  tipo_productivo_id: UUID
-  crotal?: string
-  num_hierro?: string
-  raza_id?: UUID
-  fecha_nacimiento?: ISODate
-  fecha_nacimiento_estimada?: ISODate
-  // Datos de la compra
-  fecha_compra: ISODate
-  // Asignación inicial (opcional)
-  lote_id?: UUID
-}
+export type { RegistrarCompraAnimalInput }
 
 // Crotal español: 2 letras (código país) + 12 dígitos. Ej: ES001234567890
 export function isValidCrotalFormat(crotal: string): boolean {
@@ -41,7 +26,7 @@ export function validateRegistrarCompraAnimal(input: RegistrarCompraAnimalInput)
 
 export async function registrarCompraAnimal(
   input: RegistrarCompraAnimalInput,
-): Promise<{ id: UUID }> {
+): Promise<{ id: string }> {
   validateRegistrarCompraAnimal(input)
   throw new Error('not implemented')
 }
