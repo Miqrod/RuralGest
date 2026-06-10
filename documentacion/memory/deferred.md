@@ -1,5 +1,21 @@
 # ⏳ Deferred
 
+## TRANSACCIONALIDAD EN OPERACIONES DE ESCRITURA MULTI-TABLA
+
+`insertarCompraAnimal` hace tres inserciones secuenciales (evento → animal → evento_animales)
+sin una transacción DB. Si una inserción falla tras completarse la anterior, queda un registro
+huérfano. El mismo patrón se repetirá en futuros flujos de escritura (nacimiento, salida…).
+
+La solución correcta es una función Postgres por operación (RPC vía `supabase.rpc()`) que
+agrupe todas las inserciones en una transacción atómica. El cliente JS no puede abrir
+transacciones directamente; la atomicidad solo garantizable en el servidor Postgres.
+
+Prioridad: media — no bloquea el desarrollo actual, pero debe resolverse antes de que haya
+más de dos o tres flujos de escritura implementados, para no tener que convertir cada uno
+por separado más adelante.
+Cuando: al terminar PRD005 completo (compra funcional end-to-end), como primera tarea del
+siguiente PRD de escritura o en un PRD de hardening dedicado.
+
 ## LADO FINANCIERO DE LA COMPRA DE ANIMAL (precio_compra, proveedor)
 
 `RegistrarCompraAnimalInput` no incluye `precio_compra` ni `proveedor_nombre` porque no
