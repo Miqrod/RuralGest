@@ -1,11 +1,17 @@
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
+import { listarRazas } from '@/modules/ganadero/animales/application/queries/listarRazas'
+import { listarTiposProductivos } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
 import { FormEntradaCompra } from '@/modules/ganadero/animales/ui/entrada/FormEntradaCompra'
 
-// Página contenedor: solo coordina layout y delega al formulario.
-// Los datos de catálogo (razas, tipos productivos) se cargarán aquí
-// y se pasarán como props al formulario cuando se implemente en Tarea 48.
-export default function EntradaAnimalPage() {
+// Los catálogos se resuelven aquí (Server Component) y se pasan al formulario cliente.
+// El formulario no hace fetch propio: recibe los datos ya listos.
+export default async function EntradaAnimalPage() {
+  const [razas, tiposProductivos] = await Promise.all([
+    listarRazas('vacuno'),
+    listarTiposProductivos('vacuno'),
+  ])
+
   return (
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
@@ -18,7 +24,7 @@ export default function EntradaAnimalPage() {
         </Link>
       </div>
 
-      <FormEntradaCompra />
+      <FormEntradaCompra razas={razas} tiposProductivos={tiposProductivos} />
     </PageContainer>
   )
 }

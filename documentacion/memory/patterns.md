@@ -18,6 +18,42 @@ Los botones de acción principal usan `h-auto py-3 px-8` para que el texto respi
 `cn` + `tailwind-merge` resuelve los conflictos de clase.
 Botones secundarios o inline (filtros, acciones de tabla…) conservan el tamaño por defecto.
 
+## DatePicker
+
+`components/ui/date-picker.tsx` — wrapper de Calendar (react-day-picker v10) + Popover (Base UI).
+Retorna `ISODate` (string `YYYY-MM-DD`). Muestra en formato `dd/MM/yyyy` con locale `es`.
+
+```tsx
+// Sin restricción de fecha (permite futuro)
+<DatePicker value={field.value} onChange={(v) => field.onChange(v ?? '')} />
+
+// Solo fechas pasadas (nacimiento, compra, eventos históricos)
+<DatePicker value={field.value} onChange={(v) => field.onChange(v ?? '')} maxDate={new Date()} />
+```
+
+- `captionLayout="dropdown"`: el usuario puede saltar directamente a cualquier año/mes.
+- `maxDate?: Date`: opcional. Si se omite, no hay restricción. Si es `new Date()`, bloquea fechas futuras.
+- El trigger imita el estilo del `Input` (mismo padding, border, focus ring).
+- Años disponibles en dropdown: desde 2000 hasta `maxDate` (o +2 años si no hay maxDate).
+
+## Select con valores UUID
+
+Base UI no refleja automáticamente el `ItemText` del portal en el trigger.
+Usar `children` como render function en `SelectValue`:
+
+```tsx
+<SelectValue>
+  {(value: string | null) =>
+    value
+      ? opciones.find((o) => o.id === value)?.nombre ?? value
+      : 'Selecciona una opción'
+  }
+</SelectValue>
+```
+
+La función recibe el valor bruto (UUID), devuelve el texto a mostrar en el trigger.
+El placeholder se maneja dentro de la función (cuando `value` es null o vacío).
+
 ## Use case: flujo estándar
 
 ```
