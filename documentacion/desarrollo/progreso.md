@@ -555,3 +555,105 @@ RLS habilitada con política `authenticated` igual que el resto de tablas.
 ### `.gitignore` corregido
 
 La regla `db/` (sin anclar) ignoraba `modules/shared/db/`. Corregida a `/db/`. `database.types.ts`, `helpers.ts` e `index.ts` pasan a estar en git.
+
+---
+
+## PRD005 — Primer flujo de escritura: entrada de animal (compra)
+
+**Milestone:** flujo completo de escritura end-to-end validando el modelo basado en eventos.
+
+```
+Listado → Registrar entrada → Formulario → Use Case → Evento ENTRADA → Animal → evento_animales → Ficha
+```
+
+### Reorganización de `application/` (Tarea 40)
+
+`application/` dividido en dos subdirectorios para separar lecturas de escrituras:
+
+```
+application/
+├── queries/    ← proyecciones de lectura (listarAnimales, getAnimalDetail, listarRazas, listarTiposProductivos)
+└── actions/    ← casos de uso de escritura (registrarCompraAnimal)
+```
+
+### Catálogo `tipo_productivo` (Tareas 40–41)
+
+`animal.tipo` (`normal | reproductor`) reemplazado por FK a tabla `tipo_productivo`.
+Migración `20260606000001_tipo_productivo.sql`. Seed inicial: Cárnico, Reproductor, Mixto (vacuno).
+
+`es_reproductora` sigue siendo un campo calculado en el backend: `true` si sexo=hembra y
+`tipo_productivo.nombre === 'Reproductora'`. El usuario no lo controla directamente.
+
+### `RegistrarCompraAnimalInput` + validaciones (Tareas 41–42)
+
+Tipo de entrada en `domain/types.ts` (no en `application/` — lo necesita `infrastructure/mapper.ts`).
+Validaciones en el use case:
+- Formato crotal: `/^[A-Z]{2}\d{12}$/`
+- Exclusividad: no se puede dar `fecha_nacimiento` y `fecha_nacimiento_estimada` simultáneamente
+- Coherencia temporal: fecha de nacimiento no puede ser posterior a fecha de compra
+
+### Mappers de escritura (Tarea 43)
+
+`infrastructure/mapper.ts` ampliado con dos funciones puras:
+- `mapCompraInputToEventoInsert` → payload para insertar en `eventos`
+- `mapCompraInputToAnimalInsert` → payload para insertar en `animal`
+
+Dependency Rule documentada: `infrastructure/` puede importar de `domain/` pero nunca de `application/`.
+
+### Repositorio de persistencia (Tarea 44)
+
+`insertarCompraAnimal` persiste tres registros de forma secuencial:
+1. `eventos` — evento ENTRADA con motivo COMPRA (IDs resueltos por nombre, no hardcodeados)
+2. `animal` — con `evento_creacion_id` apuntando al evento
+3. `evento_animales` — asociación N:M con `rol = sujeto`
+
+Nota: sin transacción DB (secuencial, no atómica). Diferido a RPC Postgres. Ver `deferred.md`.
+
+### Use case `registrarCompraAnimal` (Tarea 45)
+
+Punto de entrada único para la UI. Valida primero (sin llamada a DB si hay error de dominio),
+luego delega en el repositorio. Devuelve solo `{ id }` — la UI no necesita el `Animal` completo.
+
+### Botón CTA en el listado (Tarea 46)
+
+Patrón de CTA en páginas de listado: `<Link>` con `buttonVariants()` + `h-auto py-3 px-8`
+en la esquina superior derecha del encabezado. Ver `documentacion/memory/patterns.md`.
+
+### Página contenedor (Tarea 47)
+
+`app/(main)/vacuno/animales/entrada/page.tsx` — Server Component que resuelve los catálogos
+(razas, tipos productivos) en paralelo con `Promise.all` y los pasa al formulario cliente.
+El formulario no hace fetch propio: recibe los datos ya listos.
+
+### DatePicker + normalización de formularios (Tarea 48)
+
+- `components/ui/date-picker.tsx` — wrapper sobre react-day-picker v10 con dropdown año/mes,
+  soporte `maxDate`, locale es. Devuelve `ISODate` (YYYY-MM-DD).
+- `components/ui/calendar.tsx` + `components/ui/popover.tsx` — dependencias del DatePicker.
+- `Input`, `SelectTrigger`, `Textarea`: padding aumentado a `px-3.5 py-2.5` / `py-3` para
+  igualar altura visual con el trigger del DatePicker.
+- Problema resuelto: Tailwind v4 + Turbopack no detectaba clases de padding en component files.
+  Solución: doble `@source` (con y sin `../`) + `@source inline(...)` en `styles/globals.css`.
+  Ver `documentacion/memory/mistakes.md`.
+
+### `FormEntradaCompra` completo (Tarea 49)
+
+`modules/ganadero/animales/ui/entrada/FormEntradaCompra.tsx` — formulario cliente con:
+- Campos: crotal, num_hierro, sexo, tipo_productivo_id, raza_id, fecha_nac + segmented control real/estimada, fecha_compra
+- Validación Zod + react-hook-form (patrón Controller + Field existente)
+- Server Action `submitEntradaCompra`: invoca el use case, captura errores de Supabase
+  (que no son `instanceof Error`), redirige a la ficha del animal creado en caso de éxito
+- `listarRazas` + `listarTiposProductivos`: queries de catálogo resueltas en el Server Component
+
+### Estados de UI de la ruta
+
+`app/(main)/vacuno/animales/entrada/`
+- `loading.tsx` — skeleton con `animate-pulse` que replica la estructura visual del formulario
+- `error.tsx` — Client Component con botón `reset()` si fallan los catálogos SSR
+
+### Decisiones diferidas
+
+- **Selector de motivo**: omitido mientras solo existe COMPRA. La ruta IS el flujo de compra.
+  Al añadir un segundo motivo, se introducirá una pantalla de selección previa. Ver `deferred.md`.
+- **Transaccionalidad**: las tres inserciones son secuenciales sin transacción DB. Ver `deferred.md`.
+- **Lado financiero** (precio_compra, proveedor): requiere puente GANADERO↔FINANCIERO. Ver `deferred.md`.

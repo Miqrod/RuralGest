@@ -27,6 +27,22 @@ Antes de implementarlo hay que diseñar el enlace: un campo `evento_id` en `tran
 una tabla `compra_linea` análoga a `venta_linea`, u otro mecanismo explícito.
 Cuando: al diseñar el módulo financiero de gastos / compras.
 
+## SELECTOR DE MOTIVO EN EL FLUJO DE ENTRADA
+
+La ruta `/vacuno/animales/entrada` va directamente al formulario de compra sin pedir motivo.
+Decisión consciente: con un solo motivo implementado (COMPRA), añadir un selector sería
+una pantalla vacía sin valor real para el usuario.
+
+Cuando exista un segundo motivo (nacimiento, adopción…), habrá que resolver el punto de
+elección. Las dos opciones posibles:
+
+  A) Pantalla intermedia en `/vacuno/animales/entrada` que muestra los motivos disponibles
+     y redirige a `/vacuno/animales/entrada/compra`, `/vacuno/animales/entrada/nacimiento`, etc.
+  B) El botón "Registrar entrada" del listado abre directamente un selector de motivo
+     antes de navegar al formulario específico.
+
+Cuándo: al implementar el segundo motivo de entrada.
+
 ## BASE TYPE PARA INPUTS DE ENTRADA DE ANIMAL
 
 Idea a recuperar cuando se implemente el segundo motivo de entrada (nacimiento u otro):
