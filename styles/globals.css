@@ -2,9 +2,16 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Rutas relativas al CSS (compatibilidad PostCSS) */
 @source "../app/**/*.{tsx,ts}";
 @source "../components/**/*.{tsx,ts}";
 @source "../modules/**/*.{tsx,ts}";
+/* Rutas relativas a la raíz del proyecto (compatibilidad Turbopack Next.js 16) */
+@source "app/**/*.{tsx,ts}";
+@source "components/**/*.{tsx,ts}";
+@source "modules/**/*.{tsx,ts}";
+/* Salvaguarda: clases de padding de campos de formulario siempre generadas */
+@source inline("px-3.5 py-2.5 pr-2.5 pl-3.5 py-3 shadow-sm");
 
 @custom-variant dark (&:is(.dark *));
 
