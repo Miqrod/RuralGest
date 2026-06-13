@@ -54,6 +54,23 @@ Usar `children` como render function en `SelectValue`:
 La función recibe el valor bruto (UUID), devuelve el texto a mostrar en el trigger.
 El placeholder se maneja dentro de la función (cuando `value` es null o vacío).
 
+## Padding de campos de formulario
+
+`Input`, `Select` (trigger) y `Textarea` usan padding aumentado para igualar la altura del `DatePicker`:
+
+| Componente | Clases de padding |
+|---|---|
+| `Input` | `px-3.5 py-2.5` (sin `h-8`) |
+| `SelectTrigger` | `py-2.5 pr-2.5 pl-3.5` (sin `data-[size=default]:h-8`) |
+| `Textarea` | `px-3.5 py-3` |
+| `DatePicker` trigger | `px-3.5 py-2.5` |
+
+Si `npx shadcn add` regenera un componente, vuelve a los valores por defecto (`h-8 px-2.5 py-1`).
+Después de cada `shadcn add` que toque estos archivos, restaurar los valores de la tabla.
+
+Estas clases están protegidas con `@source inline(...)` en `styles/globals.css` para que
+Tailwind siempre las genere (ver `mistakes.md` — TAILWIND V4 + TURBOPACK).
+
 ## Use case: flujo estándar
 
 ```
