@@ -20,7 +20,7 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
 
   return (
     <div
-      className="rounded-lg border border-world shadow-sm p-5 mb-6"
+      className="rounded-lg border border-world shadow-sm p-5 mb-4"
       style={{ backgroundColor: 'var(--world-accent-soft)' }}
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">

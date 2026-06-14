@@ -651,6 +651,28 @@ El formulario no hace fetch propio: recibe los datos ya listos.
 - `loading.tsx` — skeleton con `animate-pulse` que replica la estructura visual del formulario
 - `error.tsx` — Client Component con botón `reset()` si fallan los catálogos SSR
 
+### Historial de eventos en la ficha (Tarea 53)
+
+Visualización del historial de eventos del animal, compuesto independientemente en la página de detalle.
+
+**`application/queries/listarEventosDeAnimal.ts`** — query de lectura con triple JOIN:
+```
+evento_animales → eventos → tipo_evento + motivos_movimiento
+```
+Proyección `EventoDeAnimal`: `{ id, fecha, tipo_codigo, tipo_label, motivo }`. Ordenado por fecha descendente. Solo los campos que la UI necesita; nunca expone tipos de DB.
+
+**`ui/ficha/SeccionEventos.tsx`** — Server Component async que:
+- Recibe `animalId` y obtiene sus eventos
+- Renderiza dentro de `FichaSection` con badges por tipo (color por código) y fecha
+- Fallback: "Sin eventos registrados" si la lista está vacía
+- Compuesto desde `page.tsx`, no desde dentro de `FichaAnimal` — independiente y reutilizable
+
+**Decisión de composición:** `SeccionEventos` se compone desde `page.tsx` al mismo nivel que `FichaAnimal`, no dentro de él. `FichaAnimal` no sabe de eventos. Si en el futuro aparece un segundo contexto (dashboard de rebaño, vista de lote), se extrae un primitivo `ListaEventos({ eventos })` de presentación pura y cada contexto aporta su propio fetcher.
+
+**Fix de espaciado:** `AnimalHeader` tenía `mb-6` (24px) hacia el grid de secciones, mientras el grid usaba `gap-4` (16px) entre columnas. Unificado a `gap-4` en todos los ejes:
+- `AnimalHeader`: `mb-6` → `mb-4`
+- `page.tsx`: envuelve `FichaAnimal` + `SeccionEventos` en `<div className="flex flex-col gap-4">`
+
 ### Decisiones diferidas
 
 - **Selector de motivo**: omitido mientras solo existe COMPRA. La ruta IS el flujo de compra.

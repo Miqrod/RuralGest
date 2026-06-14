@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { getAnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 import { FichaAnimal } from '@/modules/ganadero/animales/ui/ficha/FichaAnimal'
+import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEventos'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -25,7 +26,10 @@ export default async function AnimalDetailPage({ params }: Props) {
           ← Volver a animales
         </Link>
       </div>
-      <FichaAnimal animal={animal} />
+      <div className="flex flex-col gap-4">
+        <FichaAnimal animal={animal} />
+        <SeccionEventos animalId={animal.id} />
+      </div>
     </PageContainer>
   )
 }
