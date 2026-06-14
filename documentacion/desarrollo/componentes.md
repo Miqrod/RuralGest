@@ -93,6 +93,78 @@ Todo campo se envuelve con `Controller` de react-hook-form para integrar el esta
 
 ---
 
+## DatePicker
+`components/ui/date-picker.tsx` + `calendar.tsx` + `popover.tsx`
+
+Selector de fecha construido sobre react-day-picker v10 con dropdown de año/mes y locale español. Devuelve `ISODate` (`YYYY-MM-DD`). Se integra con react-hook-form vía `Controller`.
+
+```tsx
+// Solo fechas pasadas (compra, nacimiento, eventos históricos)
+<DatePicker value={field.value} onChange={(v) => field.onChange(v ?? '')} maxDate={new Date()} />
+
+// Sin restricción (fechas futuras permitidas)
+<DatePicker value={field.value} onChange={(v) => field.onChange(v ?? '')} />
+```
+
+- Prop `maxDate?: Date` — si se omite no hay restricción. `new Date()` bloquea el futuro.
+- `captionLayout="dropdown"`: salto directo a cualquier año/mes.
+- Rango de años: desde 2000 hasta `maxDate` (o año actual + 2 si no hay maxDate).
+- El trigger usa el mismo padding que `Input` (`px-3.5 py-2.5`) para altura uniforme en formularios.
+
+---
+
+## FichaSection
+`modules/ganadero/animales/ui/ficha/FichaSection.tsx`
+
+Contenedor de sección reutilizable para fichas de entidad. Aplica fondo blanco, borde, sombra ligera y título en mayúsculas pequeñas.
+
+```tsx
+<FichaSection title="Historial de eventos">
+  {/* contenido */}
+</FichaSection>
+```
+
+Props: `title: string`, `children: ReactNode`, `className?: string` (se fusiona con clases base).
+
+Patrón de extensión: cualquier sección nueva de una ficha compone `FichaSection` en lugar de replicar su estructura visual.
+
+---
+
+## Badges de estado (EstadosBadges)
+`modules/ganadero/animales/ui/ficha/EstadosBadges.tsx`
+
+Tres Server Components: `EstadoVitalBadge`, `EstadoReproductivoBadge`, `EstadoSanitarioBadge`. Usan el patrón `Record<Enum, { label, className }>` en lugar de switch.
+
+```tsx
+<EstadoVitalBadge estado={animal.estado_vital} />
+<EstadoReproductivoBadge estado={animal.estado_reproductivo} className="text-sm" />
+<EstadoSanitarioBadge estado={animal.estado_sanitario} />
+```
+
+- `EstadoReproductivoBadge` acepta `null` y muestra `—` sin lanzar.
+- `className` adicional en todos permite componer desde el exterior.
+- Reutilizados en `AnimalesTable` (columnas de estado) y en `SeccionEstados` (ficha).
+
+---
+
+## SeccionEventos
+`modules/ganadero/animales/ui/ficha/SeccionEventos.tsx`
+
+Server Component async que recibe un `animalId`, obtiene su historial de eventos y lo renderiza dentro de `FichaSection`. Compuesto desde `page.tsx`, nunca anidado dentro de `FichaAnimal`.
+
+```tsx
+// En page.tsx — al mismo nivel que FichaAnimal
+<div className="flex flex-col gap-4">
+  <FichaAnimal animal={animal} />
+  <SeccionEventos animalId={animal.id} />
+</div>
+```
+
+Proyección usada: `EventoDeAnimal` (ver `application/queries/listarEventosDeAnimal.ts`).
+Badge de tipo por `tipo_codigo`: `ENTRADA → bg-success-soft`, `SALIDA → bg-alert-soft`, `SANITARIO → bg-warning-soft`. Fallback neutro para tipos futuros.
+
+---
+
 ## Utilidades de formato
 `lib/format.ts`
 

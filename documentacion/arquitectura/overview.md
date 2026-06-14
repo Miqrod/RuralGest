@@ -42,16 +42,25 @@ Cada submódulo (`animales`, `lotes`, `eventos`, `ventas`…) sigue esta estruct
 ```
 <módulo>/
   domain/
-    types.ts      ← tipos de negocio (conceptos, estados derivados, invariantes)
-    rules.ts      ← funciones que lanzan si se viola una regla de negocio
+    types.ts        ← tipos de negocio (conceptos, estados derivados, invariantes)
+    rules.ts        ← funciones que lanzan si se viola una regla de negocio
   application/
-    <caso>.ts     ← orquesta domain + infrastructure; nunca toca la DB directamente
+    queries/        ← casos de uso de lectura (proyecciones de salida para la UI)
+      listarX.ts
+      getXDetail.ts
+    actions/        ← casos de uso de escritura (orquestan validación + repositorio)
+      registrarX.ts
   infrastructure/
-    repository.ts ← única capa que habla con Supabase
-    mapper.ts     ← funciones puras: DbRow ↔ Domain (sin dependencias externas)
+    repository.ts   ← única capa que habla con Supabase
+    mapper.ts       ← funciones puras: DbRow ↔ Domain (sin dependencias externas)
   ui/
-    <Componente>  ← componentes React y hooks específicos del módulo
+    <Componente>    ← componentes React y hooks específicos del módulo
 ```
+
+La separación `queries/` vs `actions/` refleja la asimetría entre lecturas y escrituras:
+- Las **queries** producen proyecciones de salida (`XListItem`, `XDetail`) — viven en `application/` porque solo las consume `ui/`.
+- Las **actions** coordinan validación de dominio + persistencia — también en `application/`.
+- Los **inputs de escritura** (`RegistrarXInput`) viven en `domain/types.ts` porque `infrastructure/mapper.ts` los necesita.
 
 ## Dónde vive cada tipo — Dependency Rule
 

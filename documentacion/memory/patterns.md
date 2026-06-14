@@ -259,6 +259,47 @@ Cada ruta con fetch async debe tener los tres archivos:
 - `error.tsx` — **Client Component** (`'use client'` obligatorio), recibe `{ error, reset }`, muestra mensaje con botón de reintento.
 - `not-found.tsx` — Server Component, se activa con `notFound()` en la página.
 
+## Sección async independiente compuesta desde page.tsx
+
+Cuando una sección de una ficha necesita hacer su propio fetch (no depende de los datos ya cargados por la página), se implementa como Server Component async que recibe solo el ID de la entidad, y se compone desde `page.tsx` al mismo nivel que el componente principal — nunca anidado dentro de él.
+
+```tsx
+// page.tsx
+<div className="flex flex-col gap-4">
+  <FichaAnimal animal={animal} />         ← recibe los datos ya resueltos por la página
+  <SeccionEventos animalId={animal.id} /> ← hace su propio fetch por ID
+</div>
+```
+
+Ventajas:
+- `FichaAnimal` permanece sync y sin conocimiento de eventos.
+- `SeccionEventos` es reutilizable en cualquier contexto que tenga un `animalId`.
+- Si en el futuro aparece un segundo caso de uso (dashboard de rebaño, vista de lote), se extrae un primitivo de presentación `ListaEventos({ eventos })` y cada contexto aporta su fetcher.
+
+Cuándo **no** usar este patrón: si los datos de la sección son parte inseparable de la entidad principal y ya viajan en la misma query (ej: los estados del animal en `AnimalDetail`), se componen dentro del componente principal sin fetch adicional.
+
+## JOIN por tabla intermedia en Supabase (PostgREST)
+
+Para recorrer una relación N:M (tabla de junction) y llegar a la tabla destino con sus campos:
+
+```ts
+supabase
+  .from('evento_animales')                          // tabla junction
+  .select(`
+    eventos!evento_animales_evento_id_fkey (
+      id,
+      fecha,
+      tipo_evento!eventos_tipo_evento_id_fkey ( codigo, tipo_negocio ),
+      motivos_movimiento!eventos_motivo_id_fkey ( nombre )
+    )
+  `)
+  .eq('animal_id', animalId)
+```
+
+- El nombre de FK explícito (`!tabla_columna_fkey`) es necesario cuando Supabase no puede inferir la relación de forma unívoca.
+- `row.eventos` llega como un objeto (to-one), no como array — filtrar nulos antes de mapear.
+- Ordenar en JS cuando la lista es corta; usar `.order()` en Supabase para listas grandes.
+
 ## Tests
 
 - caso válido → resultado esperado
