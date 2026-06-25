@@ -1,20 +1,21 @@
 # ⏳ Deferred
 
-## TRANSACCIONALIDAD EN OPERACIONES DE ESCRITURA MULTI-TABLA
+## ~~TRANSACCIONALIDAD EN OPERACIONES DE ESCRITURA MULTI-TABLA~~ ✅ RESUELTO EN PRD006
 
-`insertarCompraAnimal` hace tres inserciones secuenciales (evento → animal → evento_animales)
-sin una transacción DB. Si una inserción falla tras completarse la anterior, queda un registro
-huérfano. El mismo patrón se repetirá en futuros flujos de escritura (nacimiento, salida…).
+Resuelto mediante RPCs transaccionales en `supabase/migrations/20260618000001_rpcs_transaccionales.sql`:
+- `registrar_compra_animal` — reemplaza las 3 inserciones secuenciales de compra
+- `registrar_salida_animal` — flujo de venta y muerte
+Patrón documentado en `documentacion/arquitectura/rpc-transaccional.md`.
 
-La solución correcta es una función Postgres por operación (RPC vía `supabase.rpc()`) que
-agrupe todas las inserciones en una transacción atómica. El cliente JS no puede abrir
-transacciones directamente; la atomicidad solo garantizable en el servidor Postgres.
+## TOAST DE CONFIRMACIÓN TRAS EVENTOS DE ESCRITURA
 
-Prioridad: media — no bloquea el desarrollo actual, pero debe resolverse antes de que haya
-más de dos o tres flujos de escritura implementados, para no tener que convertir cada uno
-por separado más adelante.
-Cuando: al terminar PRD005 completo (compra funcional end-to-end), como primera tarea del
-siguiente PRD de escritura o en un PRD de hardening dedicado.
+Al guardar un evento (salida, compra…) el usuario no recibe ninguna confirmación visual
+más allá del cambio de estado en pantalla. Un toast tipo Sonner mejoraría la experiencia.
+
+Decisión: diferido hasta que el flujo de salida esté validado end-to-end.
+Requiere instalar `sonner` via shadcn y añadir `<Toaster />` al layout raíz —
+cambio de infraestructura que merece su propio paso de pulido.
+Cuando: al acometer el primer PRD de polish de UX o al finalizar PRD006 completo.
 
 ## LADO FINANCIERO DE LA COMPRA DE ANIMAL (precio_compra, proveedor)
 
@@ -62,10 +63,11 @@ Cuando: al construir el módulo de configuración.
 Pending: `useDebounce` for DataTable search once queries hit Supabase.
 When: implementing server-side filtering.
 
-## SUPABASE GENERATED TYPES
+## ~~SUPABASE GENERATED TYPES~~ ✅ RESUELTO EN PRD006
 
-Pending: do not write `types/common.ts` manually — run `supabase gen types` instead.
-When: Supabase is connected and schema is stable.
+Generados con `supabase gen types typescript --local > types/supabase.ts` (1197 líneas).
+Conectados al cliente en `lib/supabase/server.ts` y `lib/supabase/client.ts` mediante `createServerClient<Database>` / `createBrowserClient<Database>`.
+A partir de ahora: regenerar con `supabase gen types typescript --local > types/supabase.ts` cada vez que se añada una migración que cambie el schema.
 
 ## NEW WORLDS (equino, ovino…)
 

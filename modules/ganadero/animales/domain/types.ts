@@ -64,3 +64,15 @@ export interface RegistrarCompraAnimalInput {
   // Asignación inicial (opcional)
   lote_id?: UUID
 }
+
+// Salida por venta: sin datos financieros (precio, comprador) — se añadirán en fase financiera.
+export interface RegistrarVentaAnimalInput {
+  animal_id: UUID
+  fecha_venta: ISODate
+}
+
+// Salida por muerte: sin causa ni clasificación sanitaria — se añadirán en fases futuras.
+export interface RegistrarMuerteAnimalInput {
+  animal_id: UUID
+  fecha_muerte: ISODate
+}

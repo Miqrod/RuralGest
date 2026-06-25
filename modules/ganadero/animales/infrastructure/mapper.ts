@@ -1,5 +1,5 @@
-import type { DbRow, DbInsert } from '../../../shared/db/helpers'
-import type { Animal, RegistrarCompraAnimalInput } from '../domain/types'
+import type { DbRow } from '../../../shared/db/helpers'
+import type { Animal, RegistrarCompraAnimalInput, RegistrarVentaAnimalInput, RegistrarMuerteAnimalInput } from '../domain/types'
 import type { UUID } from '../../../shared/types'
 
 // El repositorio hace select('*, raza(nombre), tipo_productivo(nombre)'), por lo
@@ -9,54 +9,51 @@ type AnimalRowWithJoins = DbRow<'animal'> & {
   tipo_productivo: { nombre: string } | null
 }
 
-// ─── Write mappers (domain input → DB insert) ───────────────────────────────
+// ─── Write mappers (domain input → RPC args) ────────────────────────────────
 // Funciones puras: no hacen queries, no tienen efectos secundarios.
-// El repositorio resuelve los IDs de catálogo y los pasa como parámetros.
+// Producen el objeto de parámetros que recibe el RPC de Postgres.
+// La resolución de IDs de catálogo y el cálculo de es_reproductora
+// se han movido al RPC; el mapper solo traduce nombres de campo.
 
-// Produce la fila a insertar en `eventos` para registrar la entrada del animal.
-// tipoEventoId: UUID del tipo 'ENTRADA' (catálogo tipo_evento, resuelto por el repositorio).
-// motivoId:     UUID del motivo 'COMPRA' (catálogo motivos_movimiento, resuelto por el repositorio).
-export function mapCompraInputToEventoInsert(
-  input: RegistrarCompraAnimalInput,
-  tipoEventoId: UUID,
-  motivoId: UUID,
-): DbInsert<'eventos'> {
+// El tipo de args lo provee el tipo generado de Supabase (types/supabase.ts).
+// Aquí solo traducimos nombres de campo de dominio a nombres de parámetro del RPC.
+// Los campos opcionales del RPC usan undefined (no null) según la convención generada.
+export function mapCompraInputToRpcArgs(input: RegistrarCompraAnimalInput) {
   return {
-    especie:        input.especie,
-    fecha:          input.fecha_compra,  // fecha en que ocurrió la compra, no la inserción
-    tipo_evento_id: tipoEventoId,
-    motivo_id:      motivoId,
+    p_especie:                   input.especie,
+    p_sexo:                      input.sexo,
+    p_tipo_productivo_id:        input.tipo_productivo_id,
+    p_fecha_compra:              input.fecha_compra,
+    p_crotal:                    input.crotal                    ?? undefined,
+    p_num_hierro:                input.num_hierro                ?? undefined,
+    p_raza_id:                   input.raza_id                   ?? undefined,
+    p_fecha_nacimiento:          input.fecha_nacimiento          ?? undefined,
+    p_fecha_nacimiento_estimada: input.fecha_nacimiento_estimada ?? undefined,
+    p_lote_id:                   input.lote_id                   ?? undefined,
   }
 }
 
-// Produce la fila a insertar en `animal`.
-// eventoId:       ID del evento recién creado; enlaza el animal a su origen (trazabilidad).
-// esReproductora: flag calculado por el repositorio a partir del tipo_productivo.nombre,
-//                 porque determinarlo requiere una query que el mapper no puede hacer.
-// Los campos con default (estado_vital, estado_sanitario, origen) se fijan aquí y no
-// viajan en el input: son invariantes de negocio para una compra, no decisión del usuario.
-export function mapCompraInputToAnimalInsert(
-  input: RegistrarCompraAnimalInput,
-  eventoId: UUID,
-  esReproductora: boolean,
-): DbInsert<'animal'> {
+// Args del RPC registrar_salida_animal (ver migration 20260618000001).
+// Venta y muerte comparten el mismo RPC — el motivo distingue el caso.
+export type SalidaRpcArgs = {
+  p_animal_id: UUID
+  p_motivo:    string
+  p_fecha:     string
+}
+
+export function mapVentaInputToRpcArgs(input: RegistrarVentaAnimalInput): SalidaRpcArgs {
   return {
-    especie:                   input.especie,
-    sexo:                      input.sexo,
-    origen:                    'compra',   // implícito: este mapper es solo para compras
-    tipo_productivo_id:        input.tipo_productivo_id,
-    crotal:                    input.crotal                    ?? null,
-    num_hierro:                input.num_hierro                ?? null,
-    raza_id:                   input.raza_id                   ?? null,
-    fecha_nacimiento:          input.fecha_nacimiento          ?? null,
-    fecha_nacimiento_estimada: input.fecha_nacimiento_estimada ?? null,
-    lote_id:                   input.lote_id                   ?? null,
-    evento_creacion_id:        eventoId,
-    evento_origen_id:          eventoId,
-    es_reproductora:           esReproductora,
-    estado_vital:              'vivo',     // todo animal que entra está vivo
-    estado_sanitario:          'sano',     // estado inicial por defecto; cambia vía eventos
-    estado_reproductivo:       null,       // se asigna cuando se inicia un ciclo reproductivo
+    p_animal_id: input.animal_id,
+    p_motivo:    'venta',
+    p_fecha:     input.fecha_venta,
+  }
+}
+
+export function mapMuerteInputToRpcArgs(input: RegistrarMuerteAnimalInput): SalidaRpcArgs {
+  return {
+    p_animal_id: input.animal_id,
+    p_motivo:    'muerte',
+    p_fecha:     input.fecha_muerte,
   }
 }
 

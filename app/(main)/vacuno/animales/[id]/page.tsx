@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { getAnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
-import { FichaAnimal } from '@/modules/ganadero/animales/ui/ficha/FichaAnimal'
+import { AnimalHeader } from '@/modules/ganadero/animales/ui/ficha/AnimalHeader'
+import { SeccionEstados } from '@/modules/ganadero/animales/ui/ficha/SeccionEstados'
+import { SeccionOrigen } from '@/modules/ganadero/animales/ui/ficha/SeccionOrigen'
+import { SeccionAcciones } from '@/modules/ganadero/animales/ui/ficha/SeccionAcciones'
 import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEventos'
 
 interface Props {
@@ -27,7 +30,16 @@ export default async function AnimalDetailPage({ params }: Props) {
         </Link>
       </div>
       <div className="flex flex-col gap-4">
-        <FichaAnimal animal={animal} />
+        <AnimalHeader animal={animal} />
+        <SeccionAcciones
+          animalId={animal.id}
+          crotal={animal.crotal}
+          estadoVital={animal.estado_vital}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SeccionEstados animal={animal} />
+          <SeccionOrigen animal={animal} />
+        </div>
         <SeccionEventos animalId={animal.id} />
       </div>
     </PageContainer>

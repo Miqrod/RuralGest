@@ -1,7 +1,7 @@
 import { createServerClient } from '../../../shared/db'
-import { mapAnimalRowToDomain, mapCompraInputToEventoInsert, mapCompraInputToAnimalInsert } from './mapper'
+import { mapAnimalRowToDomain, mapCompraInputToRpcArgs, mapVentaInputToRpcArgs, mapMuerteInputToRpcArgs } from './mapper'
 import type { UUID } from '../../../shared/types'
-import type { Animal, CrearAnimalInput, RegistrarCompraAnimalInput } from '../domain/types'
+import type { Animal, CrearAnimalInput, RegistrarCompraAnimalInput, RegistrarVentaAnimalInput, RegistrarMuerteAnimalInput } from '../domain/types'
 
 export async function listAnimales(): Promise<Animal[]> {
   const supabase = await createServerClient()
@@ -43,54 +43,40 @@ export async function insertAnimal(_input: CrearAnimalInput, _eventoId: UUID): P
   throw new Error('not implemented')
 }
 
-// Persiste el registro completo de una compra de animal: evento + animal + asociación N:M.
-// NOTA: las tres inserciones son secuenciales y no están envueltas en una transacción DB.
-// Si una falla tras haberse completado la anterior quedará un registro huérfano.
-// Pendiente: reemplazar por una llamada RPC (función Postgres) cuando la integridad
-// transaccional sea prioritaria. Ver documentacion/memory/deferred.md.
+// Persiste el registro completo de una compra de animal mediante RPC transaccional.
+// El RPC registrar_compra_animal ejecuta en una única transacción Postgres:
+//   INSERT eventos → INSERT animal → INSERT evento_animales
+// Devuelve el UUID del animal; hidratamos con getAnimalById para obtener el Animal completo.
 export async function insertarCompraAnimal(
   input: RegistrarCompraAnimalInput,
 ): Promise<Animal> {
   const supabase = await createServerClient()
 
-  // Resolvemos en paralelo los IDs de catálogo que necesitan los mappers
-  // y el nombre del tipo_productivo para calcular es_reproductora.
-  // Estas tablas son datos estructurales del sistema: no cambian durante la petición.
-  const [tipoEventoRes, motivoRes, tipoProductivoRes] = await Promise.all([
-    supabase.from('tipo_evento').select('id').eq('codigo', 'ENTRADA').single(),
-    supabase.from('motivos_movimiento').select('id').eq('nombre', 'compra').single(),
-    supabase.from('tipo_productivo').select('nombre').eq('id', input.tipo_productivo_id).single(),
-  ])
-  if (tipoEventoRes.error)     throw tipoEventoRes.error
-  if (motivoRes.error)         throw motivoRes.error
-  if (tipoProductivoRes.error) throw tipoProductivoRes.error
+  const { data: animalId, error } = await supabase
+    .rpc('registrar_compra_animal', mapCompraInputToRpcArgs(input))
+  if (error) throw error
 
-  // es_reproductora es un flag interno del backend: true solo para hembras cuyo
-  // tipo_productivo se llama exactamente 'Reproductora'. El usuario no lo controla.
-  const esReproductora =
-    input.sexo === 'hembra' && tipoProductivoRes.data.nombre === 'Reproductora'
+  const animal = await getAnimalById(animalId as UUID)
+  if (!animal) throw new Error(`Animal creado no encontrado tras RPC: ${animalId}`)
+  return animal
+}
 
-  // Paso 1: insertar el evento que registra la entrada en el sistema
-  const { data: evento, error: eventoErr } = await supabase
-    .from('eventos')
-    .insert(mapCompraInputToEventoInsert(input, tipoEventoRes.data.id, motivoRes.data.id))
-    .select('id')
-    .single()
-  if (eventoErr) throw eventoErr
+// Persiste una salida por venta mediante RPC transaccional.
+// Devuelve el UUID del evento creado.
+export async function insertarVentaAnimal(input: RegistrarVentaAnimalInput): Promise<UUID> {
+  const supabase = await createServerClient()
+  const { data: eventoId, error } = await supabase
+    .rpc('registrar_salida_animal', mapVentaInputToRpcArgs(input))
+  if (error) throw error
+  return eventoId as UUID
+}
 
-  // Paso 2: insertar el animal enlazado al evento (trazabilidad)
-  const { data: animalRow, error: animalErr } = await supabase
-    .from('animal')
-    .insert(mapCompraInputToAnimalInsert(input, evento.id, esReproductora))
-    .select('*, raza(nombre), tipo_productivo(nombre)')
-    .single()
-  if (animalErr) throw animalErr
-
-  // Paso 3: crear la asociación N:M evento↔animal en evento_animales
-  const { error: assocErr } = await supabase
-    .from('evento_animales')
-    .insert({ evento_id: evento.id, animal_id: animalRow.id })
-  if (assocErr) throw assocErr
-
-  return mapAnimalRowToDomain(animalRow as Parameters<typeof mapAnimalRowToDomain>[0])
+// Persiste una salida por muerte mediante RPC transaccional.
+// Devuelve el UUID del evento creado.
+export async function insertarMuerteAnimal(input: RegistrarMuerteAnimalInput): Promise<UUID> {
+  const supabase = await createServerClient()
+  const { data: eventoId, error } = await supabase
+    .rpc('registrar_salida_animal', mapMuerteInputToRpcArgs(input))
+  if (error) throw error
+  return eventoId as UUID
 }
