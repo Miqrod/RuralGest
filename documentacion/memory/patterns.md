@@ -335,50 +335,56 @@ export type CompraRpcArgs = { p_especie: string; p_crotal: string | null; ... }
 
 Los campos opcionales del RPC usan `undefined` (no `null`) según la convención del tipo generado.
 
-## Accordion con animación de altura (grid-rows trick)
+## Accordion con Framer Motion (patrón actual)
 
-Para revelar/ocultar contenido con animación suave de altura sin `max-height`:
+Para revelar/ocultar contenido con animación de altura, usar `AnimatePresence` + `motion.div`:
 
 ```tsx
-<div className={cn(
-  'grid transition-[grid-template-rows] duration-300 ease-in-out',
-  open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-)}>
-  <div className="overflow-hidden min-h-0">
-    {/* contenido */}
-  </div>
-</div>
+import { AnimatePresence, motion } from 'framer-motion'
+
+<AnimatePresence initial={false}>
+  {open && (
+    <motion.div
+      key="panel"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      style={{ overflow: 'hidden' }}
+    >
+      {/* contenido */}
+    </motion.div>
+  )}
+</AnimatePresence>
 ```
 
-- `grid-rows-[0fr]` → el hijo interno colapsa a 0 (la máscara `overflow-hidden` lo oculta)
-- `grid-rows-[1fr]` → el hijo ocupa su altura natural
-- `min-h-0` en el hijo interno es obligatorio para que el colapso funcione
-- Animable directamente con `transition-[grid-template-rows]`
+- `initial={false}` en `AnimatePresence`: evita la animación de entrada en el primer render.
+- `height: 'auto'` funciona directamente con Framer Motion (no con CSS transitions).
+- No necesita el hack `formMounted`/`mounted`: `AnimatePresence` mantiene el componente
+  montado hasta que termina la animación de salida.
+- Animar el chevron por separado: `<motion.div animate={{ rotate: open ? 180 : 0 }}>`.
 
-Para mantener el componente montado durante la animación de cierre (evitar desmontaje inmediato):
-```tsx
-const [mounted, setMounted] = useState(false)
-// Montar al primer open; nunca desmontar (el grid colapsa la altura visualmente)
-if (!mounted && open) setMounted(true)
-{mounted && <div className={cn('grid ...', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}> ... </div>}
-```
+## Disclosure progresivo en formularios (Framer Motion)
 
-## Disclosure progresivo en formularios
-
-Mostrar campos adicionales solo cuando el usuario ha seleccionado un valor previo,
-usando el mismo grid trick:
+Mostrar campos adicionales cuando el usuario selecciona un valor previo:
 
 ```tsx
 const motivo = form.watch('motivo')
 
-<div className={cn(
-  'grid transition-[grid-template-rows] duration-300 ease-in-out',
-  motivo ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-)}>
-  <div className="overflow-hidden min-h-0">
-    {/* campos que dependen de motivo */}
-  </div>
-</div>
+<AnimatePresence initial={false}>
+  {motivo ? (
+    <motion.div
+      key="campo-condicional"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      style={{ overflow: 'hidden' }}
+    >
+      {/* campos que dependen de motivo */}
+    </motion.div>
+  ) : null}
+</AnimatePresence>
 ```
 
 Reduce la carga cognitiva: el usuario ve solo lo que necesita rellenar en cada momento.
@@ -421,6 +427,103 @@ async function onConfirm() {
   </AlertDialogContent>
 </AlertDialog>
 ```
+
+## Toasts con sonner
+
+Para notificaciones de éxito/error tras acciones del usuario:
+
+```tsx
+import { toast } from 'sonner'
+
+toast.success('Animal registrado correctamente')
+toast.error('Error al registrar la salida')
+```
+
+- `<Toaster position="top-center" richColors />` en `app/layout.tsx` (una sola vez).
+- Usar `toast.success` tras operaciones completadas; `toast.error` para errores de servidor.
+- Los errores de validación de formulario se muestran inline (más contextuales); el toast
+  es para errores que llegan del servidor después del submit.
+- Server Actions que antes hacían `redirect()` deben devolver `{ id }` para que el cliente
+  pueda hacer `toast.success()` + `router.push()` antes de navegar.
+
+## Transición de página (fade-in)
+
+`app/(main)/template.tsx` envuelve cada página en un `motion.div` con fade-in:
+
+```tsx
+'use client'
+import { motion } from 'framer-motion'
+
+export default function Template({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15, ease: 'easeInOut' }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+```
+
+- `template.tsx` (no `layout.tsx`) crea una instancia nueva en cada navegación → la animación
+  de entrada se dispara siempre.
+- Sin `exit` ni `AnimatePresence` para evitar problemas con navegación rápida (múltiples clics).
+- El fade-out no se implementa: complica la coordinación y apenas se percibe visualmente.
+
+## Stagger en listas con Framer Motion
+
+Para animar ítems de una lista en cascada:
+
+```tsx
+'use client'
+import { motion } from 'framer-motion'
+
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+}
+const item = {
+  hidden: { opacity: 0, x: -6 },
+  show:   { opacity: 1, x: 0, transition: { duration: 0.2 } },
+}
+
+<motion.ol variants={container} initial="hidden" animate="show">
+  {items.map((item) => (
+    <motion.li key={item.id} variants={item}>...</motion.li>
+  ))}
+</motion.ol>
+```
+
+- Si el componente padre es un Server Component (async), extraer la lista a un Client Component
+  separado que reciba los datos ya resueltos como prop.
+- Para tablas con DataTable genérico, animar el wrapper completo en lugar de filas individuales:
+  `<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>`.
+
+## Badge con crossfade al cambiar de valor
+
+Cuando un badge puede cambiar de valor en runtime (ej: `estado_vital` tras registrar salida):
+
+```tsx
+'use client'
+import { AnimatePresence, motion } from 'framer-motion'
+
+<AnimatePresence mode="wait">
+  <motion.div
+    key={valor}
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9 }}
+    transition={{ duration: 0.15 }}
+  >
+    <Badge valor={valor} />
+  </motion.div>
+</AnimatePresence>
+```
+
+- `key={valor}` fuerza a React a desmontar/montar cuando cambia, activando enter/exit.
+- El componente contenedor debe ser Client Component (`'use client'`).
 
 ## Hover selectivo sobre cabecera de panel
 
