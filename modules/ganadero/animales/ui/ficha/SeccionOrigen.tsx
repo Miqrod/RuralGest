@@ -58,7 +58,7 @@ export function SeccionOrigen({ animal }: { animal: AnimalDetail }) {
       </FilaDato>
 
       {fecha && (
-        <FilaDato label={esEstimada ? 'F. nacimiento (est.)' : 'F. nacimiento'}>
+        <FilaDato label={esEstimada ? 'F. nac. estimada' : 'F. nac. real'}>
           {formatFecha(fecha)}
           <span className="text-ink-muted ml-2">({calcularEdad(fecha)})</span>
         </FilaDato>

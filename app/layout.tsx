@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Geist } from 'next/font/google'
 import { ThemeProvider } from '@/providers/ThemeProvider'
+import { Toaster } from 'sonner'
 import { cn } from '@/lib/utils'
 import '@/styles/globals.css'
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>

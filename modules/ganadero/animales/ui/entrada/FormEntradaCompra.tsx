@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import * as z from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -106,11 +107,13 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
       fecha_compra:               values.fecha_compra,
     })
 
-    // submitEntradaCompra redirige internamente si tiene éxito.
-    // Si llega aquí es porque devolvió un error (no lanzó).
-    if (result && 'error' in result) {
+    if ('error' in result) {
       setServerError(result.error)
+      return
     }
+
+    toast.success('Animal registrado correctamente')
+    router.push(`/vacuno/animales/${result.id}`)
   }
 
   return (
@@ -208,11 +211,13 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
         </div>
 
         {/* ── Fila 3: Fecha de nacimiento ──────────────────────────────────── */}
-        {/* Col 1: input de fecha (siempre visible, deshabilitado en "No indicar")
+        {/* Col 1: input de fecha (siempre visible)
             Cols 2+3: segmented control fluido que determina el tipo de fecha */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Field data-invalid={!!form.formState.errors.fecha_nac}>
-            <FieldLabel htmlFor="fecha_nac">Fecha de nacimiento</FieldLabel>
+            <FieldLabel htmlFor="fecha_nac">
+              {fechaNacTipo === 'real' ? 'F. nac. real' : 'F. nac. estimada'}
+            </FieldLabel>
             <Controller name="fecha_nac" control={form.control} render={({ field }) => (
               <DatePicker
                 value={field.value || undefined}

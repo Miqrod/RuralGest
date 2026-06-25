@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/data-table/DataTable'
 import { formatFecha } from '@/lib/format'
@@ -76,12 +77,18 @@ const columns: ColumnDef<AnimalListItem, unknown>[] = [
 
 export function AnimalesTable({ data }: { data: AnimalListItem[] }) {
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      searchColumn="crotal"
-      searchPlaceholder="Buscar por crotal..."
-      pageSize={10}
-    />
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      <DataTable
+        columns={columns}
+        data={data}
+        searchColumn="crotal"
+        searchPlaceholder="Buscar por crotal..."
+        pageSize={10}
+      />
+    </motion.div>
   )
 }

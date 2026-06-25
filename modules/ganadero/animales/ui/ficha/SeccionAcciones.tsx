@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -19,32 +21,24 @@ interface Props {
 
 export function SeccionAcciones({ animalId, crotal, estadoVital }: Props) {
   const router = useRouter()
-  const [panelOpen,      setPanelOpen]      = useState(false)
-  const [accionActiva,   setAccionActiva]   = useState<AccionActiva>(null)
-  const [headerHovered,  setHeaderHovered]  = useState(false)
-  // Mantenemos el formulario montado tras la primera apertura para que la
-  // animación de cierre funcione (el grid colapsa suavemente, no desmonta).
-  const [formMounted,    setFormMounted]    = useState(false)
+  const [panelOpen,    setPanelOpen]    = useState(false)
+  const [accionActiva, setAccionActiva] = useState<AccionActiva>(null)
+  const [headerHovered, setHeaderHovered] = useState(false)
 
   function togglePanel() {
     const closing = panelOpen
     setPanelOpen(!panelOpen)
-    // Al cerrar el panel también cerramos el formulario si estaba abierto
     if (closing) setAccionActiva(null)
   }
 
   function handleSalidaClick() {
-    if (accionActiva !== 'salida') {
-      setFormMounted(true)
-      setAccionActiva('salida')
-    } else {
-      setAccionActiva(null)
-    }
+    setAccionActiva(accionActiva !== 'salida' ? 'salida' : null)
   }
 
   function handleSuccess() {
     setAccionActiva(null)
     setPanelOpen(false)
+    toast.success('Salida registrada correctamente')
     router.refresh()
   }
 
@@ -67,61 +61,68 @@ export function SeccionAcciones({ animalId, crotal, estadoVital }: Props) {
         <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide">
           Acciones
         </h2>
-        <ChevronDown
-          className={cn(
-            'size-4 text-ink-muted transition-transform duration-300',
-            panelOpen && 'rotate-180',
-          )}
-        />
+        <motion.div
+          animate={{ rotate: panelOpen ? 180 : 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <ChevronDown className="size-4 text-ink-muted" />
+        </motion.div>
       </button>
 
-      {/* ── Contenido del panel: animación de máscara por altura ──────────── */}
-      <div
-        className={cn(
-          cn('grid transition-[grid-template-rows,background-color] duration-300 ease-in-out', headerHovered ? 'bg-[#E5E7EB] dark:bg-[#28211e]' : 'bg-surface-alt'),
-          panelOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden min-h-0">
-          <div className="px-5 pt-1 pb-5 space-y-3">
+      {/* ── Contenido del panel ────────────────────────────────────────────── */}
+      <AnimatePresence initial={false}>
+        {panelOpen && (
+          <motion.div
+            key="panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+            className={headerHovered ? 'bg-[#E5E7EB] dark:bg-[#28211e]' : 'bg-surface-alt'}
+          >
+            <div className="px-5 pt-1 pb-5 space-y-3">
 
-            {/* Botones de acción */}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant={accionActiva === 'salida' ? 'outline' : 'default'}
-                className="h-auto py-2 px-5"
-                onClick={handleSalidaClick}
-              >
-                Registrar salida
-              </Button>
-              {/* Futuros botones: Registrar parto, Registrar cubrición… */}
-            </div>
-
-            {/* ── Formulario inline: animación de máscara por altura ──────── */}
-            {formMounted && (
-              <div
-                className={cn(
-                  'grid transition-[grid-template-rows] duration-300 ease-in-out',
-                  accionActiva === 'salida' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-                )}
-              >
-                <div className="overflow-hidden min-h-0">
-                  <div className="bg-canvas rounded-lg border border-divider p-5 mt-1">
-                    <FormSalidaAnimal
-                      animalId={animalId}
-                      crotal={crotal}
-                      onSuccess={handleSuccess}
-                      onCancel={() => setAccionActiva(null)}
-                    />
-                  </div>
-                </div>
+              {/* Botones de acción */}
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  variant={accionActiva === 'salida' ? 'outline' : 'default'}
+                  className="h-auto py-2 px-5"
+                  onClick={handleSalidaClick}
+                >
+                  Registrar salida
+                </Button>
+                {/* Futuros botones: Registrar parto, Registrar cubrición… */}
               </div>
-            )}
 
-          </div>
-        </div>
-      </div>
+              {/* ── Formulario inline ──────────────────────────────────────── */}
+              <AnimatePresence initial={false}>
+                {accionActiva === 'salida' && (
+                  <motion.div
+                    key="form-salida"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="bg-canvas rounded-lg border border-divider p-5 mt-1">
+                      <FormSalidaAnimal
+                        animalId={animalId}
+                        crotal={crotal}
+                        onSuccess={handleSuccess}
+                        onCancel={() => setAccionActiva(null)}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )

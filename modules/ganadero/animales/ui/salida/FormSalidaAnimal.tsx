@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import * as z from 'zod'
 
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -54,7 +55,7 @@ const MOTIVO_LABEL: Record<'venta' | 'muerte', string> = {
 
 interface Props {
   animalId:  string
-  crotal?:   string | null  // para el mensaje de confirmación
+  crotal?:   string | null
   onSuccess: () => void
   onCancel:  () => void
 }
@@ -62,10 +63,10 @@ interface Props {
 // ── Componente ───────────────────────────────────────────────────────────────
 
 export function FormSalidaAnimal({ animalId, crotal, onSuccess, onCancel }: Props) {
-  const [serverError,    setServerError]    = useState<string | null>(null)
+  const [serverError,   setServerError]   = useState<string | null>(null)
   // pendingValues: valores validados que esperan confirmación en el dialog
-  const [pendingValues,  setPendingValues]  = useState<FormValues | null>(null)
-  const [isConfirming,   setIsConfirming]   = useState(false)
+  const [pendingValues, setPendingValues] = useState<FormValues | null>(null)
+  const [isConfirming,  setIsConfirming]  = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -98,6 +99,7 @@ export function FormSalidaAnimal({ animalId, crotal, onSuccess, onCancel }: Prop
 
     if (result?.error) {
       setServerError(result.error)
+      toast.error(result.error)
       return
     }
     onSuccess()
@@ -128,31 +130,35 @@ export function FormSalidaAnimal({ animalId, crotal, onSuccess, onCancel }: Prop
           )} />
         </div>
 
-        {/* Fila 2: campos adicionales — aparecen bajo el select con animación */}
-        <div
-          className={cn(
-            'grid transition-[grid-template-rows] duration-300 ease-in-out',
-            motivo ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-          )}
-        >
-          <div className="overflow-hidden min-h-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              <Controller name="fecha" control={form.control} render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel>{motivo ? FECHA_LABEL[motivo] : 'Fecha'} *</FieldLabel>
-                  <DatePicker
-                    value={field.value || undefined}
-                    onChange={(v) => field.onChange(v ?? '')}
-                    maxDate={new Date()}
-                    placeholder="dd/mm/aaaa"
-                    aria-invalid={fieldState.invalid}
-                  />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )} />
-            </div>
-          </div>
-        </div>
+        {/* Fila 2: fecha — aparece cuando hay motivo seleccionado */}
+        <AnimatePresence initial={false}>
+          {motivo ? (
+            <motion.div
+              key="fecha-field"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                <Controller name="fecha" control={form.control} render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel>{FECHA_LABEL[motivo]} *</FieldLabel>
+                    <DatePicker
+                      value={field.value || undefined}
+                      onChange={(v) => field.onChange(v ?? '')}
+                      maxDate={new Date()}
+                      placeholder="dd/mm/aaaa"
+                      aria-invalid={fieldState.invalid}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )} />
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         <div className="flex items-center gap-4">
           {serverError && (

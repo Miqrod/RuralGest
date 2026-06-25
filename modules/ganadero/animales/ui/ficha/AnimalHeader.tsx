@@ -1,3 +1,6 @@
+'use client'
+
+import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { EstadoVitalBadge } from './EstadosBadges'
 import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
@@ -35,10 +38,22 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
             <p className="text-sm text-ink-muted mt-0.5">{subtitulo}</p>
           )}
         </div>
-        <EstadoVitalBadge
-          estado={animal.estado_vital}
-          className="text-sm px-3 py-1 mt-1"
-        />
+
+        {/* Crossfade al cambiar de estado vital tras registrar una salida */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={animal.estado_vital}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+          >
+            <EstadoVitalBadge
+              estado={animal.estado_vital}
+              className="text-sm px-3 py-1 mt-1"
+            />
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <div className="flex flex-wrap gap-2 mt-3">
