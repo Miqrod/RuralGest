@@ -39,14 +39,14 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
           )}
         </div>
 
-        {/* Crossfade al cambiar de estado vital tras registrar una salida */}
+        {/* Zoom-in con spring al cambiar de estado vital tras registrar una salida */}
         <AnimatePresence mode="wait">
           <motion.div
             key={animal.estado_vital}
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.4 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.15 }}
+            exit={{ opacity: 0, scale: 0.4 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
           >
             <EstadoVitalBadge
               estado={animal.estado_vital}

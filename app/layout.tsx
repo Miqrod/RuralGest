@@ -19,7 +19,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
-          <Toaster position="top-center" richColors />
+          {/* Variables CSS de sonner: fondo sólido igual al borde, texto blanco */}
+          <Toaster
+            position="top-center"
+            className="[--success-bg:#16a34a] [--success-border:#16a34a] [--success-text:#fff] [--error-bg:#dc2626] [--error-border:#dc2626] [--error-text:#fff]"
+          />
         </ThemeProvider>
       </body>
     </html>
