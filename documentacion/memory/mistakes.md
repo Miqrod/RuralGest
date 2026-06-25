@@ -51,6 +51,31 @@ intactas. El CLI de shadcn (`npx shadcn add`) puede regenerar componentes con pa
 
 ---
 
+## NULL VS UNDEFINED EN ARGS OPCIONALES DE RPC
+
+**Síntoma:** TypeScript error `Type 'null' is not assignable to type 'string | undefined'`
+al pasar args opcionales a `.rpc()`.
+
+**Causa:** Los tipos generados por `supabase gen types` representan parámetros opcionales
+como `param?: string` (es decir, `string | undefined`), nunca como `string | null`.
+Los mappers que usaban `campo ?? null` producen `null`, que es incompatible.
+
+**Solución:** En los mappers de args de RPC, usar `?? undefined` en lugar de `?? null`
+para campos opcionales:
+
+```ts
+// ❌ Incorrecto
+p_crotal: input.crotal ?? null     // null no es undefined
+
+// ✅ Correcto
+p_crotal: input.crotal ?? undefined
+```
+
+**Regla:** reservar `null` para campos de dominio que la DB acepta como NULL.
+Usar `undefined` para parámetros opcionales de funciones TypeScript/RPC.
+
+---
+
 ## LÓGICA EN FRONTEND
 
 Error: validar estado en React

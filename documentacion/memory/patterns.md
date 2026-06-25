@@ -305,3 +305,139 @@ supabase
 - caso válido → resultado esperado
 - caso inválido → error con mensaje correcto
 - edge case → límite de la regla (cantidad = 0, estado incorrecto para transición)
+
+## RPC transaccional
+
+Toda operación que cree eventos, cree entidades derivadas o modifique snapshots derivados
+debe ejecutarse mediante RPC transaccional. Ver `documentacion/arquitectura/rpc-transaccional.md`.
+
+Regenerar tipos tras cualquier migración que cambie el schema:
+```bash
+supabase gen types typescript --local > types/supabase.ts
+```
+
+## Tipos Supabase generados: no duplicar en TypeScript
+
+Con `types/supabase.ts` generado, los tipos de args de RPC ya existen en el tipo `Database`.
+No crear tipos paralelos manuales (`CompraRpcArgs`, etc.) — son fuente de desincronización.
+El mapper puede devolver un objeto sin anotar el tipo de retorno; TypeScript lo infiere
+contra el tipo generado del RPC cuando se pasa a `.rpc()`.
+
+```ts
+// ✅ Correcto — TypeScript infiere contra Database["public"]["Functions"]["..."]["Args"]
+export function mapCompraInputToRpcArgs(input: RegistrarCompraAnimalInput) {
+  return { p_especie: input.especie, p_crotal: input.crotal ?? undefined, ... }
+}
+
+// ❌ Incorrecto — tipo manual que puede desincronizarse
+export type CompraRpcArgs = { p_especie: string; p_crotal: string | null; ... }
+```
+
+Los campos opcionales del RPC usan `undefined` (no `null`) según la convención del tipo generado.
+
+## Accordion con animación de altura (grid-rows trick)
+
+Para revelar/ocultar contenido con animación suave de altura sin `max-height`:
+
+```tsx
+<div className={cn(
+  'grid transition-[grid-template-rows] duration-300 ease-in-out',
+  open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+)}>
+  <div className="overflow-hidden min-h-0">
+    {/* contenido */}
+  </div>
+</div>
+```
+
+- `grid-rows-[0fr]` → el hijo interno colapsa a 0 (la máscara `overflow-hidden` lo oculta)
+- `grid-rows-[1fr]` → el hijo ocupa su altura natural
+- `min-h-0` en el hijo interno es obligatorio para que el colapso funcione
+- Animable directamente con `transition-[grid-template-rows]`
+
+Para mantener el componente montado durante la animación de cierre (evitar desmontaje inmediato):
+```tsx
+const [mounted, setMounted] = useState(false)
+// Montar al primer open; nunca desmontar (el grid colapsa la altura visualmente)
+if (!mounted && open) setMounted(true)
+{mounted && <div className={cn('grid ...', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}> ... </div>}
+```
+
+## Disclosure progresivo en formularios
+
+Mostrar campos adicionales solo cuando el usuario ha seleccionado un valor previo,
+usando el mismo grid trick:
+
+```tsx
+const motivo = form.watch('motivo')
+
+<div className={cn(
+  'grid transition-[grid-template-rows] duration-300 ease-in-out',
+  motivo ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+)}>
+  <div className="overflow-hidden min-h-0">
+    {/* campos que dependen de motivo */}
+  </div>
+</div>
+```
+
+Reduce la carga cognitiva: el usuario ve solo lo que necesita rellenar en cada momento.
+
+## AlertDialog para acciones irreversibles
+
+Antes de ejecutar cualquier operación que no se puede deshacer (salida de animal, baja de
+registro, etc.), abrir un AlertDialog de confirmación. El formulario no llama al servidor
+en el `onSubmit` — guarda los valores validados en estado local y deja que el diálogo
+confirme antes de llamar a la Server Action:
+
+```tsx
+function onValidSubmit(values: FormValues) {
+  setPendingValues(values)   // abre el diálogo; NO llama al servidor
+}
+
+async function onConfirm() {
+  const result = await submitAction(pendingValues)
+  if (result?.error) { setServerError(result.error); return }
+  onSuccess()
+}
+
+<AlertDialog open={pendingValues !== null}>
+  <AlertDialogContent size="sm">
+    <AlertDialogHeader className="place-items-center py-3">
+      <AlertDialogTitle className="text-lg text-alert text-center">
+        ¿Confirmar acción?
+      </AlertDialogTitle>
+      <AlertDialogDescription className="text-center">
+        Descripción clara.<br />Esta acción no se puede deshacer.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel onClick={() => setPendingValues(null)}>Volver</AlertDialogCancel>
+      <AlertDialogAction className="bg-alert hover:bg-alert/90 text-white border-transparent"
+        onClick={onConfirm}>
+        Confirmar
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+## Hover selectivo sobre cabecera de panel
+
+Cuando el hover de un panel (cambio de fondo) debe activarse solo al pasar por la cabecera
+y no por el contenido, usar estado JS en lugar de `group-hover`:
+
+```tsx
+const [headerHovered, setHeaderHovered] = useState(false)
+
+<button
+  onMouseEnter={() => setHeaderHovered(true)}
+  onMouseLeave={() => setHeaderHovered(false)}
+>...</button>
+
+<div className={headerHovered ? 'bg-[#E5E7EB]' : 'bg-surface-alt'}>
+  {/* contenido — el hover no se activa aquí */}
+</div>
+```
+
+`group-hover` afecta a todo el grupo sin distinción. El estado JS permite precisión quirúrgica.

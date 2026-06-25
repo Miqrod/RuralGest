@@ -116,6 +116,43 @@ En Next.js 16, `params` en páginas y layouts es `Promise<{...}>` y debe ser awa
 - El nombre resuelto viaja como `tipo_productivo_nombre: string | null` en proyecciones. El mapper usa `select('*, raza(nombre), tipo_productivo(nombre)')`.
 - Los tipos pueden evolucionar per-especie sin cambiar el modelo de `animal`.
 
+## Supabase local vs remote: workflow de migraciones
+
+- `supabase db push` aplica migraciones al **remoto** (producción/staging)
+- La app en desarrollo usa el **Supabase local** (puerto 54321), que es una instancia separada
+- Para sincronizar el local tras crear nuevas migraciones: `supabase db reset`
+  (`db reset` aplica todas las migraciones + seed desde cero en local)
+- Consecuencia: si se empuja al remoto pero no se ejecuta `db reset`, el local queda desactualizado
+  y las llamadas a RPCs nuevos fallan con "function not found in schema cache"
+
+## Tipos Supabase: siempre generados, nunca manuales
+
+Los tipos de tablas, enums y RPCs se generan automáticamente desde el schema real:
+```bash
+supabase gen types typescript --local > types/supabase.ts
+```
+El cliente se tipa con `createServerClient<Database>(...)` y `createBrowserClient<Database>(...)`.
+Nunca escribir tipos de DB a mano — se desincronizarían con el schema real.
+Regenerar después de cada migración que modifique el schema.
+
+## estado_vital: snapshot derivado, no fuente de verdad
+
+`animal.estado_vital` es un campo de conveniencia que el RPC mantiene sincronizado.
+No es la fuente de verdad — los eventos lo son.
+
+- Nunca actualizar `estado_vital` directamente desde UI ni desde Use Case
+- Solo el RPC lo modifica, y siempre como último paso después de insertar el evento
+- Si el snapshot difiriera de los eventos, los eventos prevalecen (fuente canónica)
+
+## Acciones inline: en la ficha, no en una página separada
+
+Las acciones sobre una entidad (salida de animal, registro de evento, etc.) se implementan
+como formularios inline en la ficha de la entidad, dentro de un panel `SeccionAcciones`.
+No se navega a una página separada de "registrar X".
+
+Razones: el usuario no pierde el contexto de la ficha, la acción es visible junto a los datos
+que la justifican, y `router.refresh()` actualiza los Server Components sin navegación.
+
 ## `es_reproductora`: flag interno, solo backend
 
 `es_reproductora` es una derivación computada por el backend, nunca expuesta al usuario ni modificable directamente.
