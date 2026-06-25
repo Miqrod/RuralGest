@@ -19,10 +19,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
-          {/* Variables CSS de sonner: fondo sólido igual al borde, texto blanco */}
           <Toaster
             position="top-center"
-            className="[--success-bg:#16a34a] [--success-border:#16a34a] [--success-text:#fff] [--error-bg:#dc2626] [--error-border:#dc2626] [--error-text:#fff]"
+            toastOptions={{
+              classNames: {
+                toast:   'text-center',
+                success: '!bg-green-600 !border-green-600 !text-white [&_[data-title]]:!text-white [&_[data-icon]]:!text-white',
+                error:   '!bg-red-600   !border-red-600   !text-white [&_[data-title]]:!text-white [&_[data-icon]]:!text-white',
+              },
+            }}
           />
         </ThemeProvider>
       </body>
