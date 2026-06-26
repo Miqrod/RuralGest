@@ -23,8 +23,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             position="top-center"
             toastOptions={{
               classNames: {
-                title:   '!text-white !text-center',
-                icon:    '!text-white',
+                // El icono se oculta: el color de fondo ya comunica éxito/error
+                icon:    'hidden',
+                // [data-content] ocupa todo el ancho restante → text-center es real
+                content: 'w-full',
+                title:   '!text-white text-center',
                 success: '!bg-green-600 !border-green-600',
                 error:   '!bg-red-600   !border-red-600',
               },
