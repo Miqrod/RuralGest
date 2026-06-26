@@ -23,9 +23,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             position="top-center"
             toastOptions={{
               classNames: {
-                toast:   'text-center',
-                success: '!bg-green-600 !border-green-600 !text-white [&_[data-title]]:!text-white [&_[data-icon]]:!text-white',
-                error:   '!bg-red-600   !border-red-600   !text-white [&_[data-title]]:!text-white [&_[data-icon]]:!text-white',
+                title:   '!text-white !text-center',
+                icon:    '!text-white',
+                success: '!bg-green-600 !border-green-600',
+                error:   '!bg-red-600   !border-red-600',
               },
             }}
           />
