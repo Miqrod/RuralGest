@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { getAnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
+import { getMachosDisponibles } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 import { AnimalHeader } from '@/modules/ganadero/animales/ui/ficha/AnimalHeader'
 import { SeccionEstados } from '@/modules/ganadero/animales/ui/ficha/SeccionEstados'
 import { SeccionOrigen } from '@/modules/ganadero/animales/ui/ficha/SeccionOrigen'
@@ -17,6 +18,11 @@ export default async function AnimalDetailPage({ params }: Props) {
   const animal = await getAnimalDetail(id)
 
   if (!animal) notFound()
+
+  // Solo necesario para hembras reproductoras; en el resto el panel no mostrará el botón.
+  const machos = animal.es_reproductora
+    ? await getMachosDisponibles(animal.especie)
+    : []
 
   return (
     <PageContainer>
@@ -35,6 +41,9 @@ export default async function AnimalDetailPage({ params }: Props) {
           animalId={animal.id}
           crotal={animal.crotal}
           estadoVital={animal.estado_vital}
+          esReproductora={animal.es_reproductora}
+          estadoReproductivo={animal.estado_reproductivo}
+          machos={machos}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SeccionEstados animal={animal} />

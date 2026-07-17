@@ -153,6 +153,24 @@ No se navega a una página separada de "registrar X".
 Razones: el usuario no pierde el contexto de la ficha, la acción es visible junto a los datos
 que la justifican, y `router.refresh()` actualiza los Server Components sin navegación.
 
+## `fecha_prevista_parto` y `dias_restantes`: cálculo y persistencia
+
+`animal.fecha_prevista_parto` es un snapshot derivado que se actualiza mediante RPC cuando se registra una cubrición.
+
+**Cómo se calcula:**
+- Vacuno: `fecha_cubricion + 283 días` (duración media de gestación bovina)
+- Porcino: `fecha_cubricion + 114 días` (duración media de gestación porcina, regla 3-3-3: 3 meses, 3 semanas, 3 días)
+- La especie se obtiene de `animal.especie` en el momento de registrar la cubrición.
+
+**`dias_restantes` NO se persiste.**
+- Se calcula en `ReproductiveProjection` como `fecha_prevista_parto - fecha_actual`.
+- Persistirlo crearía un valor que envejece: el día siguiente sería incorrecto sin actualizarlo.
+- Cualquier componente que lo necesite lo calcula: `differenceInDays(fechaPrevistaParto, new Date())`.
+
+**Invariante:**
+- Si `estado_reproductivo = 'gestante'` entonces `fecha_prevista_parto` debe ser no nula.
+- Si `estado_reproductivo != 'gestante'` (parto, aborto, etc.) el RPC limpia `fecha_prevista_parto = NULL`.
+
 ## `es_reproductora`: flag interno, solo backend
 
 `es_reproductora` es una derivación computada por el backend, nunca expuesta al usuario ni modificable directamente.
@@ -162,3 +180,9 @@ que la justifican, y `router.refresh()` actualiza los Server Components sin nave
 - Para machos siempre `false` (el ciclo reproductivo no aplica).
 - Objetivo: todas las validaciones reproductivas usan `if (!animal.es_reproductora)` sin interpretar sexo + tipo + estado.
 - En el dominio `Animal` el campo existe (es útil en reglas de negocio). En cualquier tipo de input del usuario (`RegistrarCompraAnimalInput`, etc.) nunca aparece.
+
+**Restricción para eventos reproductivos (CUBRICIÓN, PARTO, DESTETE, ABORTO):**
+El animal debe cumplir `sexo === 'hembra' && es_reproductora === true`.
+Si falla cualquiera de las dos condiciones, el evento se rechaza antes de ejecutar la transición de estado.
+Esta validación la implementa `ReproductiveEligibilityRules` (tarea #74, PRD007).
+El comentario de intención ya está en `modules/ganadero/reproductivo/domain/rules.ts`.

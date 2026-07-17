@@ -9,6 +9,7 @@ export interface Animal {
   especie: Especie
   tipo_productivo_id: UUID | null
   tipo_productivo_nombre: string | null
+  nombre: string | null
   crotal: string | null
   num_hierro: string | null
   raza_id: UUID | null
@@ -26,6 +27,7 @@ export interface Animal {
   evento_origen_id: UUID | null
   estado_vital: EstadoVital
   estado_reproductivo: EstadoReproductivo | null
+  fecha_prevista_parto: ISODate | null
   estado_sanitario: EstadoSanitario
   ubicacion_actual_id: UUID | null
   created_at: ISOTimestamp

@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { registrarVentaAnimal } from '@/modules/ganadero/animales/application/actions/registrarVentaAnimal'
 import { registrarMuerteAnimal } from '@/modules/ganadero/animales/application/actions/registrarMuerteAnimal'
+import { registrarCubricion } from '@/modules/ganadero/reproductivo/application/actions/registrarCubricion'
+import { confirmarGestacion } from '@/modules/ganadero/reproductivo/application/actions/confirmarGestacion'
+import type { TipoCubricion } from '@/modules/ganadero/reproductivo/domain/types'
 
 // Extrae el mensaje de error tanto de Error nativo como de PostgrestError (Supabase),
 // que no hereda de Error y por tanto no pasa instanceof.
@@ -40,5 +43,47 @@ export async function submitMuerteAnimal(
   } catch (err) {
     console.error('[submitMuerteAnimal]', err)
     return { error: extractMessage(err, 'Error al registrar la muerte') }
+  }
+}
+
+export async function submitConfirmacionGestacion(
+  animalId: string,
+  fechaConfirmacion: string,
+  observaciones?: string,
+): Promise<{ error: string } | null> {
+  try {
+    await confirmarGestacion({
+      animal_id:          animalId,
+      fecha_confirmacion: fechaConfirmacion,
+      observaciones,
+    })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return null
+  } catch (err) {
+    console.error('[submitConfirmacionGestacion]', err)
+    return { error: extractMessage(err, 'Error al confirmar la gestación') }
+  }
+}
+
+export async function submitCubricionAnimal(
+  animalId: string,
+  fechaCubricion: string,
+  tipoCubricion: TipoCubricion,
+  machoId?: string,
+  observaciones?: string,
+): Promise<{ error: string } | null> {
+  try {
+    await registrarCubricion({
+      animal_id:       animalId,
+      fecha_cubricion: fechaCubricion,
+      tipo_cubricion:  tipoCubricion,
+      macho_id:        machoId,
+      observaciones,
+    })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return null
+  } catch (err) {
+    console.error('[submitCubricionAnimal]', err)
+    return { error: extractMessage(err, 'Error al registrar la cubrición') }
   }
 }

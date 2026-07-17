@@ -1,5 +1,150 @@
 # Arquitectura
 
+## Arquitectura documental
+
+La documentación arquitectónica del proyecto se organiza en tres niveles claramente diferenciados.
+
+```text id="8z9xoa"
+Principios
+
+↓
+
+Patrones
+
+↓
+
+Dominios
+```
+
+Cada nivel posee una responsabilidad distinta y evita duplicar información entre documentos.
+
+---
+
+### Principios
+
+Los principios representan las reglas fundamentales sobre las que se construye todo el proyecto.
+
+Son decisiones estables, independientes de cualquier módulo concreto y que rara vez cambian.
+
+Entre ellas:
+
+* el Use Case es la unidad arquitectónica por defecto;
+* los eventos constituyen la única fuente de verdad;
+* los snapshots representan estados derivados;
+* el backend contiene toda la lógica del dominio.
+
+Documentación:
+
+```text id="eg8cb5"
+principles/
+
+architecture-principles.md
+
+event-first.md
+
+snapshots.md
+```
+
+---
+
+### Patrones
+
+Los patrones representan soluciones arquitectónicas reutilizables.
+
+No forman parte obligatoria de todos los desarrollos.
+
+Se incorporan únicamente cuando un dominio lo necesita.
+
+Actualmente el proyecto documenta los siguientes patrones:
+
+```text id="qbjzsn"
+patterns/
+
+context-rules-projection.md
+
+rpc-transaccional.md
+```
+
+---
+
+### Dominios
+
+Los dominios representan implementaciones concretas del negocio.
+
+Cada dominio aplica los principios generales y utiliza únicamente los patrones que necesita.
+
+Actualmente la documentación contempla los siguientes dominios:
+
+```text id="a6v1y5"
+domains/
+
+reproductive.md
+
+financial.md
+
+health.md
+
+operations.md
+```
+
+Los documentos de dominio evolucionarán junto con cada módulo funcional del proyecto.
+
+Los principios y patrones, por el contrario, permanecerán estables salvo cambios arquitectónicos relevantes.
+
+---
+
+## Relación entre los documentos
+
+La arquitectura completa puede entenderse mediante el siguiente flujo:
+
+```text id="g4i9xm"
+Principios
+
+↓
+
+Patrones
+
+↓
+
+Dominios
+
+↓
+
+PRD
+
+↓
+
+Implementación
+```
+
+Los principios establecen las reglas fundamentales.
+
+Los patrones proporcionan soluciones reutilizables.
+
+Los dominios describen cómo se aplican dichos patrones a un área funcional concreta.
+
+Los PRD desarrollan nuevas funcionalidades respetando esa arquitectura.
+
+Finalmente, la implementación materializa todas las decisiones anteriores.
+
+---
+
+## Regla general
+
+Siempre que aparezca una nueva decisión arquitectónica deberá clasificarse en uno de estos niveles:
+
+* ¿Es una regla permanente del proyecto?
+  → Principio.
+
+* ¿Es una solución reutilizable para varios dominios?
+  → Patrón.
+
+* ¿Es una decisión específica de un módulo funcional?
+  → Dominio.
+
+Esta clasificación evita duplicar documentación y mantiene claramente separadas las responsabilidades de cada documento.
+
+
 ## Principios
 
 - **Event-driven**: `eventos` es la única fuente de verdad. Los estados (`estado_vital`, `estado_reproductivo`, etc.) son derivados, nunca editados directamente.

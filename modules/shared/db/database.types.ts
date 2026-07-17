@@ -50,10 +50,12 @@ export type Database = {
           evento_origen_id: string | null
           fecha_nacimiento: string | null
           fecha_nacimiento_estimada: string | null
+          fecha_prevista_parto: string | null
           id: string
           lote_id: string | null
           lote_origen_id: string | null
           madre_id: string | null
+          nombre: string | null
           num_hierro: string | null
           origen: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id: string | null
@@ -79,10 +81,12 @@ export type Database = {
           evento_origen_id?: string | null
           fecha_nacimiento?: string | null
           fecha_nacimiento_estimada?: string | null
+          fecha_prevista_parto?: string | null
           id?: string
           lote_id?: string | null
           lote_origen_id?: string | null
           madre_id?: string | null
+          nombre?: string | null
           num_hierro?: string | null
           origen: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id?: string | null
@@ -108,10 +112,12 @@ export type Database = {
           evento_origen_id?: string | null
           fecha_nacimiento?: string | null
           fecha_nacimiento_estimada?: string | null
+          fecha_prevista_parto?: string | null
           id?: string
           lote_id?: string | null
           lote_origen_id?: string | null
           madre_id?: string | null
+          nombre?: string | null
           num_hierro?: string | null
           origen?: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id?: string | null
@@ -981,16 +987,58 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _resolve_animal_especie: {
+        Args: { p_animal_id: string }
+        Returns: Database["public"]["Enums"]["especie_enum"]
+      }
+      _resolve_motivo_id: { Args: { p_nombre: string }; Returns: string }
+      _resolve_tipo_evento_id: { Args: { p_codigo: string }; Returns: string }
+      registrar_compra_animal: {
+        Args: {
+          p_crotal?: string
+          p_especie: Database["public"]["Enums"]["especie_enum"]
+          p_fecha_compra: string
+          p_fecha_nacimiento?: string
+          p_fecha_nacimiento_estimada?: string
+          p_lote_id?: string
+          p_num_hierro?: string
+          p_raza_id?: string
+          p_sexo: Database["public"]["Enums"]["sexo_enum"]
+          p_tipo_productivo_id: string
+        }
+        Returns: string
+      }
+      registrar_confirmacion_gestacion: {
+        Args: {
+          p_animal_id: string
+          p_ciclo_id: string
+          p_fecha: string
+          p_observaciones?: string
+        }
+        Returns: string
+      }
+      registrar_cubricion: {
+        Args: {
+          p_animal_id: string
+          p_ciclo_id?: string
+          p_estado_reproductivo?: Database["public"]["Enums"]["estado_reproductivo_enum"]
+          p_fecha: string
+          p_fecha_prevista_parto?: string
+          p_macho_id?: string
+          p_observaciones?: string
+          p_tipo_cubricion?: string
+        }
+        Returns: string
+      }
+      registrar_salida_animal: {
+        Args: { p_animal_id: string; p_fecha: string; p_motivo: string }
+        Returns: string
+      }
     }
     Enums: {
       especie_enum: "vacuno" | "porcino"
       estado_lote_enum: "activo" | "cerrado"
-      estado_reproductivo_enum:
-        | "vacia"
-        | "no_reproductiva"
-        | "gestante"
-        | "lactante"
+      estado_reproductivo_enum: "vacia" | "cubierta" | "gestante" | "lactante"
       estado_sanitario_enum:
         | "sano"
         | "en_observacion"
@@ -1141,12 +1189,7 @@ export const Constants = {
     Enums: {
       especie_enum: ["vacuno", "porcino"],
       estado_lote_enum: ["activo", "cerrado"],
-      estado_reproductivo_enum: [
-        "vacia",
-        "no_reproductiva",
-        "gestante",
-        "lactante",
-      ],
+      estado_reproductivo_enum: ["vacia", "cubierta", "gestante", "lactante"],
       estado_sanitario_enum: [
         "sano",
         "en_observacion",

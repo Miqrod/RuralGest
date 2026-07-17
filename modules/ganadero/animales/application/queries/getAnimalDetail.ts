@@ -18,6 +18,7 @@ export interface AnimalDetail {
   es_reproductora: boolean
   estado_vital: EstadoVital
   estado_reproductivo: EstadoReproductivo | null
+  fecha_prevista_parto: ISODate | null
   estado_sanitario: EstadoSanitario
   origen: OrigenAnimal
   fecha_nacimiento: ISODate | null
@@ -51,6 +52,7 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
     es_reproductora:           animal.es_reproductora,
     estado_vital:              animal.estado_vital,
     estado_reproductivo:       animal.estado_reproductivo,
+    fecha_prevista_parto:      animal.fecha_prevista_parto,
     estado_sanitario:          animal.estado_sanitario,
     origen:                    animal.origen,
     fecha_nacimiento:          animal.fecha_nacimiento,

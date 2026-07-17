@@ -27,6 +27,7 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "framer-motion": "^12.42.0",
     "graphify": "^1.0.0",
@@ -60,7 +61,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest",
-    "db:types": "supabase gen types typescript --local 2>/dev/null > modules/shared/db/database.types.ts",
+    "db:types": "supabase gen types typescript --local 2>/dev/null | tee modules/shared/db/database.types.ts > types/supabase.ts",
     "env:local": "cp .env.local.local .env.local",
     "env:prod": "cp .env.prod .env.local"
   }

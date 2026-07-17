@@ -6,6 +6,7 @@ import { createServerClient } from '../../../../shared/db'
 export interface EventoDeAnimal {
   id: UUID
   fecha: ISODate
+  created_at: string     // desempate de ordenación: cuando dos eventos comparten fecha, el más reciente por timestamp va primero
   tipo_codigo: string    // e.g. 'ENTRADA' — clave de máquina
   tipo_label: string     // e.g. 'Entrada' — etiqueta visible (tipo_negocio)
   motivo: string | null  // e.g. 'compra' — null si el tipo no requiere motivo
@@ -22,6 +23,7 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoDeAni
       eventos!evento_animales_evento_id_fkey (
         id,
         fecha,
+        created_at,
         tipo_evento!eventos_tipo_evento_id_fkey ( codigo, tipo_negocio ),
         motivos_movimiento!eventos_motivo_id_fkey ( nombre )
       )
@@ -35,10 +37,15 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoDeAni
   return (data ?? [])
     .map((row) => row.eventos)
     .filter((e): e is NonNullable<typeof e> => e != null)
-    .sort((a, b) => b.fecha.localeCompare(a.fecha))
+    .sort((a, b) => {
+      const byFecha = b.fecha.localeCompare(a.fecha)
+      if (byFecha !== 0) return byFecha
+      return b.created_at.localeCompare(a.created_at)
+    })
     .map((e) => ({
       id:          e.id,
       fecha:       e.fecha as ISODate,
+      created_at:  e.created_at,
       tipo_codigo: (e.tipo_evento as { codigo: string; tipo_negocio: string } | null)?.codigo ?? '',
       tipo_label:  (e.tipo_evento as { codigo: string; tipo_negocio: string } | null)?.tipo_negocio ?? '',
       motivo:      (e.motivos_movimiento as { nombre: string } | null)?.nombre ?? null,

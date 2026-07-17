@@ -29,10 +29,10 @@ export function EstadoVitalBadge({
 // ─── Estado Reproductivo ──────────────────────────────────────────────────────
 
 const REPRODUCTIVO_CONFIG: Record<EstadoReproductivo, { label: string; className: string }> = {
-  gestante:         { label: 'Gestante',        className: 'bg-warning-soft text-warning' },
-  lactante:         { label: 'Lactante',         className: 'bg-success-soft text-success' },
-  vacia:            { label: 'Vacía',            className: 'bg-surface-alt text-ink-muted' },
-  no_reproductiva:  { label: 'No reproductiva',  className: 'bg-surface-alt text-ink-muted' },
+  vacia:    { label: 'Vacía',    className: 'bg-surface-alt text-ink-muted'   },
+  cubierta: { label: 'Cubierta', className: 'bg-blue-50 text-blue-600'        },
+  gestante: { label: 'Gestante', className: 'bg-warning-soft text-warning'    },
+  lactante: { label: 'Lactante', className: 'bg-success-soft text-success'    },
 }
 
 export function EstadoReproductivoBadge({

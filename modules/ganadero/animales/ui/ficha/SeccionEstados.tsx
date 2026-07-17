@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
+import { differenceInDays } from 'date-fns'
 import { FichaSection } from './FichaSection'
 import { EstadoVitalBadge, EstadoReproductivoBadge, EstadoSanitarioBadge } from './EstadosBadges'
+import { formatFecha } from '@/lib/format'
 import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 
 function FilaEstado({ label, children }: { label: string; children: ReactNode }) {
@@ -13,6 +15,10 @@ function FilaEstado({ label, children }: { label: string; children: ReactNode })
 }
 
 export function SeccionEstados({ animal }: { animal: AnimalDetail }) {
+  const diasRestantes = animal.fecha_prevista_parto
+    ? differenceInDays(new Date(animal.fecha_prevista_parto), new Date())
+    : null
+
   return (
     <FichaSection title="Estados">
       <FilaEstado label="Vital">
@@ -22,6 +28,19 @@ export function SeccionEstados({ animal }: { animal: AnimalDetail }) {
       {animal.es_reproductora && (
         <FilaEstado label="Reproductivo">
           <EstadoReproductivoBadge estado={animal.estado_reproductivo} />
+        </FilaEstado>
+      )}
+
+      {animal.fecha_prevista_parto && (
+        <FilaEstado label="Parto previsto">
+          <span className="text-sm text-ink">
+            {formatFecha(animal.fecha_prevista_parto)}
+            {diasRestantes !== null && (
+              <span className="ml-2 text-ink-muted">
+                ({diasRestantes > 0 ? `en ${diasRestantes} días` : diasRestantes === 0 ? 'hoy' : `hace ${Math.abs(diasRestantes)} días`})
+              </span>
+            )}
+          </span>
         </FilaEstado>
       )}
 

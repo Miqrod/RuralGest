@@ -4,16 +4,39 @@ import { motion } from 'framer-motion'
 import type { EventoDeAnimal } from '@/modules/ganadero/animales/application/queries/listarEventosDeAnimal'
 import { formatFecha } from '@/lib/format'
 
-const TIPO_LABEL: Record<string, string> = {
-  ENTRADA:   'Entrada',
-  SALIDA:    'Salida',
-  SANITARIO: 'Sanitario',
+// Badge: etiqueta de categoría visible en el historial.
+// Movimientos usan su propio nombre (Entrada/Salida); reproductivos comparten "Reproductivo".
+const BADGE_LABEL: Record<string, string> = {
+  ENTRADA:                'Entrada',
+  SALIDA:                 'Salida',
+  SANITARIO:              'Sanitario',
+  CUBRICION:              'Reproductivo',
+  CONFIRMACION_GESTACION: 'Reproductivo',
+  PARTO:                  'Reproductivo',
+  DESTETE:                'Reproductivo',
+  ABORTO:                 'Reproductivo',
 }
 
-const TIPO_CLASS: Record<string, string> = {
-  ENTRADA:   'bg-success-soft text-success',
-  SALIDA:    'bg-alert-soft text-alert',
-  SANITARIO: 'bg-warning-soft text-warning',
+// Color del badge por categoría (todos los reproductivos comparten el azul).
+const BADGE_CLASS: Record<string, string> = {
+  ENTRADA:                'bg-success-soft text-success',
+  SALIDA:                 'bg-alert-soft text-alert',
+  SANITARIO:              'bg-warning-soft text-warning',
+  CUBRICION:              'bg-blue-50 text-blue-600',
+  CONFIRMACION_GESTACION: 'bg-blue-50 text-blue-600',
+  PARTO:                  'bg-blue-50 text-blue-600',
+  DESTETE:                'bg-blue-50 text-blue-600',
+  ABORTO:                 'bg-blue-50 text-blue-600',
+}
+
+// Descripción específica del evento (complementa al badge de categoría).
+// Para movimientos (ENTRADA/SALIDA) la descripción viene del campo motivo.
+const EVENTO_DESCRIPCION: Record<string, string> = {
+  CUBRICION:              'Cubrición',
+  CONFIRMACION_GESTACION: 'Confirmación gestación',
+  PARTO:                  'Parto',
+  DESTETE:                'Destete',
+  ABORTO:                 'Aborto',
 }
 
 const container = {
@@ -35,16 +58,17 @@ export function EventosList({ eventos }: { eventos: EventoDeAnimal[] }) {
       className="space-y-3"
     >
       {eventos.map((evento) => {
-        const badgeClass = TIPO_CLASS[evento.tipo_codigo] ?? 'bg-surface-alt text-ink-muted'
-        const label      = TIPO_LABEL[evento.tipo_codigo] ?? evento.tipo_label
+        const badgeClass  = BADGE_CLASS[evento.tipo_codigo]  ?? 'bg-surface-alt text-ink-muted'
+        const badgeLabel  = BADGE_LABEL[evento.tipo_codigo]  ?? evento.tipo_label
+        const descripcion = EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
 
         return (
           <motion.li key={evento.id} variants={item} className="flex items-center gap-3 text-sm">
             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}>
-              {label}
+              {badgeLabel}
             </span>
-            {evento.motivo && (
-              <span className="text-ink-muted capitalize">{evento.motivo}</span>
+            {descripcion && (
+              <span className="text-ink-muted capitalize">{descripcion}</span>
             )}
             <span className="text-divider">·</span>
             <span className="text-ink">{formatFecha(evento.fecha)}</span>

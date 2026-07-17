@@ -94,6 +94,72 @@ Pendiente: ajustar el dropdown de usuario para que (1) no pise el header y apare
 claramente por debajo de él, y (2) tenga una animación de entrada suave (fade + slide-down).
 Cuando: al trabajar en la capa de UI/polish del header.
 
+## REPRODUCTIVEENGINE — INTÉRPRETE DEL DOMINIO REPRODUCTIVO
+
+Patrón identificado durante PRD007 pero no implementado por falta de casos de uso suficientes.
+
+`ReproductiveEngine` encapsula el pipeline `Context → EligibilityRules → CycleRules → Projection`
+como intérprete reutilizable del dominio reproductivo — distinto del Use Case, que sigue siendo
+el orquestador. Su rol es interpretar el significado biológico de un evento, no coordinarlo.
+
+Decidido no implementarlo con un único caso de uso (Cubrición). El patrón emerge cuando
+al menos dos casos de uso reproductivos compartan exactamente el mismo pipeline de interpretación.
+
+Candidatos que lo justificarían: Parto, Aborto, Destete (todos pasan por Eligibility + Cycle + Projection).
+
+`buildReproductiveContext()` también se crea dentro del engine, no como fichero independiente.
+Por ahora el Use Case construye el `ReproductiveContext` directamente como objeto literal.
+
+Cuando: al implementar el segundo evento reproductivo (PRD008 o posterior).
+Referencia: `documentacion/arquitectura/patterns/context-rules-projection.md`
+
+## INFERENCIA DE PADRE Y RAZA EN ALTA DE CRÍAS (PARTO)
+
+Al registrar un parto, el Use Case puede inferir automáticamente datos de la cría
+recorriendo la cadena ya persistida en cubrición:
+
+  ciclo_reproductivo
+    → evento CUBRICION (último del ciclo, por fecha)
+    → metadata_json.macho_id → animal padre → raza_id
+
+Esto permite pre-rellenar en el formulario de parto/alta de crías:
+  - **Padre**: macho_id de la cubrición vigente del ciclo
+  - **Raza de la cría**:
+      - Si raza_madre == raza_padre → misma raza
+      - Si son distintas → null (usuario decide) o marcar como "cruzada" (a decidir)
+
+La inferencia es una sugerencia al usuario, no un valor impuesto.
+El usuario puede corregirla si la información fuera incorrecta.
+
+Requisito previo: que el macho_id se haya informado en la cubrición
+(cubriciones sin macho_id no permiten esta inferencia).
+
+Cuando: al implementar el flujo de PARTO y alta de crías (PRD008 o posterior).
+Datos ya disponibles: `eventos.metadata_json` contiene `macho_id` desde PRD007.
+
+## TRAZABILIDAD GENÉTICA — DONANTE / REGISTRO GENÉTICO
+
+Identificado durante PRD007 al diseñar `RegistrarCubricionInput`.
+
+`macho_id` (FK a `animal`) cubre el caso del macho interno (cubrición natural o IA con semen propio).
+Para inseminación con semen externo, la información genética relevante es distinta:
+referencia de pajuela, casa genética (Semex, CRI...), número de registro del donante, raza de la
+línea paterna, valoración genética (ICO, TPI...). Estos datos no corresponden a un animal del sistema.
+
+**Posible solución cuando sea necesario:**
+Una entidad `donante_genetico` (o `registro_genetico`) independiente de `animal`:
+- id, nombre, raza, especie
+- referencia_externa (número de catálogo del proveedor)
+- proveedor (casa genética)
+- valoracion_genetica (JSONB libre para índices específicos por especie)
+La cubrición entonces tendría `donante_id UUID NULL REFERENCES donante_genetico(id)`
+en paralelo (no en lugar) a `macho_id`, ya que ambos son conceptos distintos.
+
+Por ahora: el campo `observaciones` de `RegistrarCubricionInput` absorbe la referencia libre
+de semen externo sin estructura formal.
+
+Cuando: al detectar necesidad real de consultas o métricas por línea genética.
+
 ## DISCARDED HOOKS
 
 Not needed: `useLocalStorage`, `usePrevious`, `useAsync`, `useMediaQuery`.
