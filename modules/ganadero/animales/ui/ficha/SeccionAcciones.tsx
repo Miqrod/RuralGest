@@ -131,7 +131,7 @@ export function SeccionAcciones({ animalId, crotal, estadoVital, esReproductora,
                     {estadoReproductivo === 'cubierta' ? 'Registrar nueva cubrición' : 'Registrar cubrición'}
                   </Button>
                 )}
-                {esReproductora && estadoReproductivo === 'cubierta' && (
+                {esReproductora && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'vacia') && (
                   <Button
                     type="button"
                     variant={accionActiva === 'confirmacion' ? 'outline' : 'default'}
@@ -176,9 +176,11 @@ export function SeccionAcciones({ animalId, crotal, estadoVital, esReproductora,
                   >
                     <div className="bg-canvas rounded-lg border border-divider p-5 mt-1 space-y-4">
                       {estadoReproductivo === 'cubierta' && (
-                        <p className="text-sm text-warning bg-warning-soft rounded-md px-3 py-2">
-                          Este animal ya tiene una cubrición en curso. Registrar una nueva cubrición añadirá el evento al mismo ciclo y recalculará la fecha prevista de parto desde la nueva fecha de cubrición.
-                        </p>
+                        <div className="rounded-md border border-warning bg-warning-soft px-4 py-3 text-sm text-warning space-y-1">
+                          <p className="font-medium">Este animal ya tiene una cubrición registrada.</p>
+                          <p>Continúa únicamente si realmente se ha producido una nueva cubrición.</p>
+                          <p>El sistema conservará el historial y utilizará la cubrición más reciente para continuar el seguimiento de la gestación. Se recalculará la fecha prevista de parto.</p>
+                        </div>
                       )}
                       <FormCubricion
                         animalId={animalId}
@@ -204,6 +206,7 @@ export function SeccionAcciones({ animalId, crotal, estadoVital, esReproductora,
                       <FormConfirmacionGestacion
                         animalId={animalId}
                         crotal={crotal}
+                        estadoReproductivo={estadoReproductivo!}
                         onSuccess={handleConfirmacionSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />

@@ -1008,15 +1008,26 @@ export type Database = {
         }
         Returns: string
       }
-      registrar_confirmacion_gestacion: {
-        Args: {
-          p_animal_id: string
-          p_ciclo_id: string
-          p_fecha: string
-          p_observaciones?: string
-        }
-        Returns: string
-      }
+      registrar_confirmacion_gestacion:
+        | {
+            Args: {
+              p_animal_id: string
+              p_ciclo_id?: string
+              p_fecha: string
+              p_fecha_prevista_parto?: string
+              p_observaciones?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_animal_id: string
+              p_ciclo_id: string
+              p_fecha: string
+              p_observaciones?: string
+            }
+            Returns: string
+          }
       registrar_cubricion: {
         Args: {
           p_animal_id: string

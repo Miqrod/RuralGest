@@ -27,9 +27,12 @@ export interface RegistrarCubricionInput {
 }
 
 export interface RegistrarConfirmacionGestacionInput {
-  animal_id:             UUID
-  fecha_confirmacion:    ISODate
-  observaciones?:        string
+  animal_id:                   UUID
+  fecha_confirmacion:          ISODate
+  // Solo necesario cuando no existe cubrición previa (estado vacia).
+  // Dato auxiliar efímero: se usa para calcular fecha_prevista_parto y nunca se persiste.
+  meses_gestacion_estimados?:  number
+  observaciones?:              string
 }
 
 // ─── Tipos del patrón CRP ───────────────────────────────────────────────────
@@ -53,6 +56,10 @@ export interface ReproductiveContext {
   cicloAbierto: CicloReproductivo | null
   eventoSolicitado: CodigoEventoReproductivo
   fechaEvento: ISODate
+  // Presente solo en CONFIRMACION_GESTACION desde estado vacia (sin cubrición previa).
+  // Dato auxiliar efímero: permite a ReproductiveProjection calcular fecha_prevista_parto.
+  // Nunca se persiste; desaparece tras finalizar el procesamiento del evento.
+  mesesGestacionEstimados?: number
 }
 
 // Decisión que devuelve ReproductiveCycleRules tras evaluar el contexto.

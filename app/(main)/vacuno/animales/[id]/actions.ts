@@ -49,12 +49,14 @@ export async function submitMuerteAnimal(
 export async function submitConfirmacionGestacion(
   animalId: string,
   fechaConfirmacion: string,
+  mesesGestacionEstimados?: number,
   observaciones?: string,
 ): Promise<{ error: string } | null> {
   try {
     await confirmarGestacion({
-      animal_id:          animalId,
-      fecha_confirmacion: fechaConfirmacion,
+      animal_id:                  animalId,
+      fecha_confirmacion:         fechaConfirmacion,
+      meses_gestacion_estimados:  mesesGestacionEstimados,
       observaciones,
     })
     revalidatePath(`/vacuno/animales/${animalId}`)

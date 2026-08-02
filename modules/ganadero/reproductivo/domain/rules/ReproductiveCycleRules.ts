@@ -9,9 +9,10 @@ import type { ReproductiveContext, ReproductiveCycleDecision } from '../types'
 //   sin ciclo abierto       → crear      (primera cubrición o tras timeout/desconocido)
 //
 // CONFIRMACION_GESTACION:
-//   siempre reutiliza el ciclo abierto — confirmar sin cubrición previa es imposible.
+//   ciclo abierto existente → reutilizar (vino de cubrición previa)
+//   sin ciclo abierto       → crear      (PRD008: confirmación es el primer hecho del ciclo)
 //
-// PARTO, DESTETE, ABORTO: se implementarán en PRD008+ cuando existan sus Use Cases.
+// PARTO, DESTETE, ABORTO: se implementarán cuando existan sus Use Cases.
 export function evalCycleRules(ctx: ReproductiveContext): ReproductiveCycleDecision {
   switch (ctx.eventoSolicitado) {
     case 'CUBRICION':
@@ -20,10 +21,9 @@ export function evalCycleRules(ctx: ReproductiveContext): ReproductiveCycleDecis
         : { accion: 'crear',      cicloId: null }
 
     case 'CONFIRMACION_GESTACION':
-      if (ctx.cicloAbierto === null) {
-        throw new Error('No existe ciclo reproductivo abierto para confirmar gestación')
-      }
-      return { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
+      return ctx.cicloAbierto !== null
+        ? { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
+        : { accion: 'crear',      cicloId: null }
 
     default:
       throw new Error(

@@ -84,3 +84,4 @@ bocetos/
 
 # Supabase (el .gitignore interno de supabase/ ya excluye .temp y .branches)
 supabase/.temp/
+supabase/snippets/

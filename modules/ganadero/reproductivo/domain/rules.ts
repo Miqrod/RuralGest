@@ -25,7 +25,8 @@ import type { CodigoEventoReproductivo } from './types'
 
 const TRANSICIONES: Record<CodigoEventoReproductivo, { desde: EstadoReproductivo[]; hasta: EstadoReproductivo }> = {
   CUBRICION:              { desde: ['vacia', 'cubierta'],          hasta: 'cubierta'  },
-  CONFIRMACION_GESTACION: { desde: ['cubierta'],                   hasta: 'gestante'  },
+  // PRD008: 'vacia' permite confirmación directa cuando no existe cubrición previa (extensivo).
+  CONFIRMACION_GESTACION: { desde: ['cubierta', 'vacia'],          hasta: 'gestante'  },
   PARTO:                  { desde: ['cubierta', 'gestante'],       hasta: 'lactante'  },
   DESTETE:                { desde: ['lactante'],                   hasta: 'vacia'     },
   ABORTO:                 { desde: ['cubierta', 'gestante'],       hasta: 'vacia'     },
