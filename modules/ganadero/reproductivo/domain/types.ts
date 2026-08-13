@@ -33,6 +33,40 @@ export interface RegistrarConfirmacionGestacionInput {
   // Dato auxiliar efímero: se usa para calcular fecha_prevista_parto y nunca se persiste.
   meses_gestacion_estimados?:  number
   observaciones?:              string
+  // Solo relevante cuando no existe cubrición previa (estado vacia).
+  // Se persiste en metadata_json del evento CONFIRMACION_GESTACION con la clave "padre_id"
+  // (distinta de "macho_id" de CUBRICION — ver decisions.md § "Inferencia del padre en el parto").
+  padre_id?:                   UUID | null
+}
+
+export type TipoParto = 'natural' | 'asistido'
+
+export interface RegistrarPartoInput {
+  animal_id:       UUID           // madre
+  fecha_parto:     ISODate
+  numero_nacidos:  number
+  numero_vivos:    number
+  numero_muertos:  number
+  tipo_parto:      TipoParto
+  observaciones?:  string
+}
+
+// Resultado devuelto al cliente: IDs de las crías creadas para el drawer de identificación.
+export interface RegistrarPartoResult {
+  eventoId: UUID
+  criasIds: UUID[]
+}
+
+export interface RegistrarDesteteInput {
+  cria_id:        UUID
+  fecha:          ISODate
+  observaciones?: string
+}
+
+export interface RegistrarDesteteResult {
+  eventoId:      UUID
+  // true cuando el ciclo quedó cerrado (última cría destetada) — la UI puede refrescar la madre
+  cicloCerrado:  boolean
 }
 
 // ─── Tipos del patrón CRP ───────────────────────────────────────────────────

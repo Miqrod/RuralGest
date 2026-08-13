@@ -13,6 +13,31 @@ Resuelto con Sonner: `toast.success` / `toast.error` en Server Actions + Client 
 `<Toaster position="top-center" richColors />` añadido en `app/layout.tsx`.
 Patrón documentado en `patterns.md` — sección "Toasts con sonner".
 
+## ⚠️ PADRE AUSENTE EN CONFIRMACIÓN DE GESTACIÓN DIRECTA (sin cubrición previa)
+
+**Bug de trazabilidad genética — prioridad alta.**
+
+`RegistrarConfirmacionGestacionInput` no incluye `macho_id`. Cuando el ganadero confirma
+una gestación directamente desde estado `vacia` (sin cubrición registrada — habitual en
+extensivo), no tiene forma de informar el padre aunque lo conozca con certeza: en una
+explotación extensiva solo puede haber un semental por cercado, por lo que la paternidad
+es conocida aunque no se haya registrado la cubrición.
+
+**Consecuencia actual:** las crías nacidas de ciclos sin cubrición registrada tendrán
+`padre_id = null` aunque el padre sea conocido. Esto rompe la trazabilidad genética.
+
+**Solución:**
+1. Añadir `macho_id?: UUID` a `RegistrarConfirmacionGestacionInput`.
+2. Actualizar el RPC `registrar_confirmacion_gestacion` para persistir `macho_id`
+   en `eventos.metadata_json` del evento CONFIRMACION_GESTACION.
+3. Actualizar `getMachoIdFromCiclo` (repository reproductivo) para buscar `macho_id`
+   también en eventos CONFIRMACION_GESTACION cuando no haya CUBRICION en el ciclo.
+4. Actualizar el formulario `FormConfirmacionGestacion.tsx` para mostrar el selector
+   de macho cuando el animal está en estado `vacia`.
+
+Cuándo: en el siguiente PRD que toque el flujo reproductivo o antes de implementar
+genealogía y estadísticas de productividad reproductiva.
+
 ## LADO FINANCIERO DE LA COMPRA DE ANIMAL (precio_compra, proveedor)
 
 `RegistrarCompraAnimalInput` no incluye `precio_compra` ni `proveedor_nombre` porque no
@@ -92,25 +117,21 @@ Cuando: al trabajar en la capa de UI/polish del header.
 
 ## REPRODUCTIVEENGINE — INTÉRPRETE DEL DOMINIO REPRODUCTIVO
 
-Patrón identificado durante PRD007 pero no implementado todavía.
+Patrón identificado durante PRD007 pero diferido conscientemente hasta completar el módulo reproductivo.
 
 `ReproductiveEngine` encapsula el pipeline `Context → EligibilityRules → CycleRules → Projection`
 como intérprete reutilizable del dominio reproductivo — distinto del Use Case, que sigue siendo
 el orquestador. Su rol es interpretar el significado biológico de un evento, no coordinarlo.
 
-Estado tras PRD007: existen dos Use Cases (Cubrición y Confirmación de gestación) pero no comparten
-exactamente el mismo pipeline — Confirmación omite `ReproductiveProjection` porque no recalcula
-`fecha_prevista_parto`. El threshold para crear el Engine es que dos casos de uso compartan
-el pipeline completo (Eligibility + Cycle + Projection).
-
-Candidatos que lo justificarían: Parto, Aborto (ambos cierran ciclo y limpian `fecha_prevista_parto`
-→ usan Projection). Cuando haya dos de estos implementados, extraer el Engine.
-
-`buildReproductiveContext()` también se crea dentro del engine, no como fichero independiente.
+`buildReproductiveContext()` también viviría dentro del engine, no como fichero independiente.
 Por ahora cada Use Case construye el `ReproductiveContext` directamente como objeto literal.
 
-Cuando: al implementar Parto o Aborto (PRD009 o posterior).
-Referencia: `documentacion/arquitectura/patterns/context-rules-projection.md`
+**No es una refactorización puntual.** Es la pieza que culminará todo el módulo reproductivo.
+Su momento natural es cuando todos los eventos del ciclo estén implementados:
+Cubrición ✅ · Confirmación de Gestación ✅ · Parto ✅ (PRD009) · Destete ✅ (PRD010) · Aborto.
+
+Cuando: tras implementar Aborto y Destete — cuando el ciclo reproductivo completo esté consolidado.
+Referencia: `documentacion/base_conocimiento/arquitectura/patterns/context-rules-projection-pattern.md`
 
 ## INFERENCIA DE PADRE Y RAZA EN ALTA DE CRÍAS (PARTO)
 

@@ -25,9 +25,23 @@ export function evalCycleRules(ctx: ReproductiveContext): ReproductiveCycleDecis
         ? { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
         : { accion: 'crear',      cicloId: null }
 
+    case 'PARTO':
+      // El Parto no crea ni cierra el ciclo — solo puede ocurrir con uno abierto.
+      // EligibilityRules garantiza que el estado es cubierta/gestante, lo que implica ciclo abierto.
+      if (ctx.cicloAbierto === null) {
+        throw new Error('PARTO requiere un ciclo reproductivo abierto')
+      }
+      return { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
+
     default:
       throw new Error(
         `ReproductiveCycleRules: evento '${ctx.eventoSolicitado}' no implementado aún`,
       )
   }
+}
+
+// El ciclo debe cerrarse cuando no quedan crías con vínculo materno activo.
+// El caller (Use Case de destete) obtiene el count del repositorio y pasa aquí el resultado.
+export function shouldCloseCycle(activeBondsCount: number): boolean {
+  return activeBondsCount === 0
 }

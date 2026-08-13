@@ -1,7 +1,7 @@
 import type { UUID, ISODate, ISOTimestamp } from '../../../../shared/types'
 import type {
   Especie, Sexo, OrigenAnimal,
-  EstadoVital, EstadoReproductivo, EstadoSanitario,
+  EstadoVital, EstadoReproductivo, EstadoSanitario, EstadoIdentificacion, EstadoVinculoMaterno,
 } from '../../../shared/domain/types'
 import { getAnimalById, getAnimalCrotal } from '../../infrastructure/repository'
 
@@ -10,6 +10,7 @@ import { getAnimalById, getAnimalCrotal } from '../../infrastructure/repository'
 export interface AnimalDetail {
   id: UUID
   crotal: string | null
+  nombre: string | null
   num_hierro: string | null
   especie: Especie
   sexo: Sexo
@@ -23,6 +24,8 @@ export interface AnimalDetail {
   origen: OrigenAnimal
   fecha_nacimiento: ISODate | null
   fecha_nacimiento_estimada: ISODate | null
+  estado_identificacion: EstadoIdentificacion | null
+  estado_vinculo_materno: EstadoVinculoMaterno | null
   madre_id: UUID | null
   madre_crotal: string | null
   padre_id: UUID | null
@@ -44,6 +47,7 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
   return {
     id:                        animal.id,
     crotal:                    animal.crotal,
+    nombre:                    animal.nombre,
     num_hierro:                animal.num_hierro,
     especie:                   animal.especie,
     sexo:                      animal.sexo,
@@ -57,6 +61,8 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
     origen:                    animal.origen,
     fecha_nacimiento:          animal.fecha_nacimiento,
     fecha_nacimiento_estimada: animal.fecha_nacimiento_estimada,
+    estado_identificacion:     animal.estado_identificacion,
+    estado_vinculo_materno:    animal.estado_vinculo_materno,
     madre_id:                  animal.madre_id,
     madre_crotal,
     padre_id:                  animal.padre_id,

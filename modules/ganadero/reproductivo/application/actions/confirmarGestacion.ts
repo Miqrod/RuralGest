@@ -66,6 +66,7 @@ export async function confirmarGestacion(
     p_ciclo_id:             decision.cicloId     ?? undefined,  // null → RPC crea el ciclo
     p_fecha_prevista_parto: snapshot.fechaPrevistaParto ?? undefined,
     p_observaciones:        input.observaciones  ?? undefined,
+    p_padre_id:             input.padre_id       ?? undefined,
   })
   if (error) throw error
 

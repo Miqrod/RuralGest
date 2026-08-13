@@ -205,6 +205,7 @@
   --world-accent: #166534; /* default — sigue la ruta activa */
   --world-accent-soft: #E8F0EB; /* #166534 al 10% sobre blanco */
   --color-world-soft: var(--world-accent-soft); /* necesario: Tailwind bg-world-soft referencia esta var */
+  --world-banner-gradient: linear-gradient(135deg, #0a3320 0%, #166534 55%, #1e7a40 100%);
 
   /* Colores fijos por mundo — para el sidebar (independiente de la ruta activa) */
   --nav-world-default:    #166534;
@@ -212,23 +213,30 @@
   --nav-world-porcino:    #ff7700;
   --nav-world-financiero: #3377aa;
 }
-[data-world='vacuno']     { --world-accent: #800000; --world-accent-soft: #F2E6E6; }
-[data-world='porcino']    { --world-accent: #ff7700; --world-accent-soft: #FFF1E6; }
-[data-world='financiero'] { --world-accent: #3377aa; --world-accent-soft: #EBF1F7; }
+[data-world='vacuno']     { --world-accent: #800000; --world-accent-soft: #F2E6E6; --world-banner-gradient: linear-gradient(135deg, #3d0a0a 0%, #800000 55%, #9a1c1c 100%); }
+[data-world='porcino']    { --world-accent: #ff7700; --world-accent-soft: #FFF1E6; --world-banner-gradient: linear-gradient(135deg, #7a3800 0%, #cc6000 55%, #ff7700 100%); }
+[data-world='financiero'] { --world-accent: #3377aa; --world-accent-soft: #EBF1F7; --world-banner-gradient: linear-gradient(135deg, #1a3d5c 0%, #3377aa 55%, #4a8ec4 100%); }
 
 /* Dark mode world accents (colores más claros para legibilidad sobre fondos oscuros) */
 .dark {
   --world-accent: #34d399;
   --world-accent-soft: #0d2b22; /* #34d399 al 10% sobre #292524 (canvas dark) */
+  --world-banner-gradient: linear-gradient(135deg, #052e16 0%, #166534 55%, #14532d 100%);
 
   --nav-world-default:    #34d399;
   --nav-world-vacuno:     #f87171;
   --nav-world-porcino:    #fb923c;
   --nav-world-financiero: #60a5fa;
 }
-.dark [data-world='vacuno']        { --world-accent: #f87171; --world-accent-soft: #2e1a1a; }
-.dark [data-world='porcino']       { --world-accent: #fb923c; --world-accent-soft: #2e1e10; }
-.dark [data-world='financiero']    { --world-accent: #60a5fa; --world-accent-soft: #101e2e; }
+.dark [data-world='vacuno']        { --world-accent: #f87171; --world-accent-soft: #2e1a1a; --world-banner-gradient: linear-gradient(135deg, #2e1a1a 0%, #7f1d1d 55%, #991b1b 100%); }
+.dark [data-world='porcino']       { --world-accent: #fb923c; --world-accent-soft: #2e1e10; --world-banner-gradient: linear-gradient(135deg, #431407 0%, #9a3412 55%, #c2410c 100%); }
+.dark [data-world='financiero']    { --world-accent: #60a5fa; --world-accent-soft: #101e2e; --world-banner-gradient: linear-gradient(135deg, #0c1a2e 0%, #1e3a5f 55%, #1d4ed8 100%); }
+
+@layer utilities {
+  .bg-world-gradient {
+    background: var(--world-banner-gradient);
+  }
+}
 
 @layer base {
   * {

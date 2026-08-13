@@ -590,7 +590,11 @@ Un parto deja de ser únicamente un parto.
 
 Pasa a formar parte del mismo proceso reproductivo iniciado meses atrás.
 
-Y un destete deja de interpretarse como un evento aislado para convertirse en el acontecimiento que marca el cierre de dicho ciclo.
+Un destete deja de interpretarse como un evento aislado para convertirse en un acontecimiento que modifica la dependencia funcional entre la madre y una de sus crías.
+
+El ciclo no se cierra necesariamente con ese evento.
+
+El ciclo continúa mientras exista alguna cría que mantenga un vínculo materno activo y finaliza únicamente cuando desaparece toda dependencia funcional derivada de dicho ciclo.
 
 El ciclo reproductivo aporta, por tanto, el contexto necesario para interpretar correctamente cada evento.
 
@@ -616,7 +620,51 @@ El ciclo no representa una propiedad permanente del animal.
 
 Representa un proceso concreto que comienza, evoluciona y finaliza.
 
-Un mismo animal puede completar numerosos ciclos reproductivos a lo largo de su vida, cada uno completamente independiente de los anteriores.
+Un mismo animal puede completar numerosos ciclos reproductivos a lo largo de su vida.
+
+### El ciclo no se cierra por un evento concreto
+
+El cierre del ciclo no debe interpretarse como una consecuencia directa de un evento reproductivo concreto.
+
+En particular:
+
+* el Parto NO cierra el ciclo;
+* un Destete individual NO cierra necesariamente el ciclo;
+* la existencia de varias crías puede prolongar el proceso de lactancia aunque alguna de ellas ya haya sido destetada;
+* el ciclo finaliza cuando deja de existir cualquier dependencia funcional activa entre la madre y las crías nacidas dentro de ese ciclo.
+
+Por tanto, el dominio no pregunta:
+
+> ¿Ha ocurrido un Destete?
+
+Pregunta:
+
+> ¿Queda alguna cría viva que continúe dependiendo funcionalmente de la madre?
+
+Mientras la respuesta sea sí, el ciclo continúa abierto.
+
+Cuando la respuesta pasa a ser no, el ciclo puede finalizar.
+
+Esta regla permite representar correctamente tanto los casos habituales de una única cría como situaciones en las que existen varias crías con fechas de destete diferentes o en las que alguna cría deja de depender de la madre por otros motivos.
+
+El cierre del ciclo es, por tanto, una consecuencia derivada del estado de los vínculos madre-cría y no un hecho ganadero independiente.
+
+### Nuevo ciclo
+
+Cuando un ciclo finaliza, el dominio determina si la reproductora continúa siendo elegible para un nuevo ciclo.
+
+Si continúa siéndolo, se crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+
+La creación del nuevo ciclo no constituye un evento del historial del animal.
+
+Es una consecuencia interna del dominio necesaria para mantener correctamente la continuidad del ciclo reproductivo.
+
+El historial de eventos continuará mostrando únicamente hechos ganaderos reales.
+
+Por este motivo, el usuario no verá eventos como "inicio de ciclo" o "cierre de ciclo".
+
+La existencia del nuevo ciclo se reflejará mediante el estado reproductivo proyectado y mediante el historial reproductivo agregado que presenta la aplicación.
+
 
 ---
 
@@ -660,15 +708,61 @@ Todo ciclo reproductivo posee un momento de inicio y un momento de finalización
 
 Entre ambos se desarrollan todos los acontecimientos relacionados con ese proceso reproductivo.
 
-La apertura y el cierre del ciclo no dependen de una duración determinada ni del paso del tiempo.
+La apertura del ciclo se produce cuando aparece el primer hecho que permite justificar un nuevo proceso reproductivo, normalmente una Cubrición o, en determinados casos, una Confirmación de Gestación sin Cubrición previa.
 
-Dependen exclusivamente del conocimiento registrado mediante eventos.
+La finalización del ciclo no depende de una duración determinada ni del paso del tiempo.
 
-Esto permite que el modelo se adapte tanto a procesos completos como a situaciones donde parte de la información resulta desconocida.
+Tampoco depende directamente de un evento concreto como el Destete.
 
-El ciclo permanece abierto mientras exista un proceso reproductivo activo.
+El ciclo permanece abierto mientras exista una dependencia funcional activa entre la madre y alguna de las crías nacidas dentro de dicho ciclo.
 
-Cuando dicho proceso concluye, el ciclo se cierra y el animal queda preparado para iniciar uno nuevo cuando corresponda.
+La regla de cierre es:
+
+> **Un ciclo reproductivo finaliza cuando deja de existir cualquier vínculo materno activo derivado de ese ciclo.**
+
+Esta condición se evalúa a partir de las crías que continúan siendo funcionalmente dependientes de la madre.
+
+El sistema no necesita registrar un evento específico de "cierre de ciclo".
+
+El cierre constituye una consecuencia derivada del conocimiento disponible.
+
+### Finalización individual de los vínculos
+
+Cada cría nacida dentro del ciclo mantiene inicialmente un vínculo materno activo.
+
+Ese vínculo puede finalizar por:
+
+* Destete;
+* Venta de la cría antes del Destete;
+* Muerte de la cría antes del Destete;
+* Venta de la madre;
+* Muerte de la madre.
+
+Cuando un vínculo finaliza, deja de contribuir a la continuidad del ciclo.
+
+La finalización de un vínculo individual no implica necesariamente la finalización del ciclo.
+
+El ciclo solo puede finalizar cuando ya no queda ninguna cría viva y funcionalmente dependiente de la madre.
+
+### Creación del ciclo siguiente
+
+Cuando el último vínculo activo desaparece, el ciclo actual finaliza.
+
+Si la madre continúa siendo `REPRODUCTORA` y, por tanto, continúa siendo elegible para participar en el dominio reproductivo, el dominio crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+
+Este nuevo ciclo representa el contexto reproductivo disponible para la siguiente reproducción.
+
+No se genera ningún evento de historial para representar su creación.
+
+El siguiente evento reproductivo registrado por el usuario, como una Cubrición o una Confirmación de Gestación, será el primer hecho visible que permitirá comprender la evolución de ese nuevo ciclo.
+
+### TIMEOUT
+
+El cierre por discontinuidad temporal queda fuera del alcance actual del modelo implementado.
+
+No existe un cierre automático por tiempo ni un evento `TIMEOUT`.
+
+La detección de posibles discontinuidades temporales entre acontecimientos reproductivos se conserva únicamente como una posible evolución futura del dominio y deberá evaluarse cuando exista un nuevo evento reproductivo que proporcione contexto suficiente para tomar dicha decisión.
 
 ---
 
@@ -685,6 +779,139 @@ Cada nuevo evento reproductivo se incorpora siempre al ciclo abierto.
 Si no existe ninguno, el sistema determinará si dicho evento debe iniciar un nuevo ciclo de acuerdo con las reglas del dominio.
 
 Una vez cerrado, ese ciclo pasa a formar parte del historial del animal y nunca volverá a modificarse.
+
+---
+
+## Dependencia funcional madre-cría
+
+El ciclo reproductivo utiliza una relación funcional entre la madre y las crías nacidas dentro del ciclo para determinar si el proceso reproductivo continúa abierto.
+
+Esta relación no representa únicamente genealogía.
+
+La genealogía responde a:
+
+> ¿Quién es la madre de este animal?
+
+La dependencia funcional responde a:
+
+> ¿Esta cría continúa dependiendo de su madre dentro del proceso reproductivo que se está gestionando?
+
+Ambos conceptos son independientes.
+
+### Genealogía
+
+La relación `madre_id` pertenece a la identidad permanente del animal.
+
+Cuando una cría se crea a partir de un Parto, su `madre_id` identifica a la madre de forma permanente.
+
+Este dato no se modifica como consecuencia del Destete, de una Venta, de una Muerte ni de ningún otro acontecimiento posterior.
+
+La genealogía permanece aunque la relación funcional entre ambos animales haya terminado.
+
+### Estado del vínculo
+
+La dependencia funcional se representa mediante el campo técnico:
+
+`animal.estado_vinculo_materno`
+
+Sus valores posibles son:
+
+| Valor        | Significado                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `NULL`       | El sistema no dispone de un vínculo materno funcional aplicable o no puede determinarlo a partir de la información disponible. |
+| `ACTIVO`     | La cría mantiene una dependencia funcional de su madre.                                                                        |
+| `FINALIZADO` | La dependencia funcional entre madre y cría ha terminado.                                                                      |
+
+Este campo pertenece a `ANIMAL`.
+
+Es un dato derivado y exclusivamente interno.
+
+No es editable por el usuario y no forma parte de la interfaz como dato operativo.
+
+### Nacimiento del vínculo
+
+Cuando el Parto crea una nueva cría viva:
+
+* se crea la entidad `ANIMAL`;
+* se establece `madre_id`;
+* `tipo_productivo = CRÍA`;
+* `estado_vinculo_materno = ACTIVO`.
+
+De esta forma, el vínculo nace como consecuencia del mismo hecho que crea la cría.
+
+No es necesario crear una entidad independiente para representar la relación.
+
+### Finalización del vínculo
+
+El vínculo pasa a `FINALIZADO` cuando la cría deja de depender funcionalmente de la madre.
+
+Las causas contempladas actualmente son:
+
+* Destete;
+* Venta de la cría antes del Destete;
+* Muerte de la cría antes del Destete;
+* Venta de la madre;
+* Muerte de la madre.
+
+La finalización del vínculo es independiente de la genealogía.
+
+Una vez finalizado, `madre_id` continúa conservando la relación histórica entre ambos animales.
+
+### Regla para determinar la continuidad del ciclo
+
+El ciclo reproductivo permanece abierto mientras exista al menos una cría que cumpla simultáneamente:
+
+```text
+tipo_productivo = CRÍA
+estado_vinculo_materno = ACTIVO
+estado_vital = VIVO
+```
+
+Estas son las únicas crías que mantienen actualmente una dependencia funcional relevante para la continuidad del ciclo.
+
+Una cría que ya ha pasado a `RECRÍA` no debe volver a participar en esta comprobación.
+
+Del mismo modo, una cría que continúa siendo `CRÍA` pero ha sido vendida o ha muerto no mantiene un vínculo funcional activo.
+
+Cuando no existe ninguna cría que cumpla estas condiciones, el dominio puede determinar que el ciclo reproductivo ha finalizado.
+
+### Transición CRÍA → RECRÍA
+
+En el caso del Destete, la finalización del vínculo y el cambio de tipo productivo forman parte de una única operación de negocio.
+
+La secuencia lógica es:
+
+```text
+Destete
+    ↓
+finalizar vínculo materno
+    ↓
+CRÍA → RECRÍA
+```
+
+Ambos cambios deben persistirse de forma atómica.
+
+No debe existir un estado persistente en el que una cría destetada permanezca indefinidamente como `CRÍA + FINALIZADO`.
+
+La combinación `CRÍA + FINALIZADO` puede existir temporalmente como consecuencia de una Venta o Muerte antes del Destete, pero no debe ser el resultado final de un Destete correctamente procesado.
+
+### Naturaleza del vínculo
+
+El vínculo madre-cría no constituye un nuevo evento.
+
+Tampoco sustituye a los eventos de Parto, Destete, Venta o Muerte.
+
+Los eventos continúan siendo la fuente de verdad.
+
+`estado_vinculo_materno` es una proyección persistida que permite consultar de forma eficiente el conocimiento actual sobre la dependencia funcional sin tener que reconstruirlo en cada lectura.
+
+El historial conserva los acontecimientos reales.
+
+El estado del vínculo facilita la interpretación operativa actual.
+
+El ciclo reproductivo utiliza dicho estado para determinar si todavía existe dependencia funcional derivada del proceso reproductivo.
+
+---
 
 # La evolución del ciclo reproductivo
 
@@ -801,7 +1028,7 @@ Un ciclo reproductivo permanece abierto mientras exista un proceso reproductivo 
 
 Su finalización no depende únicamente del último evento registrado, sino del significado que dicho evento tiene dentro del proceso reproductivo.
 
-En condiciones normales, el ciclo concluye con el destete.
+En condiciones normales, el ciclo concluye con el destete de la última cría vinculada al ciclo.
 
 Ese momento marca el final del proceso reproductivo y deja al animal preparado para iniciar uno nuevo cuando corresponda.
 
@@ -940,39 +1167,149 @@ Forma parte permanente del ciclo que acaba de finalizar y permite conservar toda
 
 ## Caso 6. Registro del destete
 
-El destete representa la finalización normal de un ciclo reproductivo.
+El Destete representa la finalización de la dependencia funcional de una cría respecto de su madre.
 
-Hasta ese momento el sistema continúa considerando que el proceso iniciado con la gestación permanece abierto.
+La acción se inicia desde la ficha de la madre, pero afecta individualmente a las crías seleccionadas.
 
-Una vez registrado el destete:
+Una misma madre puede tener varias crías vinculadas y cada una puede ser destetada en una fecha diferente.
 
-- el ciclo se cierra;
-- el estado vuelve a **VACÍA**;
-- el animal puede iniciar un nuevo proceso reproductivo.
+Por tanto, el Destete puede ser parcial.
 
-El destete no inicia automáticamente un nuevo ciclo.
+Cuando se registra el Destete de una cría:
 
-Simplemente deja preparado al animal para que dicho ciclo pueda comenzar cuando exista un nuevo hecho que lo justifique.
+* se registra el evento `DESTETE` asociado a la madre;
+* se registra el mismo evento asociado a la cría;
+* el vínculo materno de esa cría pasa de `ACTIVO` a `FINALIZADO`;
+* el tipo productivo de la cría pasa de `CRÍA` a `RECRÍA`;
+* la cría deja de contribuir a la continuidad del ciclo reproductivo.
+
+El evento se registra sobre ambos animales porque el hecho tiene significado operativo tanto para la madre como para la cría.
+
+### Destete parcial
+
+Si una madre tiene varias crías vinculadas, el Destete de una parte de ellas no finaliza el ciclo.
+
+Por ejemplo:
+
+```text
+Madre
+├── Cría A → DESTETADA
+├── Cría B → ACTIVA
+└── Cría C → ACTIVA
+```
+
+El ciclo continúa abierto porque todavía existen vínculos maternos activos.
+
+Si posteriormente se desteta la Cría B:
+
+```text
+Madre
+├── Cría A → FINALIZADO
+├── Cría B → FINALIZADO
+└── Cría C → ACTIVA
+```
+
+El ciclo continúa abierto.
+
+Finalmente:
+
+```text
+Madre
+├── Cría A → FINALIZADO
+├── Cría B → FINALIZADO
+└── Cría C → FINALIZADO
+```
+
+Ya no existe ninguna dependencia funcional activa.
+
+En ese momento el dominio finaliza el ciclo.
+
+### Finalización del ciclo tras el Destete
+
+El Destete de una cría no es equivalente al cierre del ciclo.
+
+El cierre únicamente se produce cuando el Destete afecta a la última cría que mantenía un vínculo activo con la madre.
+
+Cuando desaparece el último vínculo:
+
+* el ciclo actual se considera finalizado;
+* el estado reproductivo de la madre pasa a `VACÍA`;
+* si la madre continúa siendo `REPRODUCTORA`, el dominio crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+
+No se registra ningún evento adicional para representar el cierre o la apertura del ciclo.
+
+La historia de eventos permanece formada únicamente por los hechos ocurridos en la explotación.
+
+### Historia del ciclo
+
+El historial de eventos conserva cada Destete individual.
+
+El carrusel del historial reproductivo es quien agregará estos acontecimientos para explicar la historia completa del ciclo.
+
+De esta forma el sistema puede distinguir entre:
+
+* una madre con una única cría destetada correctamente;
+* una madre con varias crías destetadas en fechas diferentes;
+* una madre cuyas crías han dejado de depender de ella por causas diferentes;
+* ciclos en los que existieron pérdidas antes del Destete.
+
+El cierre del ciclo no sustituye esta información ni intenta resumirla en un único "motivo de cierre".
+
+La historia detallada permanece en los eventos y la interpretación agregada pertenece a la proyección del ciclo.
 
 ---
 
-## Caso 7. Venta o muerte del animal
+## Caso 7. Venta o muerte de la madre o de una cría
 
-La venta o la muerte no constituyen acontecimientos reproductivos.
+La Venta y la Muerte son eventos de gestión o de causa mayor, no eventos reproductivos.
 
-Sin embargo, afectan directamente al seguimiento del ciclo.
+Sin embargo, mientras exista una dependencia funcional activa entre una madre y una cría, estos acontecimientos pueden provocar la finalización del vínculo materno.
 
-Cuando alguno de estos eventos ocurre, el sistema deja de realizar seguimiento reproductivo sobre ese animal.
+### Venta o muerte de una cría
 
-Si existía un ciclo abierto, este se cierra.
+Si una cría continúa siendo:
 
-No porque el proceso reproductivo haya finalizado biológicamente, sino porque deja de tener sentido continuar gestionándolo dentro de la explotación.
+```text
+tipo_productivo = CRÍA
+estado_vinculo_materno = ACTIVO
+```
 
-Esta diferencia refleja nuevamente uno de los principios fundamentales del modelo.
+y se registra su Venta o Muerte antes del Destete:
 
-El ciclo representa el conocimiento útil para la gestión de la explotación.
+* el evento de Venta o Muerte se registra sobre la propia cría;
+* el vínculo materno pasa a `FINALIZADO`;
+* la cría deja de contribuir a la continuidad del ciclo;
+* el dominio vuelve a evaluar si existen otras crías que mantengan vínculos activos.
 
-No pretende describir toda la realidad biológica del animal más allá de ese contexto.
+Si todavía existe alguna otra cría dependiente, el ciclo continúa abierto.
+
+Si no queda ninguna, el ciclo finaliza.
+
+Una vez finalizado el vínculo, los acontecimientos posteriores que afecten a esa cría ya no tienen repercusión sobre el contexto reproductivo de la madre.
+
+En particular, si una cría fue destetada previamente y posteriormente se vende o muere cuando ya es `RECRÍA`, ese evento pertenece únicamente a la historia de la propia cría y no afecta al ciclo reproductivo de la madre.
+
+### Venta o muerte de la madre
+
+La Venta o Muerte de la madre provoca la finalización de todos los vínculos maternos que continúen activos.
+
+El ciclo reproductivo deja de tener continuidad porque la madre ya no puede continuar participando en él dentro de la explotación.
+
+No se crea un nuevo ciclo.
+
+La relación genealógica `madre_id` de las crías se conserva íntegramente.
+
+### Regla general
+
+La finalización del vínculo materno se produce independientemente del motivo que la origine.
+
+Lo relevante para el dominio reproductivo es si la dependencia funcional continúa existiendo.
+
+La Venta o Muerte no generan un evento artificial de "fin de vínculo" ni un evento de "cierre de ciclo".
+
+Los hechos reales permanecen registrados como eventos de Venta o Muerte.
+
+El estado `estado_vinculo_materno` y la proyección del ciclo permiten interpretar sus consecuencias sobre la dependencia madre-cría y sobre la continuidad del ciclo reproductivo.
 
 # Decisiones de diseño del modelo
 

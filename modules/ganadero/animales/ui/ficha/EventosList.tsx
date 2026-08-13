@@ -49,6 +49,8 @@ const item = {
   show:   { opacity: 1, x: 0, transition: { duration: 0.2 } },
 }
 
+const SEXO_SYMBOL: Record<string, string> = { macho: '♂', hembra: '♀' }
+
 export function EventosList({ eventos }: { eventos: EventoDeAnimal[] }) {
   return (
     <motion.ol
@@ -60,7 +62,19 @@ export function EventosList({ eventos }: { eventos: EventoDeAnimal[] }) {
       {eventos.map((evento) => {
         const badgeClass  = BADGE_CLASS[evento.tipo_codigo]  ?? 'bg-surface-alt text-ink-muted'
         const badgeLabel  = BADGE_LABEL[evento.tipo_codigo]  ?? evento.tipo_label
-        const descripcion = EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
+        // Para PARTO: la madre ve "Parto", la cría ve "Nacimiento"
+        const descripcion = evento.tipo_codigo === 'PARTO' && evento.rol === 'cria'
+          ? 'Nacimiento'
+          : EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
+
+        // Para DESTETE cuando este animal es la madre: mostrar crías destetadas con ♂/♀
+        const criasLabel = evento.tipo_codigo === 'DESTETE' && evento.rol === 'madre' && evento.crias_destetadas.length > 0
+          ? evento.crias_destetadas.map(c => {
+              const sexo  = c.sexo ? (SEXO_SYMBOL[c.sexo] ?? null) : null
+              const base  = c.crotal ?? c.nombre ?? 'sin crotal'
+              return sexo ? `${sexo} - ${base}` : base
+            }).join(', ')
+          : null
 
         return (
           <motion.li key={evento.id} variants={item} className="flex items-center gap-3 text-sm">
@@ -69,6 +83,9 @@ export function EventosList({ eventos }: { eventos: EventoDeAnimal[] }) {
             </span>
             {descripcion && (
               <span className="text-ink-muted capitalize">{descripcion}</span>
+            )}
+            {criasLabel && (
+              <span className="text-ink-muted">{criasLabel}</span>
             )}
             <span className="text-divider">·</span>
             <span className="text-ink">{formatFecha(evento.fecha)}</span>

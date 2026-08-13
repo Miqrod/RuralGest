@@ -28,7 +28,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 // !text-white en success/error propaga color al SVG via currentColor
                 success: '!bg-green-600 !border-green-600 !text-white',
                 error:   '!bg-red-600   !border-red-600   !text-white',
-                title:   '!text-white',
+                title:       '!text-white',
+                description: '!text-white/90',
               },
             }}
           />

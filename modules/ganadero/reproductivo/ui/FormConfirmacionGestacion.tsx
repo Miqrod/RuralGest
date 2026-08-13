@@ -9,8 +9,16 @@ import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
+import { AnimalSelector } from '@/components/ui/animal-selector'
+import type { AnimalOption } from '@/components/ui/animal-selector'
 import { submitConfirmacionGestacion } from '@/app/(main)/vacuno/animales/[id]/actions'
 import type { EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
+import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
+
+function machoToOption(m: MachoOption): AnimalOption {
+  const label = [m.nombre, m.raza_nombre].filter(Boolean).join(' · ') || m.crotal || m.id
+  return { id: m.id, label, sublabel: m.crotal ?? undefined }
+}
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -19,6 +27,7 @@ import type { EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
 const schema = z.object({
   fecha:           z.string().min(1, 'La fecha es obligatoria.'),
   meses_estimados: z.number().int().min(1).max(9).optional(),
+  padre_id:        z.string().optional(),
   observaciones:   z.string().optional(),
 })
 
@@ -30,13 +39,14 @@ interface Props {
   animalId:           string
   crotal?:            string | null
   estadoReproductivo: EstadoReproductivo
+  machos?:            MachoOption[]
   onSuccess:          () => void
   onCancel:           () => void
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormConfirmacionGestacion({ animalId, estadoReproductivo, onSuccess, onCancel }: Props) {
+export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos = [], onSuccess, onCancel }: Props) {
   const [serverError, setServerError]   = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -62,6 +72,7 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, onSucc
       animalId,
       values.fecha,
       sinCubricionPrevia ? values.meses_estimados : undefined,
+      sinCubricionPrevia ? (values.padre_id || undefined) : undefined,
       values.observaciones || undefined,
     )
 
@@ -87,51 +98,72 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, onSucc
         </div>
       )}
 
-      {/* ── Fecha de confirmación ──────────────────────────────────────────── */}
-      <Controller name="fecha" control={form.control} render={({ field, fieldState }) => (
-        <Field data-invalid={fieldState.invalid}>
-          <FieldLabel>Fecha de confirmación *</FieldLabel>
-          <DatePicker
-            value={field.value || undefined}
-            onChange={(v) => field.onChange(v ?? '')}
-            maxDate={new Date()}
-            placeholder="dd/mm/aaaa"
-            aria-invalid={fieldState.invalid}
-          />
-          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-        </Field>
-      )} />
-
-      {/* ── Meses de gestación estimados: solo cuando no hay cubrición previa  */}
-      {sinCubricionPrevia && (
-        <Controller name="meses_estimados" control={form.control} render={({ field, fieldState }) => (
+      {/* ── Fila 1: fecha al 50% ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+        <Controller name="fecha" control={form.control} render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel>¿De cuántos meses está gestante aproximadamente? *</FieldLabel>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((mes) => (
-                <button
-                  key={mes}
-                  type="button"
-                  onClick={() => field.onChange(mes)}
-                  className={[
-                    'size-10 rounded-md border text-sm font-medium transition-colors',
-                    field.value === mes
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-divider bg-canvas text-ink hover:border-brand hover:text-brand',
-                  ].join(' ')}
-                >
-                  {mes}
-                </button>
-              ))}
-            </div>
+            <FieldLabel>Fecha de confirmación *</FieldLabel>
+            <DatePicker
+              value={field.value || undefined}
+              onChange={(v) => field.onChange(v ?? '')}
+              maxDate={new Date()}
+              placeholder="dd/mm/aaaa"
+              aria-invalid={fieldState.invalid}
+            />
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            {!fieldState.invalid && (
-              <p className="text-xs text-ink-muted">
-                Solo se solicita una estimación aproximada para calcular la fecha prevista de parto.
-              </p>
-            )}
           </Field>
         )} />
+      </div>
+
+      {/* ── Fila 2: meses (50%) + padre (50%), solo sin cubrición previa ─── */}
+      {sinCubricionPrevia && (
+        <div className="grid grid-cols-2 gap-4">
+          <Controller name="meses_estimados" control={form.control} render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel>¿De cuántos meses está gestante? *</FieldLabel>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((mes) => (
+                  <button
+                    key={mes}
+                    type="button"
+                    onClick={() => field.onChange(mes)}
+                    className={[
+                      'size-10 rounded-md border text-sm font-medium transition-colors',
+                      field.value === mes
+                        ? 'border-brand bg-brand text-white'
+                        : 'border-divider bg-canvas text-ink hover:border-brand hover:text-brand',
+                    ].join(' ')}
+                  >
+                    {mes}
+                  </button>
+                ))}
+              </div>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {!fieldState.invalid && (
+                <p className="text-xs text-ink-muted">
+                  Estimación para calcular la fecha prevista de parto.
+                </p>
+              )}
+            </Field>
+          )} />
+
+          {machos.length > 0 && (
+            <Controller name="padre_id" control={form.control} render={({ field }) => (
+              <Field>
+                <FieldLabel>Padre <span className="text-ink-muted font-normal">(opcional)</span></FieldLabel>
+                <AnimalSelector
+                  options={machos.map(machoToOption)}
+                  value={field.value ?? null}
+                  onChange={(id) => field.onChange(id ?? '')}
+                  placeholder="Seleccionar semental…"
+                />
+                <p className="text-xs text-ink-muted">
+                  Se asignará a las crías en el parto.
+                </p>
+              </Field>
+            )} />
+          )}
+        </div>
       )}
 
       {/* ── Observaciones ─────────────────────────────────────────────────── */}

@@ -1,7 +1,7 @@
 import type { UUID, ISODate, ISOTimestamp } from '../../../shared/types'
 import type {
   Especie, Sexo, OrigenAnimal,
-  EstadoVital, EstadoReproductivo, EstadoSanitario,
+  EstadoVital, EstadoReproductivo, EstadoSanitario, EstadoIdentificacion, EstadoVinculoMaterno,
 } from '../../shared/domain/types'
 
 export interface Animal {
@@ -16,7 +16,7 @@ export interface Animal {
   raza_nombre: string | null
   fecha_nacimiento: ISODate | null
   fecha_nacimiento_estimada: ISODate | null
-  sexo: Sexo
+  sexo: Sexo  // null = no determinado aún (crías en explotación extensiva)
   madre_id: UUID | null
   padre_id: UUID | null
   es_reproductora: boolean
@@ -29,6 +29,9 @@ export interface Animal {
   estado_reproductivo: EstadoReproductivo | null
   fecha_prevista_parto: ISODate | null
   estado_sanitario: EstadoSanitario
+  estado_identificacion: EstadoIdentificacion | null
+  estado_vinculo_materno: EstadoVinculoMaterno | null
+  parto_evento_id: UUID | null
   ubicacion_actual_id: UUID | null
   created_at: ISOTimestamp
   created_by: UUID | null
@@ -54,7 +57,7 @@ export interface CrearAnimalInput {
 export interface RegistrarCompraAnimalInput {
   // Identidad del animal
   especie: Especie
-  sexo: Sexo
+  sexo: NonNullable<Sexo>  // en compra el sexo siempre se conoce
   tipo_productivo_id: UUID
   crotal?: string
   num_hierro?: string

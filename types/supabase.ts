@@ -41,10 +41,16 @@ export type Database = {
           crotal: string | null
           es_reproductora: boolean
           especie: Database["public"]["Enums"]["especie_enum"]
+          estado_identificacion:
+            | Database["public"]["Enums"]["estado_identificacion_enum"]
+            | null
           estado_reproductivo:
             | Database["public"]["Enums"]["estado_reproductivo_enum"]
             | null
           estado_sanitario: Database["public"]["Enums"]["estado_sanitario_enum"]
+          estado_vinculo_materno:
+            | Database["public"]["Enums"]["vinculo_materno_enum"]
+            | null
           estado_vital: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id: string | null
           evento_origen_id: string | null
@@ -59,8 +65,9 @@ export type Database = {
           num_hierro: string | null
           origen: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id: string | null
+          parto_evento_id: string | null
           raza_id: string | null
-          sexo: Database["public"]["Enums"]["sexo_enum"]
+          sexo: Database["public"]["Enums"]["sexo_enum"] | null
           tipo_productivo_id: string | null
           ubicacion_actual_id: string | null
           updated_at: string
@@ -72,10 +79,16 @@ export type Database = {
           crotal?: string | null
           es_reproductora?: boolean
           especie: Database["public"]["Enums"]["especie_enum"]
+          estado_identificacion?:
+            | Database["public"]["Enums"]["estado_identificacion_enum"]
+            | null
           estado_reproductivo?:
             | Database["public"]["Enums"]["estado_reproductivo_enum"]
             | null
           estado_sanitario?: Database["public"]["Enums"]["estado_sanitario_enum"]
+          estado_vinculo_materno?:
+            | Database["public"]["Enums"]["vinculo_materno_enum"]
+            | null
           estado_vital?: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id?: string | null
           evento_origen_id?: string | null
@@ -90,8 +103,9 @@ export type Database = {
           num_hierro?: string | null
           origen: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id?: string | null
+          parto_evento_id?: string | null
           raza_id?: string | null
-          sexo: Database["public"]["Enums"]["sexo_enum"]
+          sexo?: Database["public"]["Enums"]["sexo_enum"] | null
           tipo_productivo_id?: string | null
           ubicacion_actual_id?: string | null
           updated_at?: string
@@ -103,10 +117,16 @@ export type Database = {
           crotal?: string | null
           es_reproductora?: boolean
           especie?: Database["public"]["Enums"]["especie_enum"]
+          estado_identificacion?:
+            | Database["public"]["Enums"]["estado_identificacion_enum"]
+            | null
           estado_reproductivo?:
             | Database["public"]["Enums"]["estado_reproductivo_enum"]
             | null
           estado_sanitario?: Database["public"]["Enums"]["estado_sanitario_enum"]
+          estado_vinculo_materno?:
+            | Database["public"]["Enums"]["vinculo_materno_enum"]
+            | null
           estado_vital?: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id?: string | null
           evento_origen_id?: string | null
@@ -121,8 +141,9 @@ export type Database = {
           num_hierro?: string | null
           origen?: Database["public"]["Enums"]["origen_animal_enum"]
           padre_id?: string | null
+          parto_evento_id?: string | null
           raza_id?: string | null
-          sexo?: Database["public"]["Enums"]["sexo_enum"]
+          sexo?: Database["public"]["Enums"]["sexo_enum"] | null
           tipo_productivo_id?: string | null
           ubicacion_actual_id?: string | null
           updated_at?: string
@@ -155,6 +176,13 @@ export type Database = {
             columns: ["padre_id"]
             isOneToOne: false
             referencedRelation: "animal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "animal_parto_evento_id_fkey"
+            columns: ["parto_evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
             referencedColumns: ["id"]
           },
           {
@@ -297,17 +325,17 @@ export type Database = {
         Row: {
           animal_id: string
           evento_id: string
-          rol: string | null
+          rol: Database["public"]["Enums"]["rol_evento_animal_enum"] | null
         }
         Insert: {
           animal_id: string
           evento_id: string
-          rol?: string | null
+          rol?: Database["public"]["Enums"]["rol_evento_animal_enum"] | null
         }
         Update: {
           animal_id?: string
           evento_id?: string
-          rol?: string | null
+          rol?: Database["public"]["Enums"]["rol_evento_animal_enum"] | null
         }
         Relationships: [
           {
@@ -368,6 +396,41 @@ export type Database = {
             columns: ["lote_origen_id"]
             isOneToOne: false
             referencedRelation: "lote"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evento_parto: {
+        Row: {
+          evento_id: string
+          numero_muertos: number
+          numero_nacidos: number
+          numero_vivos: number
+          observaciones: string | null
+          tipo_parto: Database["public"]["Enums"]["tipo_parto_enum"]
+        }
+        Insert: {
+          evento_id: string
+          numero_muertos: number
+          numero_nacidos: number
+          numero_vivos: number
+          observaciones?: string | null
+          tipo_parto: Database["public"]["Enums"]["tipo_parto_enum"]
+        }
+        Update: {
+          evento_id?: string
+          numero_muertos?: number
+          numero_nacidos?: number
+          numero_vivos?: number
+          observaciones?: string | null
+          tipo_parto?: Database["public"]["Enums"]["tipo_parto_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_parto_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: true
+            referencedRelation: "eventos"
             referencedColumns: ["id"]
           },
         ]
@@ -1008,26 +1071,17 @@ export type Database = {
         }
         Returns: string
       }
-      registrar_confirmacion_gestacion:
-        | {
-            Args: {
-              p_animal_id: string
-              p_ciclo_id?: string
-              p_fecha: string
-              p_fecha_prevista_parto?: string
-              p_observaciones?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_animal_id: string
-              p_ciclo_id: string
-              p_fecha: string
-              p_observaciones?: string
-            }
-            Returns: string
-          }
+      registrar_confirmacion_gestacion: {
+        Args: {
+          p_animal_id: string
+          p_ciclo_id?: string
+          p_fecha: string
+          p_fecha_prevista_parto?: string
+          p_observaciones?: string
+          p_padre_id?: string
+        }
+        Returns: string
+      }
       registrar_cubricion: {
         Args: {
           p_animal_id: string
@@ -1041,6 +1095,26 @@ export type Database = {
         }
         Returns: string
       }
+      registrar_destete: {
+        Args: { p_cria_id: string; p_fecha: string; p_observaciones?: string }
+        Returns: Json
+      }
+      registrar_parto: {
+        Args: {
+          p_animal_id: string
+          p_ciclo_id: string
+          p_estado_reproductivo?: Database["public"]["Enums"]["estado_reproductivo_enum"]
+          p_fecha: string
+          p_numero_muertos: number
+          p_numero_nacidos: number
+          p_numero_vivos: number
+          p_observaciones?: string
+          p_padre_id?: string
+          p_raza_cria_id?: string
+          p_tipo_parto: Database["public"]["Enums"]["tipo_parto_enum"]
+        }
+        Returns: Json
+      }
       registrar_salida_animal: {
         Args: { p_animal_id: string; p_fecha: string; p_motivo: string }
         Returns: string
@@ -1048,6 +1122,7 @@ export type Database = {
     }
     Enums: {
       especie_enum: "vacuno" | "porcino"
+      estado_identificacion_enum: "pendiente" | "completa"
       estado_lote_enum: "activo" | "cerrado"
       estado_reproductivo_enum: "vacia" | "cubierta" | "gestante" | "lactante"
       estado_sanitario_enum:
@@ -1064,10 +1139,13 @@ export type Database = {
         | "desconocido"
         | "venta"
         | "muerte"
+      rol_evento_animal_enum: "madre" | "cria"
       sexo_enum: "macho" | "hembra"
       tipo_base_movimiento_enum: "ENTRADA" | "SALIDA" | "MIXTO"
       tipo_lote_enum: "camada" | "post_destete" | "engorde"
+      tipo_parto_enum: "natural" | "asistido"
       tipo_tecnico_evento_enum: "STOCK" | "BIOLOGICO" | "OPERATIVO" | "SISTEMA"
+      vinculo_materno_enum: "activo" | "finalizado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1199,6 +1277,7 @@ export const Constants = {
   public: {
     Enums: {
       especie_enum: ["vacuno", "porcino"],
+      estado_identificacion_enum: ["pendiente", "completa"],
       estado_lote_enum: ["activo", "cerrado"],
       estado_reproductivo_enum: ["vacia", "cubierta", "gestante", "lactante"],
       estado_sanitario_enum: [
@@ -1217,10 +1296,13 @@ export const Constants = {
         "venta",
         "muerte",
       ],
+      rol_evento_animal_enum: ["madre", "cria"],
       sexo_enum: ["macho", "hembra"],
       tipo_base_movimiento_enum: ["ENTRADA", "SALIDA", "MIXTO"],
       tipo_lote_enum: ["camada", "post_destete", "engorde"],
+      tipo_parto_enum: ["natural", "asistido"],
       tipo_tecnico_evento_enum: ["STOCK", "BIOLOGICO", "OPERATIVO", "SISTEMA"],
+      vinculo_materno_enum: ["activo", "finalizado"],
     },
   },
 } as const

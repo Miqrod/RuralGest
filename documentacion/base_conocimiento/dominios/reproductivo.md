@@ -240,6 +240,17 @@ En este documento únicamente se describen las particularidades de su aplicació
 | Projection | Construir snapshots |
 | Snapshot   | Optimizar lectura   |
 
+Las reglas del dominio utilizan las relaciones y estados derivados ya existentes en el modelo ganadero.
+
+En particular:
+
+* `madre_id` representa la relación genealógica permanente;
+* `estado_vinculo_materno` representa el estado derivado del vínculo funcional;
+* `tipo_productivo` permite identificar las crías que siguen perteneciendo a la etapa productiva `CRÍA`;
+* `estado_vital` permite determinar si una cría continúa viva y operativamente presente.
+
+El dominio reproductivo interpreta estas informaciones para determinar la continuidad del ciclo, pero no redefine el significado de dichas entidades o campos.
+
 
 ## ReproductiveContext
 
@@ -254,9 +265,17 @@ Inicialmente podrá contener:
 * animal;
 * ciclo reproductivo activo;
 * último evento biológico;
-* evento solicitado.
+* evento solicitado;
+* crías con vínculo materno funcional relevante para el ciclo;
+* estado actual de los vínculos maternos.
 
-En futuras fases podrá ampliarse con nueva información siempre que sea necesaria para interpretar el dominio.
+La información sobre los vínculos se obtiene a partir de `ANIMAL`.
+
+El dominio no introduce una entidad independiente para representar el vínculo madre-cría.
+
+La relación genealógica se mantiene mediante `madre_id`, mientras que `estado_vinculo_materno` proporciona el conocimiento derivado sobre la existencia actual del vínculo funcional.
+
+El Context debe proporcionar a las reglas la información necesaria para determinar si una operación afecta a uno o varios vínculos y si, después de aplicarla, permanece alguna dependencia funcional que permita mantener abierto el ciclo.
 
 El Context nunca:
 
@@ -269,21 +288,108 @@ Su única responsabilidad consiste en proporcionar a las reglas todo el contexto
 
 ---
 
-## ReproductiveRules
+### ReproductiveCycleRules
 
-Las reglas del dominio encapsulan todo el conocimiento relacionado con la evolución del proceso reproductivo.
+Responsabilidad:
 
-Se organizan en componentes especializados, cada uno con una responsabilidad claramente definida.
+Interpretar la evolución del ciclo reproductivo.
 
-Inicialmente el dominio incorpora:
+Entre otras tareas:
+
+* apertura de ciclos;
+* reutilización de ciclos existentes;
+* determinación de la continuidad del ciclo;
+* finalización de ciclos;
+* interpretación de eventos biológicos;
+* determinación del estado reproductivo;
+* cálculo de la evolución del ciclo.
+
+### Continuidad del ciclo y vínculos maternos
+
+Cuando un ciclo ha alcanzado la fase posterior al Parto, su continuidad depende de la existencia de crías que mantengan una dependencia funcional activa de la madre.
+
+La regla de continuidad se basa en los vínculos maternos derivados del modelo `ANIMAL`.
+
+Conceptualmente:
 
 ```text
-ReproductiveEligibilityRules
-
-ReproductiveCycleRules
+Existe al menos una cría:
+    tipo_productivo = CRÍA
+    estado_vital = VIVO
+    estado_vinculo_materno = ACTIVO
+        ↓
+    El ciclo continúa abierto
 ```
 
-Esta división podrá ampliarse conforme evolucione el módulo.
+Cuando ya no existe ninguna cría que cumpla estas condiciones:
+
+```text
+0 vínculos maternos funcionalmente activos
+        ↓
+    El ciclo puede finalizar
+```
+
+La finalización del ciclo es una consecuencia derivada del estado de los vínculos y no constituye un evento independiente.
+
+### Creación del ciclo siguiente
+
+Cuando un ciclo finaliza, las reglas determinan si la reproductora continúa siendo elegible para participar en un nuevo ciclo.
+
+Si continúa siendo `REPRODUCTORA`, se crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+
+La creación del nuevo ciclo tampoco constituye un evento del historial.
+
+El historial conserva únicamente los hechos registrados en la explotación.
+
+### Finalización individual de vínculos
+
+La finalización de un vínculo materno puede ser consecuencia de diferentes hechos registrados.
+
+Entre ellos se encuentran:
+
+* Destete;
+* Venta de una cría que mantiene un vínculo activo;
+* Muerte de una cría que mantiene un vínculo activo;
+* Venta de la madre;
+* Muerte de la madre.
+
+El dominio interpreta las consecuencias de estos hechos sobre los vínculos, pero no crea eventos artificiales para representar la finalización del vínculo.
+
+### Regla específica del Destete
+
+El Destete se inicia desde el contexto de la madre, pero afecta individualmente a las crías seleccionadas.
+
+La operación puede afectar a una, varias o todas las crías con vínculo activo.
+
+Para cada cría destetada:
+
+```text
+estado_vinculo_materno
+ACTIVO → FINALIZADO
+
+tipo_productivo
+CRÍA → RECRÍA
+```
+
+Ambos cambios forman parte de una única operación de negocio y deben persistirse de forma atómica.
+
+El Destete de una cría no implica por sí mismo el cierre del ciclo.
+
+El ciclo únicamente finaliza cuando, después de procesar el hecho, ya no existe ninguna cría que mantenga un vínculo funcional activo.
+
+### Vínculos ya finalizados
+
+Una vez que `estado_vinculo_materno = FINALIZADO`, los acontecimientos posteriores de esa cría no afectan al ciclo reproductivo de la madre.
+
+En particular, una cría que ya ha sido destetada y posteriormente es vendida o muere no debe volver a participar en las reglas de continuidad del ciclo.
+
+### TIMEOUT y discontinuidad temporal
+
+La finalización del ciclo por discontinuidad temporal queda fuera del alcance actual del dominio implementado.
+
+No existe un mecanismo automático de cierre por tiempo ni un evento `TIMEOUT`.
+
+La posible detección futura de discontinuidades temporales deberá evaluarse al registrar nuevos eventos reproductivos y no mediante un proceso temporal que genere eventos artificiales.
 
 ---
 
@@ -455,19 +561,45 @@ Otros dominios especializados, como Financiero, Sanitario u Operacional, podrán
 
 El dominio reproductivo constituye actualmente el primer dominio especializado construido sobre el patrón **Context → Rules → Projection (CRP)**.
 
-La primera funcionalidad implementada corresponde al registro de cubriciones, que valida la arquitectura y establece la base para la incorporación del resto de procesos reproductivos.
+La arquitectura se encuentra consolidada y se reutiliza para las distintas funcionalidades del ciclo reproductivo.
 
-El dominio crecerá incorporando nuevos eventos reproductivos (parto, aborto, destete...) sin modificar la arquitectura existente.
+Actualmente el dominio contempla:
 
-La evolución del dominio se realizará ampliando las reglas existentes y reutilizando los mismos componentes arquitectónicos, evitando la duplicación de lógica entre distintos casos de uso.
+* Cubrición;
+* Confirmación de Gestación;
+* Parto;
+* creación de las crías asociadas al Parto;
+* relación genealógica madre-cría mediante `madre_id`;
+* estado reproductivo `LACTANTE`;
+* gestión de la dependencia funcional madre-cría mediante `estado_vinculo_materno`.
 
-**Funcionalidades implementadas:**
-- Cubrición — abre ciclo, calcula `fecha_prevista_parto`, transición `vacia/cubierta → cubierta`
-- Confirmación de gestación — reutiliza ciclo, transición `cubierta → gestante`
+Las funcionalidades implementadas reutilizan los componentes:
 
-Ambas funcionalidades validan la arquitectura CRP y establecen los componentes reutilizables
-(`ReproductiveContext`, `ReproductiveEligibilityRules`, `ReproductiveCycleRules`, `ReproductiveProjection`)
-sobre los que se construirán los próximos eventos reproductivos.
+```text
+ReproductiveContext
+ReproductiveEligibilityRules
+ReproductiveCycleRules
+ReproductiveProjection
+```
+
+La evolución del ciclo reproductivo se realiza mediante eventos reales registrados en la explotación.
+
+El dominio no genera eventos artificiales para representar:
+
+* inicio de ciclo;
+* cierre de ciclo;
+* finalización de vínculo;
+* TIMEOUT.
+
+El cierre del ciclo constituye una consecuencia derivada de las reglas del dominio.
+
+En el caso de la dependencia madre-cría, el dominio utiliza el estado `estado_vinculo_materno` persistido en `ANIMAL` para determinar si continúa existiendo una dependencia funcional que mantenga abierto el ciclo.
+
+El detalle conceptual de esta relación se documenta en:
+
+```text
+documentacion/modelo/modelo_reproductivo.md
+```
 
 ---
 
@@ -477,14 +609,16 @@ El dominio reproductivo está diseñado para evolucionar de forma incremental si
 
 Entre las futuras capacidades del dominio se incluyen:
 
-- parto;
-- aborto;
-- destete;
-- sincronización reproductiva;
-- automatizaciones;
-- alertas reproductivas;
-- planificación y seguimiento del calendario reproductivo;
-- nuevas proyecciones derivadas.
+* aborto;
+* sincronización reproductiva;
+* alertas reproductivas;
+* planificación y seguimiento del calendario reproductivo;
+* nuevas proyecciones derivadas;
+* detección de posibles discontinuidades temporales entre eventos reproductivos.
+
+La posible detección de discontinuidades temporales no se implementará mediante un mecanismo `TIMEOUT` ni mediante un proceso automático basado únicamente en el paso del tiempo.
+
+Si en el futuro se considera necesario, deberá estudiarse como una capacidad específica del dominio que evalúe la continuidad de un ciclo cuando se registra un nuevo evento reproductivo.
 
 Cada nueva funcionalidad reutilizará los componentes existentes del dominio, ampliando las reglas de negocio cuando sea necesario, pero manteniendo la misma estructura arquitectónica.
 

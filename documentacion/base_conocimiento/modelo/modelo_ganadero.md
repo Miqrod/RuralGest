@@ -193,6 +193,7 @@ Representan conocimiento derivado.
 ```mermaid
 erDiagram
 
+    ANIMAL ||--o{ ANIMAL : "es madre de"
     ANIMAL ||--o{ EVENTO_ANIMAL : participa
     EVENTO ||--o{ EVENTO_ANIMAL : contiene
 
@@ -201,6 +202,7 @@ erDiagram
 
     MOVIMIENTO ||--o{ EVENTO : agrupa
 ```
+
 
 ## Relaciones con otros modelos
 
@@ -334,17 +336,37 @@ La entidad Animal no es responsable de calcular dichos estados. Su única respon
 
 ## Información persistente
 
-La información persistente representa aquellas características propias del animal que únicamente cambian cuando existe una decisión explícita o un nuevo hecho registrado.
+La información persistente representa aquellas características propias del animal que forman parte de su identidad o de su clasificación dentro de la explotación.
 
 Algunos ejemplos son:
 
-- identificación;
-- especie;
-- sexo;
-- raza;
-- fecha de nacimiento;
-- tipo productivo;
-- genealogía.
+* identificación;
+* especie;
+* sexo;
+* raza;
+* fecha de nacimiento;
+* tipo productivo;
+* genealogía.
+
+### Genealogía
+
+La genealogía forma parte de la identidad histórica del animal.
+
+La relación con su madre se representa mediante `madre_id`.
+
+`madre_id` identifica de forma permanente a la madre conocida del animal y es independiente de cualquier relación funcional posterior entre ambos.
+
+La finalización de un vínculo materno no modifica ni elimina `madre_id`.
+
+Por tanto:
+
+```text
+madre_id
+    ↓
+relación genealógica permanente
+```
+
+La existencia de `madre_id` no implica que la cría continúe dependiendo funcionalmente de su madre.
 
 ---
 
@@ -356,11 +378,36 @@ Estas proyecciones no constituyen la fuente de verdad y nunca deben modificarse 
 
 Entre ellas se encuentran:
 
-- estado vital;
-- estado sanitario;
-- estado reproductivo;
-- lote actual;
-- ubicación actual.
+* estado vital;
+* estado sanitario;
+* estado reproductivo;
+* estado del vínculo materno;
+* lote actual;
+* ubicación actual.
+
+### Estado del vínculo materno
+
+El estado del vínculo materno representa el conocimiento actual del sistema sobre la existencia de una dependencia funcional entre una cría y su madre.
+
+Se representa mediante el campo técnico `estado_vinculo_materno`.
+
+Este estado es independiente de `madre_id`.
+
+Mientras `madre_id` representa una relación genealógica permanente, `estado_vinculo_materno` representa una situación funcional que puede finalizar durante la vida del animal.
+
+El estado del vínculo materno puede adoptar los siguientes valores:
+
+| Valor        | Significado                                                                                                    |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `NULL`       | El sistema no dispone de información suficiente para determinar la existencia de un vínculo materno funcional. |
+| `ACTIVO`     | El sistema conoce la existencia de un vínculo materno funcional vigente.                                       |
+| `FINALIZADO` | El sistema conoce que el vínculo materno funcional ha terminado.                                               |
+
+`estado_vinculo_materno` es una proyección derivada persistida.
+
+No constituye una fuente de verdad independiente de los eventos y no debe ser editable por el usuario.
+
+El detalle de las reglas que determinan su creación, evolución y finalización pertenece al dominio reproductivo y se documenta en `modelo_reproductivo.md`.
 
 ---
 
@@ -635,6 +682,33 @@ En caso de discrepancia, el historial de eventos prevalece siempre sobre cualqui
 Las relaciones entre entidades deben mantenerse siempre consistentes.
 
 No pueden existir referencias a entidades inexistentes ni operaciones que dejen el modelo en un estado inválido.
+
+---
+
+## Genealogía
+
+La relación genealógica representada mediante `madre_id` es independiente de los estados funcionales derivados del animal.
+
+Cuando `madre_id` identifica una madre conocida:
+
+* la relación genealógica se conserva durante toda la vida del animal;
+* la finalización de un vínculo materno no modifica `madre_id`;
+* ningún evento de Destete, Venta o Muerte debe eliminar ni sustituir la relación genealógica.
+
+El modelo debe distinguir siempre entre:
+
+```text
+madre_id
+    ↓
+genealogía
+
+estado_vinculo_materno
+    ↓
+dependencia funcional
+```
+
+La existencia de una relación genealógica no implica que exista actualmente una dependencia funcional entre ambos animales.
+
 
 ---
 

@@ -34,6 +34,9 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
           )}>
             {identificador ?? 'Sin crotal'}
           </h1>
+          {animal.nombre && (
+            <p className="text-base font-medium text-ink mt-0.5">{animal.nombre}</p>
+          )}
           {subtitulo && (
             <p className="text-sm text-ink-muted mt-0.5">{subtitulo}</p>
           )}
@@ -57,7 +60,7 @@ export function AnimalHeader({ animal }: { animal: AnimalDetail }) {
       </div>
 
       <div className="flex flex-wrap gap-2 mt-3">
-        <span className={pill}>{SEXO_LABEL[animal.sexo] ?? animal.sexo}</span>
+        <span className={pill}>{animal.sexo !== null ? (SEXO_LABEL[animal.sexo] ?? animal.sexo) : 'Sin determinar'}</span>
         {animal.tipo_productivo_nombre && (
           <span className={pill}>{animal.tipo_productivo_nombre}</span>
         )}

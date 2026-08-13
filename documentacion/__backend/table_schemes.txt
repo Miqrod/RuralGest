@@ -1,0 +1,1688 @@
+Este documento contiene una descripción detallada del modelo de datos para:
+- modelo ganadero + ciclo reproductivo
+- modelo financiero
+- tablas comunes
+- extensiones + enums
+- alter tables (tabla animal)
+
+
+---
+
+# MÓDULO GANADERO
+
+    🐄🐗 TABLA ANIMAL
+    🧱 SQL
+
+    ```sql
+    CREATE TABLE animal (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    especie especie_enum NOT NULL,
+
+    tipo TEXT NOT NULL
+    CHECK (
+    tipo IN ('normal', 'reproductor')
+    ),
+
+    crotal TEXT UNIQUE NULL,
+
+    num_hierro TEXT NULL,
+
+    fecha_nacimiento DATE NULL,
+
+    fecha_nacimiento_estimada DATE NULL,
+
+    sexo sexo_enum NOT NULL,
+
+    madre_id UUID NULL
+    REFERENCES animal(id),
+
+    padre_id UUID NULL
+    REFERENCES animal(id),
+
+    es_reproductora BOOLEAN NOT NULL DEFAULT false,
+
+    origen origen_animal_enum NOT NULL,
+
+    lote_id UUID NULL
+    REFERENCES lote(id),
+
+    lote_origen_id UUID NULL
+    REFERENCES lote(id),
+
+    evento_creacion_id UUID NULL,
+
+    evento_origen_id UUID NULL,
+
+    estado_vital estado_vital_enum NOT NULL DEFAULT 'vivo',
+
+    estado_reproductivo estado_reproductivo_enum NULL,
+
+    estado_sanitario estado_sanitario_enum NOT NULL DEFAULT 'sano',
+
+    ubicacion_actual_id UUID NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    created_by UUID NULL,
+
+    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    updated_by UUID NULL,
+
+    CONSTRAINT chk_fecha_nacimiento
+    CHECK (
+    fecha_nacimiento IS NOT NULL
+    OR fecha_nacimiento_estimada IS NOT NULL
+    ),
+
+    CONSTRAINT chk_estado_reproductivo
+    CHECK (
+    (
+    es_reproductora = false
+    AND estado_reproductivo IS NULL
+    )
+    OR
+    (
+    es_reproductora = true
+    )
+    )
+    );
+
+    CREATE INDEX idx_animal_especie
+    ON animal(especie);
+
+    CREATE INDEX idx_animal_lote
+    ON animal(lote_id);
+
+    CREATE INDEX idx_animal_estado_vital
+    ON animal(estado_vital);
+
+    CREATE INDEX idx_animal_sexo
+    ON animal(sexo);
+    ```
+
+    animal
+    - id
+    - especie (vacuno | porcino)
+    - tipo (normal | reproductor)
+    - crotal
+    - num_hierro (solo vacuno)
+    - fecha_nacimiento (nullable)
+    - fecha_nacimiento_estimada (nullable)
+    - sexo (macho | hembra)
+    - madre_id (nullable)
+    - padre_id (nullable)
+    - es_reproductora           -- (boolean) (para indicar si es animal de reproducción)
+    - origen                    -- "interno" | "compra"
+    - lote_id (nullable)        -- (nullable) (animales) ✅ CLAVE
+    - lote_origen_id            -- (nullable) (lote de origen del animal) ✅ CLAVE
+    - evento_creacion_id        -- cómo entra al sistema
+    - evento_origen_id          -- (nullable) De dónde viene
+    - estado_vital              -- (derivado de eventos) vivo | muerto | vendido
+    - estado_reproductivo       -- (derivado de eventos) no_reproductiva | gestante | lactante
+    - estado_sanitario          -- (derivado de eventos) sano | en_observacion | en_tratamiento | no_apto
+    - ubicacion_actual_id       -- (derivado de eventos) ubicación actual del animal
+
+    ** fecha_nacimiento vs fecha_nacimiento_estimada:
+        - fecha_nacimiento: fecha real de nacimiento (deriva de evento parto)
+        - fecha_nacimiento_estimada: fecha estimada de nacimiento (en caso de compra de animales, o de animales que no se sabe su fecha de nacimiento real, p.ej. cerdas reproductoras seleccionadas a partir de animales nacidos en explotación)
+        - si NO conocemos la fecha_nacimiento, se usará la fecha_nacimiento_estimada
+    ** es_reproductora: para saber si un animal puede entrar en ciclo reproductivo o no. Esto permite:
+        - filtrar qué animales podrán entrar en ciclo reproductivo
+        - saber de forma lógica si un animal puede entrar en ciclo reproductivo o no (no dependemos de la "memoria" o de inferencias)
+        - a nivel de UX, el usuario no tiene que preocuparse de esto, ya que el sistema se encarga de ello
+        - IMPORTANTE: si "es_reproductora = false" → estado_reproductivo = NULL
+    ** ✅ los campos lote_id y lote_origen_id son CLAVE ya que abren la puerta a mejoras futuras
+        - lote_id: permitiría tener lotes de animales individuales (p.ej. hacer lotes de cerdas reproductoras, o de vacuno de engorde...)
+        - lote_origen_id: permitiría saber de qué lote procede ese animal (caso más claro: cerda reproductora que se "extrae" de un lote post-destete...)
+    ** ✅ los campos estado_vital, estado_reproductivo y estado_sanitario:
+        - NO son editables
+        - son derivados, no se pueden modificar directamente, sino que se derivan de los eventos que afectan al animal
+        - se actualizarán automáticamente cuando se cree un evento que afecte a alguno de estos estados
+        - son persistidos (snapshot), para que no sea necesario recalcularlos con cada consulta
+
+
+    🐖 TABLA LOTE
+    🧱 SQL
+
+    ```sql
+    CREATE TABLE lote (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    especie especie_enum NOT NULL,
+
+    tipo_lote tipo_lote_enum NOT NULL,
+
+    codigo_identificacion TEXT NULL,
+
+    lote_origen_id UUID NULL
+    REFERENCES lote(id),
+
+    fecha_creacion DATE NOT NULL,
+
+    fecha_cierre DATE NULL,
+
+    cantidad_actual INTEGER NOT NULL DEFAULT 0
+    CHECK (cantidad_actual >= 0),
+
+    estado estado_lote_enum NOT NULL DEFAULT 'activo',
+
+    estado_sanitario estado_sanitario_enum NOT NULL DEFAULT 'sano',
+
+    ubicacion_actual_id UUID NULL,
+
+    alimentacion TEXT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    created_by UUID NULL,
+
+    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    updated_by UUID NULL,
+
+    CONSTRAINT chk_lote_fecha_cierre
+    CHECK (
+    fecha_cierre IS NULL
+    OR fecha_cierre >= fecha_creacion
+    )
+    );
+
+    CREATE INDEX idx_lote_especie
+    ON lote(especie);
+
+    CREATE INDEX idx_lote_estado
+    ON lote(estado);
+
+    CREATE INDEX idx_lote_tipo
+    ON lote(tipo_lote);
+    ```
+
+    lote
+    - id
+    - especie               -- (porcino)
+    - tipo_lote             -- (camada, post-destete, engorde)
+    - codigo_identificacion -- (nullable) para identificar el lote por su código (p.ej. AÑO-001, AÑO-002, etc.) en post-destete, o "bellota", "recebo" o la descripción que sea en el caso de lote de engorde
+    - lote_origen_id        -- (nullable) -- para tener trazabilidad
+    - fecha_creacion
+    - fecha_cierre          -- (nullable) -- fecha en la que el lote se cierra
+    - cantidad_actual       -- (derivado de eventos) número de animales en el lote
+    - estado                -- (derivado de cantidad_actual) activo | cerrado
+    - estado_sanitario      -- (derivado de eventos) sano | en_observacion | en_tratamiento | no_apto
+    - ubicacion_actual_id   -- (derivado de eventos) ubicación actual del lote
+    - alimentacion          -- (solo engorde) tipo de alimentación del lote
+
+    ** codigo_identificacion: por lo general será:
+        - en lote camada: null
+        - en lote post-destete: OBLIGATORIO --> AÑO-001, AÑO-002, etc.
+        - en lote de engorde: opcional --> "bellota", "recebo" o la descripción que sea
+
+
+🎯 Regla conceptual potente:
+Un animal puede pertenecer a un lote
+Un lote NO necesita conocer animales individuales
+
+Añadir el campo lote_id a la tabla animal permite:
+🔄 Flexibilidad suficiente
+    Se puede hacer:
+        🐗 Reproductor suelto → lote_id = null
+        🐗 Reproductor en grupo → lote_id = X
+        🐄 Vacuno → normalmente lote_id = null
+⚙️ Escalable
+    Si algún día se necesita más complejidad, se puede:
+        Añadir tabla intermedia (animal_lote_historial)
+        Añadir eventos de pertenencia a lote
+        👉 Sin romper lo actual
+
+🧠 PROBLEMA TRAZABILIDAD LOTES (porcino):
+*** DECISIÓN ***
+Ante la complejidad que supondría tener una buena trazabilidad de los animales a nivel de lotes, se ha decidido optar por una solución más sencilla:
+👉👉👉 añadir el campo lote_origen_id (nullable) a la tabla EVENTO_LOTES
+Esto permite la trazabilidad que necesitamos ahora y deja la puerta abierta para futuras soluciones más complejas.
+*** DECISIÓN ***
+
+MODELO DE EVENTOS:
+- MOVIMIENTO
+- EVENTOS
+--- TIPO_EVENTO
+--- EVENTO_ANIMALES
+--- EVENTO_LOTES
+--- MOTIVOS_MOVIMIENTO
+
+
+
+En lugar de usar 2 tablas independientes para los eventos (evento_animales y evento_lotes), se define:
+✔ tabla única de eventos → SÍ
+✔ eliminar evento "traslado" --> usar entrada/salida + motivo
+✔ eliminar los eventos compra, venta y muerte:
+    ✔ compra se tratará como evento entrada (motivo: compra)
+    ✔ venta/muerte se tratará como evento salida (motivo: venta/muerte)
+✔ ENTRADA / SALIDA = movimientos de stock, el resto = eventos biológicos / operativos
+✔ no todos los eventos serán de tipo entrada/salida, hay eventos que no implican movimiento de stock puro: parto, cubrición, cambio_ubicacion, sanitario, etc.
+✔ si un evento puede ser total/parcial (venta, muerte...), en ambos casos se tratará igual. Se tiene que respetar siempre:
+    ✔ cantidad movida siempre ≤ disponible
+    ✔ si cantidad == total → cerrar lote (estado = cerrado, pero NO hardcodeado sino derivado y recalculado con cada evento nuevo)
+    ✔ si cantidad < total → lote activo (estado = activo, derivado de eventos)
+✔ Para mejorar la TRAZABILIDAD de animales y lotes en los EVENTOS:
+    ✔ TABLA MOVIMIENTO:
+        - está por encima de los eventos
+        - permite agrupar eventos que forman parte de un mismo movimiento (ej: entrada + salida)
+        - los eventos son la fuente de verdad, el movimiento solo agrupa eventos:
+            💡 Patrón híbrido:
+            EVENTOS = granularidad
+            MOVIMIENTO = coherencia
+    ✔ TABLA ANIMAL:
+        - lote_id (nullable): (animales) de momento "no tiene sentido", pero en un futuro podría permitir hacer lotes de animales individuales (p.ej. hacer lotes de cerdas reproductoras, o de vacuno de engorde...)
+        - evento_creacion_id: id del evento que crea el animal
+        - lote_origen_id (nullable): id del lote de origen del animal (especialmente importante en evento "seleccion_reproductor")
+        - evento_origen_id (nullable): id del evento de origen del animal (especialmente importante en evento "seleccion_reproductor")
+    ✔ TABLA EVENTO_LOTES:
+        - guardar SIEMPRE el ORIGEN de los eventos
+        - lote_origen_id: id del lote de origen del evento
+
+Se define una única tabla de EVENTOS con una serie de tablas auxiliares.
+Por encima está la tabla MOVIMIENTO que agrupa eventos relacionados:
+* TABLA "SUPERIOR": MOVIMIENTO
+    🧱 SQL
+
+    ```sql
+    CREATE TABLE movimiento (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    tipo_movimiento TEXT NOT NULL,
+
+    fecha TIMESTAMP NOT NULL,
+
+    descripcion TEXT NULL,
+
+    usuario_id UUID NULL,
+
+    estado movimiento_estado_enum NOT NULL DEFAULT 'activo',
+
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    created_by UUID NULL
+    );
+
+    CREATE INDEX idx_movimiento_fecha
+    ON movimiento(fecha);
+
+    CREATE INDEX idx_movimiento_estado
+    ON movimiento(estado);
+    ```
+
+
+    MOVIMIENTO
+    ----------
+    id
+    tipo_movimiento        -- adopcion, engorde, etc.
+    fecha
+    descripcion
+    usuario_id
+    estado (activo | cancelado)
+    created_at
+
+    ✔ Un MOVIMIENTO puede tener de 1 a N eventos
+    ✔ Un EVENTO puede pertenecer a 0 o 1 movimiento 
+    ✔ el usuario selecciona una acción en UX y el resto ocurre en el backend --> se crea un movimiento --> se crean los eventos asociados al movimiento
+    ✔ para deshacer un movimiento: movimiento.estado = CANCELADO + generar automáticamente eventos de ajuste
+    ✔ REGLA IMPORTANTE: movimiento_id --> Solo eventos que forman parte de un flujo de stock coordinado
+        ✅ SÍ llevan movimiento_id
+            📦 Movimientos entre lotes
+            - ENTRADA (adopción)
+            - SALIDA (adopción)
+
+            - ENTRADA (engorde)
+            - SALIDA (engorde)
+
+            - ENTRADA (reagrupación)
+            - SALIDA (reagrupación)
+            👉 Siempre en pareja (o más en futuro)
+        ❌ NO llevan movimiento_id
+            🧬 Eventos biológicos --> Aunque generen movimientos, ellos no pertenecen al movimiento
+                - PARTO
+                - ABORTO
+                - DESTETE (* --> NO pertenece a un movimiento pero genera movimiento interno, en porcino)
+                - CUBRICIÓN
+            🧱 Eventos operativos/estructurales --> No generan movimientos
+                - CAMBIO_UBICACION
+                - SANITARIO
+                - AJUSTE
+            📦 Eventos de stock simples --> aunque mueven stock, son eventos unitarios, no necesitan agrupación
+                - ENTRADA (compra)
+                - SALIDA (venta, muerte)
+        ⚠️ Caso especial: DESTETE
+            * VACUNO: solo cambia estado biológico, NO genera movimiento
+            * PORCINO: cambia estado biológico y SÍ genera movimiento interno, pero NO pertenece al movimiento
+                → evento biológico
+                → genera movimiento interno:
+                    - SALIDA (camada)
+                    - ENTRADA (post-destete)
+                → dicho de otra manera:
+                    DESTETE.movimiento_id = NULL
+                    SALIDA.movimiento_id = X
+                    ENTRADA.movimiento_id = X
+            👉 Esto es MUY importante mantenerlo así
+            👉 las diferencias por especie se gestionan en backend
+            👉 para revertir el destete en porcino:
+                1) revertir el movimiento interno (SALIDA + ENTRADA)
+                2) revertir el evento DESTETE
+            
+
+* TABLA PRINCIPAL:
+    EVENTOS
+    ---------
+    🧱 SQL
+
+        ```sql
+        CREATE TABLE eventos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+        tipo_evento_id UUID NOT NULL
+        REFERENCES tipo_evento(id),
+
+        motivo_id UUID NULL
+        REFERENCES motivos_movimiento(id),
+
+        movimiento_id UUID NULL
+        REFERENCES movimiento(id),
+
+        evento_referencia_id UUID NULL
+        REFERENCES eventos(id),
+
+        fecha TIMESTAMP NOT NULL,
+
+        especie especie_enum NOT NULL,
+
+        ciclo_id UUID NULL
+        REFERENCES ciclo_reproductivo(id),
+
+        metadata_json JSONB NULL,
+
+        created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+        created_by UUID NULL
+        );
+
+        CREATE INDEX idx_eventos_fecha
+        ON eventos(fecha);
+
+        CREATE INDEX idx_eventos_tipo
+        ON eventos(tipo_evento_id);
+
+        CREATE INDEX idx_eventos_movimiento
+        ON eventos(movimiento_id);
+
+        CREATE INDEX idx_eventos_ciclo
+        ON eventos(ciclo_id);
+        ```
+
+    id
+    tipo_evento_id              -- FK a TIPO_EVENTO
+    motivo_id                   -- (nullable) FK a MOTIVO
+    movimiento_id               -- (nullable) FK a MOVIMIENTO
+    evento_referencia_id        -- (nullable) FK a EVENTOS (permite saber qué evento originó el actual, y será muy útil para compensaciones futuras)
+    fecha
+    especie                     -- vacuno / porcino
+    ciclo_id                    -- (nullable) FK a CICLO_REPRODUCTIVO (solo necesario para eventos reproductivos: parto, aborto, destete, cubrición)
+    metadata_json               -- datos específicos (opcional)
+    created_at
+
+    ✔ tipo_evento define QUÉ pasa y si puede haber motivo (motivo define POR QUÉ pasa)
+    ✔ movimiento_id SOLO cuando hay relación entre varios eventos, para el resto de eventos será NULL
+        * SÍ necesitará movimiento_id: 
+            - cualquier movimiento entre lotes (entrada + salida): adopción, paso a engorde, reagrupación
+        * NO necesitará movimiento_id: 
+            - parto
+            - destete
+            - cubrición
+            - cambio_ubicacion
+            - sanitario
+            - ajuste
+            - entrada o salida simple (muerte, venta, compra)
+    ✔ evento_referencia_id: 
+        * apunta a otro evento (el que originó el evento actual)
+        * será muy útil si hay necesidad de hacer futuras compensaciones
+        * permite establecer relaciones causales, y ayuda a reconstruir el historial de eventos:
+            - destete: 
+                SALIDA.evento_referencia_id = DESTETE.id
+                ENTRADA.evento_referencia_id = DESTETE.id
+        * permite reconstruir "qué generó qué" sin lógicas externas complejas 
+    
+            
+
+* TABLAS AUXILIARES:
+    1) TIPO_EVENTO
+    -------------
+    🧱 SQL
+
+        ```sql
+        CREATE TABLE tipo_evento (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+        codigo TEXT NOT NULL UNIQUE,
+
+        descripcion TEXT NOT NULL,
+
+        tipo_tecnico tipo_tecnico_evento_enum NOT NULL,
+
+        tipo_negocio TEXT NOT NULL,
+
+        es_biologico BOOLEAN NOT NULL DEFAULT false,
+
+        requiere_motivo BOOLEAN NOT NULL DEFAULT false,
+
+        afecta_stock BOOLEAN NOT NULL DEFAULT false,
+
+        afecta_animales BOOLEAN NOT NULL DEFAULT false,
+
+        afecta_lotes BOOLEAN NOT NULL DEFAULT false,
+
+        activo BOOLEAN NOT NULL DEFAULT true,
+
+        created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+        created_by UUID NULL
+        );
+
+        CREATE INDEX idx_tipo_evento_codigo
+        ON tipo_evento(codigo);
+        ```
+
+    id
+    codigo              -- PARTO, SALIDA, ENTRADA, etc.
+    descripcion
+    tipo_tecnico        -- STOCK | BIOLOGICO | OPERATIVO | SISTEMA
+    tipo_negocio        -- reproductivo | movimientos | sanitario | ubicacion | gestion
+    es_biologico        -- boolean (relacionado con el ciclo reproductivo)
+    requiere_motivo     -- boolean
+    afecta_stock        -- boolean
+    afecta_animales     -- boolean
+    afecta_lotes        -- boolean
+    activo              -- boolean 
+
+    Ejemplo:
+
+        ID | CODIGO            | tipo_tecnico | tipo_negocio  | MOTIVO | STOCK | ANIMAL | LOTE | BIOLOGICO
+        ---|-------------------|--------------|---------------|--------|-------|--------|------|-----------
+        1  | PARTO             | BIOLOGICO    | reproductivo  | false  | false | true   | false| true
+        2  | ABORTO            | BIOLOGICO    | reproductivo  | false  | false | true   | false| true
+        3  | CUBRICION         | BIOLOGICO    | reproductivo  | false  | false | true   | false| true
+        4  | DESTETE           | BIOLOGICO    | reproductivo  | false  | true  | true   | true | true
+        5  | CAMBIO_UBICACION  | OPERATIVO    | ubicacion     | false  | false | true   | true | false
+        6  | SANITARIO         | OPERATIVO    | sanitario     | false  | false | true   | true | false
+        7  | ENTRADA           | STOCK        | movimientos   | true   | true  | true   | true | false
+        8  | SALIDA            | STOCK        | movimientos   | true   | true  | true   | true | false
+        9  | CREACION_LOTE     | SISTEMA      | gestion       | false  | false | false  | true | false
+        10 | AJUSTE            | STOCK        | gestion       | true   | true  | false  | true | false
+        11 | SELECCION_REPROD  | OPERATIVO    | gestion       | false  | true  | true   | true | false
+
+    * requiere_motivo → SOLO para ENTRADA/SALIDA/AJUSTE
+    * afecta_stock → afecta cantidad_actual
+    * tipo_tecnico + tipo_negocio → clasificación funcional de los eventos
+        * tipo_tecnico (backend) → Cómo se comporta el evento
+        * tipo_negocio (UX / dominio) → Cómo lo entiende el usuario
+        * esto permite:
+            - diferenciar en UI eventos por tipo_negocio: movimientos, reproductivo, sanitario, ubicacion, gestion
+            - facilitar la analítica
+            - aplicar reglas específicas según el tipo_tecnico: Ej: solo eventos BIOLOGICOS afectan al ciclo reproductivo
+                if (tipo_tecnico === 'BIOLOGICO') {
+                    gestionarCiclo()
+                }
+            - aplicar validaciones complejas: Ej: solo podemos aplicar un evento de tipo reproductivo a hembras
+    * es_biologico → indica si se trata de un evento biológico (parto, aborto, destete, cubrición), y aplica a eventos que AFECTAN al ciclo reproductivo. Permite:
+        1. UI más limpia
+            - pestaña “reproductivo”
+            - pestaña “movimientos”
+        2. Evitar bugs
+            - impide cosas como:
+                * cerrar ciclo con una venta
+
+    Para los movimientos de mezcla de lotes (adopción, paso a engorde, reagrupación) NO hay un evento específico sino que:
+        ✔ se iniciarán con el evento SALIDA + motivo (adopción, paso a engorde, reagrupación)
+        ✔ se completarán con el evento ENTRADA + motivo (mismo que en la salida)
+        ✔ salida + entrada = mismo movimiento_id
+
+    Para el caso de los eventos de AJUSTE:
+        - casi siempre solo aplicables a LOTES 
+        - en el caso de un animal individual:
+            - en la mayoría de casos NO será necesario un ajuste, sino edición de datos mediante formulario y se guardarán las modificaciones en HISTORIAL DE CAMBIOS (ej: correccion de un crotal, cambio de sexo, etc.)
+            - solo en casos muy puntuales se justificará un evento de ajuste (ej: hemos indicado por error la muerte de un animal)
+        - hay que asegurar la integridad de los datos, por lo que requiere:
+            * motivo obligatorio
+            * auditoría (quién, cuándo, por qué)
+            * obviamente, habrá que controlar que no deje la cantidad_actual en negativo...
+
+    El evento CUBRICIÓN:
+        - se aplicará a las hembras (no necesario en machos, ya que no tienen ciclo reproductivo)
+        - tiene valor "informativo", no es definitivo, ya que el animal podría no quedar preñado. 
+        - pueden ser necesarias varias cubriciones para que el animal quede gestante
+        - así pues, se tendrán que poder informar varios eventos de cubrición por ciclo_reproductivo
+        - IMPORTANTE: cubricion_vigente = última cubrición del ciclo_reproductivo (por fecha)
+
+    2) EVENTO_ANIMALES
+    ----------------
+    🧱 SQL
+
+        ```sql
+        CREATE TABLE evento_animales (
+        evento_id UUID NOT NULL
+        REFERENCES eventos(id)
+        ON DELETE CASCADE,
+
+        animal_id UUID NOT NULL
+        REFERENCES animal(id),
+
+        rol TEXT NULL,
+
+        PRIMARY KEY (evento_id, animal_id)
+        );
+
+        CREATE INDEX idx_evento_animales_animal
+        ON evento_animales(animal_id);
+        ```
+
+    evento_id   -- FK a EVENTOS
+    animal_id   -- FK a ANIMALES
+    rol         -- opcional: madre, macho, hijo, etc.
+
+    3) EVENTO_LOTES
+    ----------------
+    🧱 SQL
+
+        ```sql
+        CREATE TABLE evento_lotes (
+        evento_id UUID NOT NULL
+        REFERENCES eventos(id)
+        ON DELETE CASCADE,
+
+        lote_id UUID NOT NULL
+        REFERENCES lote(id),
+
+        lote_origen_id UUID NULL
+        REFERENCES lote(id),
+
+        rol TEXT NOT NULL,
+
+        cantidad INTEGER NOT NULL
+        CHECK (cantidad > 0),
+
+        PRIMARY KEY (
+        evento_id,
+        lote_id,
+        rol
+        )
+        );
+
+        CREATE INDEX idx_evento_lotes_lote
+        ON evento_lotes(lote_id);
+        ```
+
+    evento_id           -- FK a EVENTOS
+    lote_id             -- FK a LOTES
+    lote_origen_id      -- (nullable) - mejora trazabilidad de movimientos entre lotes
+    rol                 -- origen | destino | sujeto | afectado | 
+    cantidad            -- MUY IMPORTANTE
+
+    4) MOTIVOS_MOVIMIENTO
+    -------------------
+    🧱 SQL
+
+        ```sql
+        CREATE TABLE motivos_movimiento (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+        nombre TEXT NOT NULL UNIQUE,
+
+        tipo_base tipo_base_movimiento_enum NOT NULL,
+
+        descripcion TEXT NULL,
+
+        es_monetizable BOOLEAN NOT NULL DEFAULT false,
+
+        tipo_economico TEXT NOT NULL
+        CHECK (
+        tipo_economico IN (
+        'ingreso',
+        'gasto',
+        'ninguno'
+        )
+        ),
+
+        activo BOOLEAN NOT NULL DEFAULT true,
+
+        created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+        created_by UUID NULL
+        );
+        ```
+
+    id
+    nombre
+    tipo_base           -- ENTRADA / SALIDA / MIXTO (dirección en que se mueve el stock, +/-)
+    descripcion
+    es_monetizable      -- boolean 🔥
+    tipo_economico      -- ingreso | gasto | ninguno 🔥 (opcional pero MUY útil)
+    activo              -- boolean (para activar/desactivar motivos sin borrarlos)
+
+    Ejemplo:
+    
+        ID | nombre                 | tipo_base | es_monetizable | tipo_economico | descripcion
+        ---|------------------------|-----------|----------------|----------------|------------
+        1  | compra                 | ENTRADA   | true           | gasto          | entrada externa
+        2  | venta                  | SALIDA    | true           | ingreso        | salida comercial
+        3  | muerte                 | SALIDA    | false          | ninguno        | baja por muerte
+        4  | adopcion               | MIXTO     | false          | ninguno        | camada → camada
+        5  | paso_engorde           | MIXTO     | false          | ninguno        | post-destete → engorde
+        6  | reagrupacion           | MIXTO     | false          | ninguno        | engorde → engorde
+        7  | destete                | MIXTO     | false          | ninguno        | interna (generado por sistema)
+        8  | seleccion_reproductor  | SALIDA    | false          | ninguno        | lote → animal
+        9  | ajuste_regularizacion  | MIXTO     | false          | ninguno        | conteo real
+        10 | ajuste_error           | MIXTO     | false          | ninguno        | corrección operativa
+
+
+    * Cómo se relaciona la tabla eventos con las 4 tablas auxiliares? 
+        - en la tabla eventos encontramos el campo tipo_evento_id que es una clave foránea que apunta a la tabla tipo_evento.
+        - en la tabla evento_animales encontramos el campo evento_id, que es una clave foránea que apunta a la tabla eventos.
+        - en la tabla evento_lotes encontramos el campo evento_id, que es una clave foránea que apunta a la tabla eventos.
+        - en la tabla eventos encontramos el campo motivo_id que es una clave foránea que apunta a la tabla motivos_movimiento.
+
+    🎯 ¿Qué eventos llevan motivo_id?
+        - Regla simple
+            👉 Solo eventos de tipo STOCK: entrada, salida, ajuste
+            ❌ NO llevan motivo: eventos biológicos y operativos
+        - 💡 Por qué? motivo responde a: “¿por qué se mueve el stock?”, y no a: “¿qué evento ocurrió?”
+    
+    * es_monetizable:
+        - indica si se trata de un evento con impacto económico, activa la lógica económica
+        - permite, en combinación con "tipo_economico":
+            - automatizar creación de venta_linea (vía de enlace con MODELO FINANCIERO) si es INGRESO
+            - crear transacción (gastos o ingresos)
+            - ❌ NO crear factura automáticamente (a menudo la factura llega más tarde, o se introduce manualmente...) 
+                if (motivo.es_monetizable) {
+                    if (motivo.tipo_economico === 'ingreso') {
+                        crearVentaLinea()
+                    }
+                    if (motivo.tipo_economico === 'gasto') {
+                        crearTransaccionGasto()
+                    }
+                }
+            - separar ingresos/gastos sin necesitar consultas complejas
+            - filtrar eventos económicos
+            - evitar bugs (SOLO crear venta_linea en eventos monetizables)
+                👉 ya no hay que “interpretar” eventos
+                👉 el sistema sabe qué hacer
+
+    * tipo_economico:
+        - ingreso → venta animales
+        - gasto   → compra (pienso, etc.)
+        - ninguno → movimientos internos (muerte, adopción, paso_engorde...)
+
+    * RELACIÓN IMPORTANTE:
+        EVENTO
+          ↓
+        MOTIVO (decide comportamiento económico)
+          ↓
+        SI monetizable:
+          → venta_linea (ingreso)
+          → o gasto (factura directa)
+
+    * campo "activo":
+        - default = true
+        - permite desactivar motivos sin eliminarlos (auditoría, corrección de errores, etc.) y mantener histórico
+
+
+CICLO_REPRODUCTIVO
+-------------------
+🧱 SQL
+
+    ```sql
+    CREATE TABLE ciclo_reproductivo (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    animal_id UUID NOT NULL
+    REFERENCES animal(id),
+
+    numero_ciclo INTEGER NOT NULL
+    CHECK (numero_ciclo > 0),
+
+    fecha_inicio DATE NOT NULL,
+
+    fecha_fin DATE NULL,
+
+    resultado resultado_ciclo_enum NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+
+    created_by UUID NULL,
+
+    CONSTRAINT uq_ciclo_numero
+    UNIQUE (animal_id, numero_ciclo),
+
+    CONSTRAINT chk_fechas_ciclo
+    CHECK (
+    fecha_fin IS NULL
+    OR fecha_fin >= fecha_inicio
+    )
+    );
+    ```
+
+    CREATE INDEX idx_ciclo_animal
+    ON ciclo_reproductivo(animal_id);
+
+    CREATE INDEX idx_ciclo_resultado
+    ON ciclo_reproductivo(resultado);
+    ```
+
+id
+animal_id (FK, hembra) ✅
+numero_ciclo (int)
+fecha_inicio
+fecha_fin (nullable)
+resultado (nullable):
+    - parto
+    - aborto
+    - desconocido
+    - venta
+    - muerte
+created_at
+
+** Se relaciona con los EVENTOS mediante el campo "ciclo_id" (nullable) de la tabla EVENTOS
+** El RESULTADO solo se asigna en el momento de cierre del ciclo
+** El ESTADO del ciclo no se guardará, se deriva del RESULTADO (NULL = abierto | cualquier otro valor = cerrado)
+
+- FLUJO DEL CICLO REPRODUCTIVO:
+🧠 REGLA GLOBAL: Siempre existe como máximo 1 ciclo abierto por animal
+
+NOTA: 
+- la cubrición se puede dar en:
+    * hembras "vacías"
+    * novillas/hembras jóvenes que aún no han parido nunca ("no_reproductora") - primer ciclo
+- si ya hay ciclo abierto, tras la cubrición se sigue el mismo ciclo; en caso contrario, la cubrición crea un nuevo ciclo.
+
+🟢 CASO 1 — Primer evento reproductivo registrado o bien ciclo anterior con resultado DESCONOCIDO
+    1. Evento: cubrición
+    2. Si NO hay ciclo abierto:
+        → crear nuevo ciclo
+        → asignar ciclo_id al evento
+
+🟡 CASO 2 — Cubrición dentro de ciclo
+    1. Si hay ciclo abierto:
+        → asignar ciclo_id existente
+    👉 incluye:
+        - repeticiones
+        - fallos
+        - abortos no detectados
+
+🔴 CASO 3 — Aborto
+    1. asignar evento al ciclo actual
+    2. cerrar ciclo:
+        - fecha_fin = fecha aborto
+        - resultado = aborto
+        - estado (derivado) = cerrado
+    3. crear NUEVO ciclo inmediatamente
+
+🟢 CASO 4 — Parto
+    1. asignar evento al ciclo actual
+    2. resultado del ciclo → NO se informa aún, se hará cuando se cierre el ciclo con el destete
+    👉 NO se cierra el ciclo aún
+
+🔵 CASO 5 — Destete
+    1. asignar evento al ciclo actual
+    2. cerrar ciclo:
+        - fecha_fin = fecha destete
+        - resultado = parto
+        - estado (derivado) = cerrado
+    3. crear NUEVO ciclo
+
+🟢 CASO 6 — Venta
+    1. asignar evento al ciclo actual
+    2. cerrar ciclo:
+        - fecha_fin = fecha venta
+        - resultado = venta
+        - estado (derivado) = cerrado
+    3. NO crear nuevo ciclo
+
+🔴 CASO 7 — Muerte
+    1. asignar evento al ciclo actual
+    2. cerrar ciclo:
+        - fecha_fin = fecha muerte
+        - resultado = muerte
+        - estado (derivado) = cerrado
+    3. NO crear nuevo ciclo
+
+🔵 CASO 8 — Timeout (sin parto ni aborto)
+    1. Si pasa X tiempo desde última cubrición SIN que haya parto ni aborto:
+        → cerrar ciclo:
+            fecha_fin = fecha actual
+            resultado = desconocido
+            estado (derivado) = cerrado
+        → NO crear nuevo ciclo, el animal queda en estado "vacía" hasta la siguiente cubrición
+
+🟡 CASO HIPOTÉTICO: muerte de la cría antes del destete:
+    1. se tratará como un DESTETE
+        → El ciclo reproductivo mide la reproducción de la madre, no la supervivencia de la camada
+        → Por tanto, la muerte de la cría NO afecta al ciclo reproductivo
+        → No mezclar eventos de crías con ciclo de la madre, añadiría complejidad y fuente de errores
+        → No inferir automáticamente desde mortalidad de camada
+    2. se cerrará el ciclo
+        - fecha_fin = fecha destete
+        - resultado = parto
+        - estado (derivado) = cerrado
+    3. se abrirá un nuevo ciclo
+
+❓ Cubrición sin ciclo previo →  crea ciclo
+❓ Múltiples cubriciones → mismo ciclo
+❓ Aborto sin cubrición previa registrada → se asigna al ciclo abierto igualmente
+❓ Datos históricos incompletos → resultado = desconocido 
+
+RESUMEN:
+********
+    EVENTO        → ACCIÓN
+
+    cubrición     → crea ciclo si no existe (Primer evento reproductivo registrado o bien ciclo anterior con resultado DESCONOCIDO)
+    cubrición     → sigue ciclo si existe
+
+    parto         → evento interno del ciclo (NO cambia resultado)
+
+    destete       → cerrar ciclo + resultado = parto + abrir nuevo (estado VACÍA)
+
+    aborto        → cerrar ciclo + resultado = aborto + abrir nuevo (estado VACÍA)
+
+    timeout       → cerrar ciclo (resultado = desconocido). NO abre nuevo ciclo
+
+    muerte        → cerrar ciclo (resultado = muerte). NO abre nuevo ciclo
+
+    venta         → cerrar ciclo (resultado = venta). NO abre nuevo ciclo
+********
+
+
+---
+
+# MÓDULO FINANCIERO:
+
+# 🥇 1. TERCERO (BASE DE TODO)
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE tercero (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  nombre TEXT NOT NULL,
+
+  tipo TEXT CHECK (tipo IN ('cliente','proveedor','mixto')) NOT NULL,
+
+  activo BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+---
+
+## 🧠 Modelo simple
+
+TERCERO
+- id
+- nombre
+- tipo (cliente / proveedor / mixto)
+- activo
+
+🧠 Qué es
+Un tercero es cualquier persona o empresa con la que se tiene relación económica.
+👉 Ejemplos reales:
+    - el matadero al que vendes
+    - el proveedor de pienso
+    - el veterinario
+Es el “quién” del dinero.
+
+🔑 Campos clave
+    - nombre
+        → cómo identificas al tercero en el mundo real
+        → crítico para UX y para evitar duplicados
+    - tipo (cliente / proveedor / mixto)
+        → define cómo se usa:
+            - cliente → ingresos
+            - proveedor → gastos
+        → evita errores de uso
+    - activo
+        → permite dejar de usar un tercero sin borrarlo
+        → mantiene histórico limpio
+
+🔗 Relaciones
+    - venta.cliente_id → quién compra animales
+    - factura.tercero_id → quién emite o recibe factura
+
+👉 No conecta directamente con ganadero
+👉 pero es clave para análisis económico
+
+---
+
+# 🥈 2. VENTA
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE venta (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  cliente_id UUID NOT NULL REFERENCES tercero(id),
+
+  categoria_id UUID NOT NULL REFERENCES categoria_financiera(id),
+
+  fecha DATE NOT NULL,
+
+  estado TEXT CHECK (estado IN ('abierta','parcial','facturada')) DEFAULT 'abierta',
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+## 🧠 Modelo simple
+
+VENTA
+- id
+- cliente
+- fecha
+- categoria
+- estado (abierta / parcial / facturada)
+
+🧠 Qué es
+La venta es el acuerdo comercial.
+    👉 No es el evento físico
+    👉 No es el dinero
+    👉 Es el “trato” que haces con el cliente
+
+Ejemplo real
+“Vendo 20 cerdos al matadero X”
+Eso es UNA venta, aunque:
+    - salgan en días distintos
+    - haya varias facturas
+
+🔑 Campos clave
+    - cliente_id
+        → quién compra
+        → conecta con tercero
+    - fecha
+        → referencia temporal del acuerdo
+        → importante para reporting
+    - categoria_id
+        → hace referencia a la categoría financiera (tabla categoria_financiera)
+        → define qué tipo de ingreso es
+        → se propondrá una por defecto según el tipo de venta, aunque el usuario podrá cambiarla antes de guardar.
+    - estado (abierta / parcial / facturada)
+        → indica situación económica:
+            - abierta → sin facturas
+            - parcial → facturación incompleta
+            - facturada → cerrada
+        👉 Este campo evita caos en seguimiento
+
+🔗 Relaciones
+    - 1:N con venta_linea
+    - 1:N con transacción (ingresos)
+    - relación indirecta con factura
+
+👉 No conecta directamente con ganadero
+👉 pero agrupa lo que viene de eventos
+
+❗❗❗ REGLAS CLAVE: ❗❗❗
+1) si una venta tiene transacciones NO se puede editar!!!
+    Backend (typescript):
+        if (existsTransacciones(venta.id)) {
+            throw Error('No se puede modificar una venta con impacto económico')
+        }
+
+2) Los campos categoria_id y cliente_id también existen en "transaccion", pero la VERDAD reside en "venta". Lo que se guarde en "transaccion" es solo un reflejo de lo que está en "venta".
+    * transaccion.tercero_id = venta.cliente_id
+    * transaccion.categoria_id = venta.categoria_id 
+    (se asignan en el momento de la creación de la transacción)
+
+3) Una transacción es un hecho económico cerrado en el tiempo. 👉 es inmutable y NO debe cambiar retroactivamente.
+    - por esta razón definimos el punto 1: NO se puede editar una venta con transacciones.
+    - si en el futuro se ve necesidad de modificar una venta con transacciones, se debe asegurar que las transacciones ya existentes NO se modifiquen, que conserven su categoria anterior --> integridad histórica.
+        * Si se modificara la categoría en venta, NO debe propagarse retroactivamente hacia las transacciones.
+        * la modificación de la categoría en venta solo afectaría a futuras transacciones.
+❗❗❗
+
+---
+
+# 🥉 3. VENTA_LINEA (🔥 CLAVE DEL SISTEMA)
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE venta_linea (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  venta_id UUID NOT NULL REFERENCES venta(id),
+  evento_id UUID NOT NULL REFERENCES eventos(id),
+
+  tipo TEXT CHECK (tipo IN ('animal','lote')) NOT NULL,
+
+  animal_id UUID NULL,
+  lote_id UUID NULL,
+
+  cantidad INT NOT NULL,
+
+  created_at TIMESTAMP DEFAULT now(),
+
+  CONSTRAINT chk_tipo_entidad CHECK (
+    (tipo = 'animal' AND animal_id IS NOT NULL AND lote_id IS NULL)
+    OR
+    (tipo = 'lote' AND lote_id IS NOT NULL AND animal_id IS NULL)
+  )
+);
+```
+
+## 🧠 Modelo simple
+
+VENTA_LINEA
+- venta
+- evento
+- tipo (animal/lote)
+- entidad (animal_id o lote_id)
+- cantidad
+
+🧠 Qué es
+👉 Esta es la pieza más importante del sistema
+NO es una entidad económica. 
+Es una entidad comercial con origen físico, es la traducción comercial de un evento ganadero.
+No conecta con dinero directamente, conecta con la facturación --> conecta con "factura_linea" mediante el campo "factura_linea.venta_linea_id".
+
+Ejemplo
+- Evento: “salen 20 cerdos del lote A”
+- Venta_linea: “estos 20 cerdos forman parte de la venta X”
+
+🔑 Campos clave
+    - evento_id 🔥
+        → conecta con la realidad (ganadero)
+        → sin esto, pierdes trazabilidad
+    - venta_id
+        → indica a qué acuerdo pertenece
+    - tipo (animal / lote)
+        → define qué estás vendiendo
+        → evita ambigüedad
+    - animal_id / lote_id
+        → la entidad física real
+        → permite análisis posterior
+    - cantidad
+        → indica cuánto estamos vendiendo (unidades fisicas)
+        → es dato físico/comercial, no económico
+
+🔗 Relaciones
+    - evento_id → EVENTOS (ganadero) 🔥
+    - venta_id → venta
+    - factura_linea → conexión con facturación
+
+👉 Es el puente entre: GANADERO ↔ FINANCIERO
+
+
+---
+
+# 🏦 4. TRANSACCION
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE transaccion (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- tipo de dinero
+  tipo TEXT CHECK (tipo IN ('ingreso','gasto')) NOT NULL,
+
+  -- origen del movimiento
+  origen TEXT CHECK (origen IN ('prevision','factura','manual')) NOT NULL,
+
+  -- relaciones (flexibles)
+  venta_id UUID NULL REFERENCES venta(id),
+  factura_id UUID NULL REFERENCES factura(id),
+
+  -- dimensiones analíticas (🔥 SIEMPRE INFORMADAS)
+  tercero_id UUID NOT NULL REFERENCES tercero(id),
+  categoria_id UUID NOT NULL REFERENCES categoria_financiera(id),
+
+  -- datos económicos
+  importe NUMERIC NOT NULL CHECK (importe >= 0),
+  fecha DATE NOT NULL,
+
+  -- contexto humano (🔥 clave)
+  descripcion TEXT NOT NULL,
+
+  -- control
+  created_at TIMESTAMP DEFAULT now(),
+
+  -- reglas de coherencia
+  CONSTRAINT chk_origen_relaciones CHECK (
+    -- previsión → ligada a venta
+    (origen = 'prevision' AND venta_id IS NOT NULL AND factura_id IS NULL)
+    OR
+    -- factura → ligada a factura
+    (origen = 'factura' AND factura_id IS NOT NULL)
+    OR
+    -- manual → sin necesidad de relaciones
+    (origen = 'manual')
+  )
+);
+```
+
+## 🧠 Modelo Simple
+
+TRANSACCION
+- tipo (ingreso/gasto)
+- origen (previsión/factura/manual)
+- venta (opcional)
+- factura (opcional)
+- tercero (obligatorio)
+- categoria (obligatorio)
+- importe
+- fecha
+- descripcion (obligatorio)
+
+🧠 Qué es
+El movimiento económico real.
+    👉 Es el dinero (o su expectativa)
+    👉 HOY: siempre viene de factura (origen = factura)
+    👉 FUTURO: puede venir de venta (estimación) -- solo hace falta informar el importe en la transacción
+
+Ejemplos
+    - ingreso por venta
+    - gasto en pienso
+    - gasto en gasolina
+
+| caso                             | soportado |
+| -------------------------------- | --------- |
+| hoy: factura → dinero            | ✔         |
+| mañana: venta → dinero estimado  | ✔         |
+| gasto manual                     | ✔         |
+| conciliación futura              | ✔         |
+
+
+🔑 Campos clave
+    - tipo (ingreso / gasto)
+        → define dirección del dinero
+    - origen (previsión / factura / manual)
+        → indica cómo y en qué momento se creó: si es una previsión de venta, si es una factura o si es un gasto manual
+    - importe (siempre NOT NULL)
+        → si no se sabe el importe NO puede haber transacción
+    - fecha (siempre obligatoria)
+        → referencia económica
+        → importante para reporting real
+    - descripcion (siempre obligatoria)
+        → permite entender el movimiento, mejora la UX en listados y el reporting.
+        → especialmente importante en gastos manuales --> lo debe rellenar el usuario
+        → en el caso de INGRESOS, el backend hará propuesta de descripción  (ej: "Ingreso por venta de lote X", "Factura 1234 - Venta animales"...), aunque el usuario podrá modificarla antes de guardar
+    - tercero_id y categoria_id:
+        - SIEMPRE deben estar informados, pero su origen difiere:
+            🟢 TIPO = INGRESO: NO se informan por parte del usuario, se toman desde venta. Al crear la transacción:
+                * tercero_id: venta.cliente_id
+                * categoria_id: venta.categoria_id
+                * al crear la transaccion debemos asegurar que "transaccion.categoria_id === venta.categoria_id"
+                * user-friendly y UX-friendly: evitamos pedir al usuario que informe datos que ya están en venta, así como lógica compleja para obtener en runtime estos valores desde la venta.
+            🔴 TIPO = GASTO: los informará el usuario:
+                * tercero_id: opcional, ya que no siempre se conocerá (pero recomendable)
+                * categoria_id: obligatorio
+        - permiten que la tabla transaccion pase de ser "operativa" a "analítica":
+            * reporting potente (gasto por categoría, gasto por proveedor, margen por cliente...)
+            * queries simples (sin joins)
+            * UX mejor
+            * escalable
+
+🔗 Relaciones
+    - venta_id → ingresos previstos
+    - factura_id → ingreso real / gastos
+    - tabla documento → evidencia del gasto (ticket, pdf…)
+        * documento.entidad_tipo = 'transaccion'
+        * documento.entidad_id   = transaccion.id
+
+👉 Es la única tabla que mide dinero directamente
+
+REGLAS CRÍTICAS (NO NEGOCIABLES)
+🔴 Si una venta tiene transacciones → NO se puede editar, se bloqueará
+    if (existsTransacciones(venta.id)) {
+        throw Error('No se puede modificar una venta con impacto económico')
+    }
+
+🟢 Creación de transacción (INGRESOS)
+    transaccion = {
+        tipo: 'ingreso',
+        origen: 'factura',
+
+        venta_id: venta.id,
+        factura_id: factura.id,
+
+        tercero_id: venta.cliente_id, **
+        categoria_id: venta.categoria_id, **
+
+        ...
+    }
+
+    👉 sin lógica extra
+    👉 sin ambigüedad
+
+🔴 Creación de transacción (GASTOS)
+    - NO hay venta
+    - usuario informa:
+        * categoria_id (obligatorio)
+        * tercero_id (opcional pero recomendable)
+        * descripcion (obligatoria)
+
+🔒 Inmutabilidad
+👉 NUNCA:
+    - editar transacciones
+    - cambiar categoria_id
+    - cambiar importe
+👉 SIEMPRE:
+    - crear nueva transacción correctora
+
+---
+
+# 🧾 5. FACTURA
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE factura (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  tercero_id UUID REFERENCES tercero(id),
+
+  tipo TEXT CHECK (tipo IN ('ingreso','gasto')) NOT NULL,
+
+  fecha DATE NOT NULL,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+## 🧠 Modelo simple
+
+FACTURA
+- tercero
+- tipo (ingreso/gasto)
+- fecha
+
+🧠 Qué es
+Un documento externo.
+    👉 No lo controlas tú
+    👉 Te llega o lo emites
+    👉 Tiene valor legal
+
+Ejemplos
+    - factura del matadero
+    - factura del proveedor de pienso
+
+🔑 Campos clave
+    - tercero_id
+        → quién la emite o recibe
+        → clave para análisis
+    - tipo (ingreso / gasto)
+        → define flujo económico
+    - fecha
+        → referencia contable
+
+🔗 Relaciones
+    - 1:N con factura_linea
+    - opcional con transaccion
+
+👉 No conecta directamente con ganadero
+👉 pero se conecta indirectamente vía venta_linea
+
+---
+
+# 📄 6. FACTURA_LINEA
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE factura_linea (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  factura_id UUID NOT NULL REFERENCES factura(id),
+
+  venta_linea_id UUID NULL REFERENCES venta_linea(id),
+
+  total_kg NUMERIC,
+  total_importe NUMERIC,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+## 🧠 Modelo simple
+
+FACTURA_LINEA
+- factura
+- venta_linea (opcional)
+- totales (kg, importe)
+
+🧠 Qué es
+Una línea dentro de la factura, pero a nivel agregado.
+    👉 Es lo que ves en la factura
+
+Ejemplo
+“20 cerdos → 2.000 kg → 3.000 €”
+
+🔑 Campos clave
+    - factura_id
+        → a qué factura pertenece
+    - venta_linea_id 🔥
+        → conecta con lo vendido
+        → clave para trazabilidad
+    - total_kg / total_importe
+        → resumen económico
+
+🔗 Relaciones
+    - factura_id → factura
+    - venta_linea_id → venta_linea
+
+👉 Aquí se une: VENTA ↔ FACTURA
+
+---
+
+# 🔬 7. FACTURA_LINEA_DETALLE
+
+## 🧱 SQL
+
+```sql
+CREATE TABLE factura_linea_detalle (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  factura_linea_id UUID NOT NULL REFERENCES factura_linea(id),
+
+  peso NUMERIC,
+  precio_unitario NUMERIC,
+
+  metadata JSONB,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+## 🧠 Modelo simple
+
+FACTURA_LINEA_DETALLE
+- factura_linea
+- peso
+- precio_unitario
+- metadata
+
+🧠 Qué es
+El nivel más granular.
+    👉 Cuando la factura viene con detalle por animal
+
+Ejemplo
+cerdo 1 → 100 kg → 150€
+cerdo 2 → 95 kg → 140€
+...
+
+🔑 Campos clave
+    - peso
+    - precio_unitario
+    - metadata
+        → flexible (sexo, categoría, etc.)
+
+🔗 Relaciones
+    - factura_linea_id → factura_linea
+
+👉 No conecta directamente con ganadero
+👉 pero permite análisis profundo
+
+---
+
+# TABLAS COMUNES:
+
+Estas tablas NO son parte del flujo principal, pero son necesarias para el sistema.
+
+
+1) TABLA DOCUMENTOS:
+Usaremos una única tabla para documentos, que se relacionará con las entidades que necesiten documentos.
+
+🧱 SQL
+```sql
+CREATE TABLE documentos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  tipo TEXT CHECK (tipo IN (
+    'factura',
+    'ticket',
+    'imagen',
+    'documento'
+  )) NOT NULL,
+
+  url TEXT NOT NULL,
+
+  entidad_tipo TEXT CHECK (entidad_tipo IN (
+    'animal',
+    'lote',
+    'evento',
+    'transaccion',
+    'factura'
+  )) NOT NULL,
+
+  entidad_id UUID NOT NULL,
+
+  descripcion TEXT,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+🧠 Modelo simple
+DOCUMENTOS
+    - tipo (factura, ticket, imagen…)
+    - archivo (url)
+    - a qué pertenece (entidad_tipo + entidad_id)
+
+🎯 Qué permite
+✔ adjuntar:
+    - fotos de animales
+    - tickets
+    - PDFs
+    - informes
+✔ sin duplicar tablas
+✔ sin acoplarte a ningún módulo
+
+
+2) TABLA CATEGORIA_FINANCIERA:
+Permite clasificar los ingresos y gastos.
+
+## 🧱 SQL
+```sql
+CREATE TABLE categoria_financiera (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  nombre TEXT NOT NULL,
+
+  tipo TEXT CHECK (tipo IN ('ingreso','gasto')) NOT NULL,
+
+  parent_id UUID NULL REFERENCES categoria_financiera(id),
+
+  activo BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+## 🧠 Modelo simple
+CATEGORIA_FINANCIERA
+    - nombre (veterinario, pienso, gasolina…)
+    - tipo (ingreso/gasto)
+    - jerarquía (opcional)
+
+El campo "parent_id" permite crear jerarquías en forma de árbol, por ejemplo:
+GASTOS
+├── Alimentación
+│   ├── Pienso
+│   ├── Forraje
+│   └── Suplementos
+├── Veterinario
+│   ├── Medicamentos
+│   └── Servicios veterinarios
+├── Mantenimiento
+│   ├── Reparaciones
+│   └── Material
+└── Combustible
+
+👉 Aquí:
+    - "Pienso" → parent = "Alimentación"
+    - "Alimentación" → parent = NULL
+
+Esto permite analizar a distintos niveles sin duplicar datos ni necesidad de lógica compleja:
+    - nivel alto → visión global (Ej: SUM gastos por "Alimentación")
+    - nivel bajo → detalle fino (Ej: SUM gastos por "Pienso")
+
+EJEMPLOS REALES DE DATOS
+📥 Inserts:
+```sql
+-- ROOT
+INSERT INTO categoria_financiera (id, nombre, tipo, parent_id)
+VALUES 
+('cat_gastos', 'Gastos', 'gasto', NULL),
+('cat_ingresos', 'Ingresos', 'ingreso', NULL);
+
+-- NIVEL 1
+INSERT INTO categoria_financiera (id, nombre, tipo, parent_id)
+VALUES
+('cat_alimentacion', 'Alimentación', 'gasto', 'cat_gastos'),
+('cat_veterinario', 'Veterinario', 'gasto', 'cat_gastos'),
+('cat_mantenimiento', 'Mantenimiento', 'gasto', 'cat_gastos'),
+('cat_combustible', 'Combustible', 'gasto', 'cat_gastos');
+
+-- NIVEL 2
+INSERT INTO categoria_financiera (id, nombre, tipo, parent_id)
+VALUES
+('cat_pienso', 'Pienso', 'gasto', 'cat_alimentacion'),
+('cat_forraje', 'Forraje', 'gasto', 'cat_alimentacion'),
+
+('cat_medicamentos', 'Medicamentos', 'gasto', 'cat_veterinario'),
+('cat_servicios_vet', 'Servicios veterinarios', 'gasto', 'cat_veterinario'),
+
+('cat_reparaciones', 'Reparaciones', 'gasto', 'cat_mantenimiento'),
+('cat_material', 'Material', 'gasto', 'cat_mantenimiento');
+
+-- INGRESOS
+INSERT INTO categoria_financiera (id, nombre, tipo, parent_id)
+VALUES
+('cat_venta_animales', 'Venta de animales', 'ingreso', 'cat_ingresos'),
+('cat_subvenciones', 'Subvenciones', 'ingreso', 'cat_ingresos');
+````
+
+---
+
+# EXTENSIONES + ENUMS
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+
+-- =========================
+-- ENUMS GENERALES
+-- =========================
+
+CREATE TYPE especie_enum AS ENUM (
+'vacuno',
+'porcino'
+);
+
+CREATE TYPE sexo_enum AS ENUM (
+'macho',
+'hembra'
+);
+
+CREATE TYPE origen_animal_enum AS ENUM (
+'interno',
+'compra'
+);
+
+-- =========================
+-- ESTADOS
+-- =========================
+
+CREATE TYPE estado_vital_enum AS ENUM (
+'vivo',
+'muerto',
+'vendido'
+);
+
+CREATE TYPE estado_reproductivo_enum AS ENUM (
+'vacia',
+'no_reproductiva',
+'gestante',
+'lactante'
+);
+
+CREATE TYPE estado_sanitario_enum AS ENUM (
+'sano',
+'en_observacion',
+'en_tratamiento',
+'no_apto'
+);
+
+CREATE TYPE estado_lote_enum AS ENUM (
+'activo',
+'cerrado'
+);
+
+-- =========================
+-- LOTES
+-- =========================
+
+CREATE TYPE tipo_lote_enum AS ENUM (
+'camada',
+'post_destete',
+'engorde'
+);
+
+-- =========================
+-- MOVIMIENTOS
+-- =========================
+
+CREATE TYPE movimiento_estado_enum AS ENUM (
+'activo',
+'cancelado'
+);
+
+CREATE TYPE tipo_base_movimiento_enum AS ENUM (
+'ENTRADA',
+'SALIDA',
+'MIXTO'
+);
+
+-- =========================
+-- EVENTOS
+-- =========================
+
+CREATE TYPE tipo_tecnico_evento_enum AS ENUM (
+'STOCK',
+'BIOLOGICO',
+'OPERATIVO',
+'SISTEMA'
+);
+
+-- =========================
+-- CICLO REPRODUCTIVO
+-- =========================
+
+CREATE TYPE resultado_ciclo_enum AS ENUM (
+'parto',
+'aborto',
+'desconocido',
+'venta',
+'muerte'
+);
+
+---
+
+# ALTER TABLES
+
+(hacerlo al final, por separado, NO mezclar con creación de tablas)
+
+ALTER TABLE animal
+ADD CONSTRAINT fk_animal_evento_creacion
+FOREIGN KEY (evento_creacion_id)
+REFERENCES eventos(id);
+
+ALTER TABLE animal
+ADD CONSTRAINT fk_animal_evento_origen
+FOREIGN KEY (evento_origen_id)
+REFERENCES eventos(id);

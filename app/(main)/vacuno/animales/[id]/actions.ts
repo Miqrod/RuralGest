@@ -5,7 +5,11 @@ import { registrarVentaAnimal } from '@/modules/ganadero/animales/application/ac
 import { registrarMuerteAnimal } from '@/modules/ganadero/animales/application/actions/registrarMuerteAnimal'
 import { registrarCubricion } from '@/modules/ganadero/reproductivo/application/actions/registrarCubricion'
 import { confirmarGestacion } from '@/modules/ganadero/reproductivo/application/actions/confirmarGestacion'
-import type { TipoCubricion } from '@/modules/ganadero/reproductivo/domain/types'
+import { identificarAnimal } from '@/modules/ganadero/animales/application/identificarAnimal'
+import { registrarParto } from '@/modules/ganadero/reproductivo/application/actions/registrarParto'
+import { registrarDestete } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
+import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteResult } from '@/modules/ganadero/reproductivo/domain/types'
+import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
 
 // Extrae el mensaje de error tanto de Error nativo como de PostgrestError (Supabase),
 // que no hereda de Error y por tanto no pasa instanceof.
@@ -50,6 +54,7 @@ export async function submitConfirmacionGestacion(
   animalId: string,
   fechaConfirmacion: string,
   mesesGestacionEstimados?: number,
+  padreId?: string,
   observaciones?: string,
 ): Promise<{ error: string } | null> {
   try {
@@ -57,6 +62,7 @@ export async function submitConfirmacionGestacion(
       animal_id:                  animalId,
       fecha_confirmacion:         fechaConfirmacion,
       meses_gestacion_estimados:  mesesGestacionEstimados,
+      padre_id:                   padreId ?? null,
       observaciones,
     })
     revalidatePath(`/vacuno/animales/${animalId}`)
@@ -64,6 +70,52 @@ export async function submitConfirmacionGestacion(
   } catch (err) {
     console.error('[submitConfirmacionGestacion]', err)
     return { error: extractMessage(err, 'Error al confirmar la gestación') }
+  }
+}
+
+export async function submitIdentificarAnimal(
+  animalId: string,
+  datos: { crotal?: string; sexo?: 'macho' | 'hembra'; num_hierro?: string; nombre?: string },
+): Promise<{ status: AnimalIdentificationStatus } | { error: string }> {
+  try {
+    const status = await identificarAnimal({ animal_id: animalId, ...datos })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return { status }
+  } catch (err) {
+    console.error('[submitIdentificarAnimal]', err)
+    return { error: extractMessage(err, 'Error al identificar el animal') }
+  }
+}
+
+export async function submitRegistrarParto(
+  animalId: string,
+  datos: Omit<RegistrarPartoInput, 'animal_id'>,
+): Promise<{ result: RegistrarPartoResult } | { error: string }> {
+  try {
+    const result = await registrarParto({ animal_id: animalId, ...datos })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return { result }
+  } catch (err) {
+    console.error('[submitRegistrarParto]', err)
+    return { error: extractMessage(err, 'Error al registrar el parto') }
+  }
+}
+
+export async function submitRegistrarDestete(
+  criaId: string,
+  madreId: string,
+  fecha: string,
+  observaciones?: string,
+): Promise<{ result: RegistrarDesteteResult } | { error: string }> {
+  try {
+    const result = await registrarDestete({ cria_id: criaId, fecha, observaciones })
+    // Revalidar ambas fichas: la cría cambia de tipo y vínculo, la madre puede cambiar de estado reproductivo
+    revalidatePath(`/vacuno/animales/${criaId}`)
+    revalidatePath(`/vacuno/animales/${madreId}`)
+    return { result }
+  } catch (err) {
+    console.error('[submitRegistrarDestete]', err)
+    return { error: extractMessage(err, 'Error al registrar el destete') }
   }
 }
 

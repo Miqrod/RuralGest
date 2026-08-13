@@ -217,6 +217,145 @@ Limitación aceptada: si el usuario introduce eventos retroactivos el mismo día
 el `created_at` puede no reflejar la realidad biológica. Se difiere un `numero_secuencia` hasta que
 haya un caso real que lo justifique.
 
+## `tipo_productivo` de crías: Cría → Recría en el destete
+
+Las crías vivas nacidas en un parto reciben `tipo_productivo = 'Cría'` (no 'Recría').
+Las crías nacidas muertas siguen con `tipo_productivo = NULL`.
+
+Ciclo de vida del tipo_productivo para animales nacidos internamente:
+```
+Parto → Cría → (destete) → Recría → (decisión ganadero) → Semental / Reproductora / Engorde / …
+```
+
+**Por qué 'Cría' y no 'Recría' desde el nacimiento:**
+Permite distinguir en el censo cuántos animales son lactantes (Cría) y cuántos están
+estrictamente en fase de recría post-destete (Recría). Son fases productivas distintas.
+
+**Transición automática en el destete:**
+El RPC `registrar_destete` (implementado en PRD010) actualiza `tipo_productivo_id` de cada cría
+de 'Cría' → 'Recría' como parte de la misma transacción del evento.
+Esta es la única transición de tipo_productivo que el sistema realiza automáticamente.
+El resto de cambios de tipo_productivo son manuales (decisión del ganadero).
+
+**El catálogo 'Cría' existe para vacuno y porcino.**
+
+## Rol del animal en eventos compartidos: "Parto" vs "Nacimiento" / Destete en madre y cría
+
+Los eventos reproductivos pueden asociarse a múltiples animales mediante `evento_animales.rol`.
+El `rol` determina cómo se muestra el evento en la ficha de cada animal participante.
+
+**PARTO:**
+- Madre (`rol = 'madre'`) → muestra "Parto"
+- Cría (`rol = 'cria'`) → muestra "Nacimiento" (el parto le ocurrió a la madre, no a la cría)
+
+Este patrón se implementa en `EventosList`: la descripción del evento depende del `tipo_codigo` Y del `rol` del animal en ese evento. La query `listarEventosDeAnimal` selecciona `rol` de `evento_animales` para que la UI pueda hacer esta distinción.
+
+**DESTETE (implementado en PRD010):**
+El RPC `registrar_destete` inserta en `evento_animales`:
+- La madre con `rol = 'madre'`
+- Cada cría destetada con `rol = 'cria'`
+
+El destete aparece en la ficha de ambos animales. El historial de eventos de la madre muestra el crotal y sexo (♂/♀) de cada cría destetada; el historial de la cría muestra el evento de destete con fecha.
+
+## Inferencia del padre en el parto: `macho_id` vs `padre_id`
+
+El sistema necesita conocer al padre de las crías en el momento del parto para asignarlo a `animal.padre_id`.
+Existen dos vías para que esa información llegue al ciclo reproductivo, cada una con una clave distinta en `eventos.metadata_json`:
+
+| Clave | Evento | Contexto |
+|---|---|---|
+| `macho_id` | `CUBRICION` | El macho que cubrió físicamente a la hembra. Se registra en el momento de la cubrición. |
+| `padre_id` | `CONFIRMACION_GESTACION` | El padre declarado por el ganadero cuando no existía cubrición previa registrada. Se registra retrospectivamente al confirmar la gestación. |
+
+Las claves son distintas porque representan momentos y contextos distintos:
+- `macho_id` es el macho en el acto de cubrición (contexto de `CUBRICION`).
+- `padre_id` es el padre conocido identificado a posteriori (contexto de `CONFIRMACION_GESTACION` desde estado `vacia`).
+
+**Regla de prioridad en `getPadreIdFromCiclo`:**
+La función busca primero en `CUBRICION` (fuente más fiable: hecho biológico registrado).
+Solo si no encuentra nada busca en `CONFIRMACION_GESTACION`.
+Nunca deben coexistir ambos en el mismo ciclo (la confirmación directa cierra la posibilidad de añadir cubrición posterior), pero la prioridad queda definida para proteger contra estados corruptos.
+
+**Por qué no usar la misma clave en ambos eventos:**
+Usar `macho_id` en CONFIRMACION_GESTACION habría ocultado el origen del dato. Con claves distintas, cualquier consulta directa al evento sabe inmediatamente en qué momento y con qué certeza se conoció al padre.
+
+## PRD010 — `estado_vinculo_materno`: dependencia funcional madre-cría
+
+`animal.estado_vinculo_materno` representa si existe una dependencia funcional activa entre la cría y su madre durante la lactancia. Es un campo derivado, interno y no editable directamente por el usuario.
+
+**Valores y semántica:**
+- `NULL` — sin información suficiente. Ocurre en animales anteriores a PRD010 sin historial de parto registrado, o en cualquier animal al que el sistema no puede atribuir con certeza una dependencia funcional.
+- `'activo'` — dependencia funcional conocida: la cría está viva, bajo lactación, y el sistema tiene constancia de ello.
+- `'finalizado'` — la dependencia ya no existe: la cría fue destetada (→ 'Recría'), vendida o murió antes del destete.
+
+**Diferencia crítica con `madre_id`:**
+`madre_id` es genealogía permanente e inmutable. Nunca cambia aunque la cría muera, sea vendida o destetada.
+`estado_vinculo_materno` es estado temporal de dependencia funcional. Cambia durante la vida del animal.
+Son conceptos distintos y no deben confundirse.
+
+**Reglas de asignación:**
+- Cría viva nacida en parto registrado: `ACTIVO`
+- Nacido muerto: `FINALIZADO` (nunca existió dependencia funcional)
+- Destete: `ACTIVO → FINALIZADO` + tipo_productivo `Cría → Recría`
+- Muerte/venta antes del destete: `ACTIVO → FINALIZADO` (la cría permanece como tipo_productivo `Cría`)
+- Solo el sistema modifica este campo mediante RPC; nunca la UI directamente
+
+## PRD010 — Regla de continuidad del ciclo reproductivo
+
+El ciclo reproductivo permanece abierto mientras exista al menos una cría que cumpla simultáneamente:
+```
+tipo_productivo = 'Cría'
+AND estado_vital = 'vivo'
+AND estado_vinculo_materno = 'activo'
+```
+
+Cuando el count de crías que cumplen esa condición llega a **0** (por destete, venta o muerte de la última):
+1. El ciclo se cierra: `ciclo_reproductivo.fecha_fin = fecha_evento`, `resultado = 'parto'`
+2. Si `madre.es_reproductora = true` → `madre.estado_reproductivo = 'vacia'`
+
+**El cierre del ciclo no genera un evento.** Es una consecuencia derivada, no un hecho biológico registrado. El historial solo contiene hechos reales (PARTO, DESTETE, VENTA, MUERTE).
+
+La misma regla se aplica independientemente del motivo que redujo el count a 0: el mecanismo es idéntico para último destete, última muerte y última venta.
+
+## PRD010 — Patrón de finalización de vínculo por muerte/venta de la cría
+
+El RPC `registrar_salida_animal` se extendió en PRD010 para finalizar el vínculo materno cuando la cría tiene `estado_vinculo_materno = 'activo'`.
+
+**Flujo añadido (paso 4 del RPC, tras actualizar `estado_vital`):**
+1. Detecta que `estado_vinculo_materno = 'activo'` AND `madre_id IS NOT NULL` AND `parto_evento_id IS NOT NULL`
+2. Actualiza `estado_vinculo_materno = 'finalizado'` en la cría
+3. Resuelve `ciclo_id` via `parto_evento_id → eventos.ciclo_id`
+4. Cuenta vínculos activos restantes en ese ciclo
+5. Si quedan 0: cierra el ciclo y pone la madre en `estado_reproductivo = 'vacia'`
+
+La cría permanece con `tipo_productivo = 'Cría'` (a diferencia del destete, que la promueve a 'Recría'). Biológicamente correcto: murió/vendida antes de ser destetada.
+
+## PRD010 — Backfill conservador de `estado_vinculo_materno`
+
+El backfill **no establece `ACTIVO` indiscriminadamente** en todas las crías vivas existentes.
+Solo se infiere ACTIVO cuando hay evidencia suficiente:
+
+| Condición | Valor asignado |
+|-----------|---------------|
+| `tipo_productivo='Cría'` AND `estado_vital='vivo'` AND `madre_id IS NOT NULL` | `'activo'` |
+| `estado_vital IN ('muerto','vendido')` con `tipo_productivo='Cría'` | `'finalizado'` |
+| `tipo_productivo='Recría'` (o superior) — ya fue destetada | `'finalizado'` |
+| Nacido muerto (`estado_vital='muerto'` desde el parto) | `'finalizado'` |
+| Cualquier otro caso sin información suficiente | `NULL` (se conserva la ausencia) |
+
+El principio es que el sistema representa conocimiento, no inventa retrospectivamente información que nunca fue registrada.
+
+## PRD010 — `registrar_destete`: un evento por cría, agrupación en UI
+
+El RPC `registrar_destete` crea **un evento DESTETE por cría** para preservar la fecha individual de destete de cada una (las crías de un mismo parto pueden destetarse en fechas distintas).
+
+La UI agrupa todos los eventos DESTETE de un mismo ciclo en una sola fila del carrusel reproductivo mediante `agruparDestetes()` (en `HistorialCarousel.tsx`):
+- El título del grupo muestra la fecha del **último** destete (cuando la madre quedó libre)
+- Cada cría conserva su `fecha_destete` individual visible dentro del grupo
+- Los símbolos ♂/♀ identifican el sexo de cada cría en el carrusel y en el historial de eventos
+
+Esta agrupación es presentacional y vive exclusivamente en la UI. El modelo de datos mantiene la trazabilidad individual de cada destete.
+
 ## `EventosList`: badge de categoría + descripción específica
 
 Patrón visual unificado para el historial de eventos:
