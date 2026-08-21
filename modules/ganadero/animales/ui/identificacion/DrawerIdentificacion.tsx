@@ -26,15 +26,21 @@ import {
 import { EstadoVitalBadge } from '@/modules/ganadero/animales/ui/ficha/EstadosBadges'
 import { formatFecha } from '@/lib/format'
 import { submitIdentificarAnimal } from '@/app/(main)/vacuno/animales/[id]/actions'
+import { isValidCrotalFormat } from '@/modules/ganadero/animales/domain/IdentificationRules'
 import type { ISODate } from '@/modules/shared/types'
 import type { Sexo, EstadoVital, EstadoIdentificacion } from '@/modules/ganadero/shared/domain/types'
 import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
 
 // ── Schema ────────────────────────────────────────────────────────────────────
-// Solo los campos que AnimalIdentificationRules evalúa: crotal y sexo.
+// crotal es opcional; si se rellena, debe tener el formato oficial (2 letras país + 12 dígitos).
 
 const schema = z.object({
-  crotal: z.string().optional(),
+  crotal: z.string()
+    .refine(
+      (val) => !val || isValidCrotalFormat(val),
+      { message: 'Formato inválido. Usa 2 letras de país + 12 dígitos (ej. ES123456789012)' },
+    )
+    .optional(),
   sexo:   z.enum(['macho', 'hembra', '']).optional(),
 })
 
@@ -113,7 +119,7 @@ export function DrawerIdentificacion({
     setIsSubmitting(false)
 
     if ('error' in result) {
-      setServerError('Error al guardar los datos')
+      setServerError(result.error)
       return
     }
 

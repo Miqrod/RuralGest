@@ -2,15 +2,26 @@ import { FichaSection } from '@/modules/ganadero/animales/ui/ficha/FichaSection'
 import { getHistorialReproductivo } from '../application/queries/getHistorialReproductivo'
 import { HistorialCarousel } from './HistorialCarousel'
 import type { UUID, ISODate } from '@/modules/shared/types'
+import type { EstadoVital } from '@/modules/ganadero/shared/domain/types'
 
 interface Props {
-  animalId: UUID
-  madreCrotal: string | null
+  animalId:          UUID
+  madreCrotal:       string | null
   fechaPrevistaParto: ISODate | null
+  // Necesarios para la anotación contextual en animales vendidos/fallecidos
+  estadoVital:       EstadoVital
+  fechaSalida:       ISODate | null
 }
 
-// Solo se renderiza para hembras reproductoras: la página es responsable de condicionar.
-export async function SeccionHistorialReproductivo({ animalId, madreCrotal, fechaPrevistaParto }: Props) {
+// Solo se renderiza cuando el animal tiene historial reproductivo.
+// La página es responsable de condicionar la renderización.
+export async function SeccionHistorialReproductivo({
+  animalId,
+  madreCrotal,
+  fechaPrevistaParto,
+  estadoVital,
+  fechaSalida,
+}: Props) {
   const ciclos = await getHistorialReproductivo(animalId)
 
   return (
@@ -18,7 +29,13 @@ export async function SeccionHistorialReproductivo({ animalId, madreCrotal, fech
       {ciclos.length === 0 ? (
         <p className="text-sm text-ink-muted">Sin ciclos reproductivos registrados.</p>
       ) : (
-        <HistorialCarousel ciclos={ciclos} madreCrotal={madreCrotal} fechaPrevistaParto={fechaPrevistaParto} />
+        <HistorialCarousel
+          ciclos={ciclos}
+          madreCrotal={madreCrotal}
+          fechaPrevistaParto={fechaPrevistaParto}
+          estadoVital={estadoVital}
+          fechaSalida={fechaSalida}
+        />
       )}
     </FichaSection>
   )

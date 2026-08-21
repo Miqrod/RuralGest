@@ -2,7 +2,6 @@ import { getAnimalById } from '../../../animales/infrastructure/repository'
 import { getCicloAbierto, getPadreIdFromCiclo } from '../../infrastructure/repository'
 import { checkEligibility } from '../../domain/rules/ReproductiveEligibilityRules'
 import { evalCycleRules } from '../../domain/rules/ReproductiveCycleRules'
-import { buildSnapshot } from '../../domain/rules/ReproductiveProjection'
 import { createServerClient } from '../../../../shared/db'
 import type { RegistrarPartoInput, RegistrarPartoResult, ReproductiveContext } from '../../domain/types'
 import type { UUID } from '../../../../shared/types'
@@ -58,17 +57,12 @@ export async function registrarParto(input: RegistrarPartoInput): Promise<Regist
     throw new Error(`Parto no permitido: ${eligibility.errors.join('; ')}`)
   }
 
-  // 4. Decisión de ciclo: siempre reutilizar — el Parto no crea ni cierra ciclos
+  // 4. Decisión de ciclo: siempre reutilizar — el ciclo debe existir previamente.
+  // evalCycleRules lanza si no hay ciclo abierto.
   const decision = evalCycleRules(ctx)
-  if (decision.cicloId === null) {
-    throw new Error('Parto requiere un ciclo reproductivo activo')
-  }
 
-  // 5. Proyección: estado_reproductivo → 'lactante', fechaPrevistaParto → null
-  const snapshot = buildSnapshot(ctx, decision.cicloId)
-
-  // 6. Inferencia de padre y raza de las crías
-  //    cicloId es no-null aquí: CycleRules garantiza que PARTO requiere ciclo abierto
+  // 5. Inferencia de padre y raza de las crías
+  // El RPC gestiona internamente el estado reproductivo resultante y el nuevo ciclo VACÍA.
   const supabase = await createServerClient()
   const machoId = await getPadreIdFromCiclo(decision.cicloId)
 
@@ -86,19 +80,18 @@ export async function registrarParto(input: RegistrarPartoInput): Promise<Regist
     razaCriaId = calcularRazaCria(madre.raza_id, padre?.raza_id ?? null, cruzadaRazaId)
   }
 
-  // 7. Persistir: RPC gestiona evento + evento_parto + snapshot madre + crías en una transacción
+  // 6. Persistir: RPC gestiona evento + evento_parto + snapshot madre + crías en una transacción
   const { data, error } = await supabase.rpc('registrar_parto', {
-    p_animal_id:           input.animal_id,
-    p_fecha:               input.fecha_parto,
-    p_ciclo_id:            decision.cicloId,
-    p_numero_nacidos:      input.numero_nacidos,
-    p_numero_vivos:        input.numero_vivos,
-    p_numero_muertos:      input.numero_muertos,
-    p_tipo_parto:          input.tipo_parto,
-    p_estado_reproductivo: snapshot.estadoReproductivo,
-    p_padre_id:            machoId    ?? undefined,
-    p_raza_cria_id:        razaCriaId ?? undefined,
-    p_observaciones:       input.observaciones ?? undefined,
+    p_animal_id:      input.animal_id,
+    p_fecha:          input.fecha_parto,
+    p_ciclo_id:       decision.cicloId,
+    p_numero_nacidos: input.numero_nacidos,
+    p_numero_vivos:   input.numero_vivos,
+    p_numero_muertos: input.numero_muertos,
+    p_tipo_parto:     input.tipo_parto,
+    p_padre_id:       machoId    ?? undefined,
+    p_raza_cria_id:   razaCriaId ?? undefined,
+    p_observaciones:  input.observaciones ?? undefined,
   })
   if (error) throw error
 

@@ -707,3 +707,220 @@ Cada test genera UUIDs únicos, inserta datos mínimos necesarios y ejecuta `cle
 ### Cuándo hacerlo
 
 Al inicio del siguiente PRD, antes de escribir nuevos RPCs. Una vez que la plantilla existe, el coste marginal por RPC es bajo.
+
+---
+
+---
+
+## PRD-correctivo — Cambio de tipo productivo y correcciones del módulo reproductivo
+
+> Implementado en agosto 2026. Pendiente de incorporar a la documentación permanente del modelo reproductivo.
+> No documentar todavía: el modelo reproductivo puede seguir evolucionando.
+
+---
+
+### 1. Tabla `animal` — nuevos campos
+
+Se añaden `fecha_entrada` y `fecha_salida` directamente en la tabla `animal`.
+
+- `fecha_entrada`: fecha de alta del animal en la explotación (compra, nacimiento, etc.).
+- `fecha_salida`: fecha de baja (venta, muerte). Null mientras el animal esté activo.
+
+Backfill aplicado desde `eventos` para animales existentes.
+
+---
+
+### 2. Tipo de evento `CAMBIO_TIPO_PRODUCTIVO`
+
+Nuevo código de evento reproductivo que registra el momento en que un animal deja de ser Reproductora.
+
+- Persiste en `eventos` vinculado al `ciclo_id` del ciclo que se cierra.
+- Aparece en el slide del ciclo en el carrusel, en rojo, con la etiqueta "Paso a no reproductora".
+
+---
+
+### 3. RPC `cambiar_tipo_productivo`
+
+RPC transaccional en `supabase/migrations/20260819000000_fecha_entrada_salida_cambio_tipo.sql`.
+
+Comportamiento según el estado reproductivo del animal:
+
+| Estado al cambiar | Resultado |
+|---|---|
+| `gestante` | `RAISE EXCEPTION` — cambio bloqueado a nivel DB |
+| `cubierta` o `vacia` | Ciclo más reciente cerrado con `resultado = 'cierre_manual'` |
+| Sin ciclo abierto | Solo se actualiza `tipo_productivo` |
+
+Al volver a Reproductora: se crea siempre un nuevo ciclo en estado `vacía`, independientemente de si existen ciclos anteriores abiertos o cerrados.
+
+Detalle técnico crítico: la query del ciclo abierto usa `ORDER BY numero_ciclo DESC LIMIT 1` para operar siempre sobre el ciclo más reciente. Pueden coexistir múltiples ciclos sin `fecha_fin` (escenario posible con cambios de tipo históricos).
+
+---
+
+### 4. Regla de dominio: gestante no puede cambiar de tipo productivo
+
+Decisión de dominio adoptada para simplificar el modelo y evitar estados inconsistentes.
+
+Un animal en estado `gestante` **no puede cambiar de tipo productivo**. La gestación en curso debe resolverse primero (parto o aborto).
+
+Implementación en dos capas:
+- **UI**: `DrawerCambioTipoProductivo` detecta `estadoReproductivo === 'gestante'` y muestra solo un mensaje de bloqueo en rojo. No hay formulario ni botón de confirmar.
+- **DB**: el RPC lanza `RAISE EXCEPTION` como red de seguridad independiente de la UI.
+
+---
+
+### 5. `DrawerCambioTipoProductivo` — lógica de mensajes y confirmación
+
+`getMensajeContextual()` devuelve `{ texto, tipo: 'bloqueo' | 'aviso' } | null` según la combinación de tipo actual, tipo nuevo y estado reproductivo:
+
+- `gestante` → `bloqueo`: mensaje rojo, sin formulario, solo "Cerrar".
+- `cubierta` saliendo de Reproductora → `aviso` + checkbox obligatorio de confirmación.
+- `vacía` saliendo de Reproductora → `aviso` informativo (sin checkbox).
+- Otras combinaciones → sin mensaje.
+
+El checkbox de cubierta usa `style={{ accentColor: 'var(--color-world)' }}` (la clase Tailwind `accent-world` no aplica correctamente).
+El estado del drawer (tipo seleccionado + checkbox) se resetea siempre al cerrar.
+
+---
+
+### 6. Eventos reales vs entradas de presentación — patrón transversal
+
+El sistema diferencia con precisión lo que es un **hecho registrado** de lo que es un **hito de presentación**. Esta distinción es crítica para no confundir la historia real de la explotación con ayudas visuales construidas en tiempo de render.
+
+#### Log de historial completo (`listarEventosDeAnimal`)
+
+Devuelve una lista mezclada de dos tipos, distinguidos por la unión discriminada `EventoEnHistorial`:
+
+```typescript
+type EventoEnHistorial = EventoReal | EventoVirtual
+```
+
+- **`EventoReal` (`virtual: false`)**: fila persistida en la tabla `eventos`, creada por un RPC a partir de una acción real del usuario. Tiene UUID real.
+- **`EventoVirtual` (`virtual: true`)**: hito de presentación inyectado en la propia función de query. Nunca persiste en la DB. El `id` es un string sintético (`'virtual-ciclo-{ciclo_id}'`), nunca un UUID.
+
+Tipo virtual actualmente existente:
+- `NUEVO_CICLO`: marca el inicio de un nuevo ciclo reproductivo (C2, C3...) en el log cronológico. Se inyecta para que el usuario entienda el punto de inflexión sin que exista un evento real de "inicio de ciclo".
+
+**Regla de dominio explícita en el código:** nunca crear un `tipo_evento = 'INICIO_CICLO'` en la DB. Estos hitos viven exclusivamente en la capa de presentación.
+
+#### Carrusel reproductivo (`HistorialCarousel`)
+
+Usa su propia unión discriminada `EntradaCiclo`:
+
+```typescript
+type EntradaCiclo =
+  | { tipo: 'real';          evento: EventoHistorial }
+  | { tipo: 'cierre_manual'; fecha: string }
+```
+
+- **`tipo: 'real'`**: evento real leído de `getHistorialReproductivo` (tabla `eventos`). Renderizado por `EventoRow`.
+- **`tipo: 'cierre_manual'`**: entrada sintética inyectada por `buildEntradasOrdenadas()` en el render. No persiste. Solo existe para ciclos ANTERIORES a la implementación del evento `CAMBIO_TIPO_PRODUCTIVO`, que tienen `resultado = 'cierre_manual'` pero ningún evento vinculado.
+
+Para ciclos NUEVOS (creados a partir del PRD-correctivo), "Paso a no reproductora" es un `EventoReal` (`CAMBIO_TIPO_PRODUCTIVO`) persisitido en `eventos` con `ciclo_id`. Aparece como `tipo: 'real'` y lo renderiza `EventoRow` con dot y label en rojo (`text-alert`).
+
+La guarda de compatibilidad en `buildEntradasOrdenadas()`:
+
+```typescript
+const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
+if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
+  // solo ciclos antiguos: inyectar entrada sintética
+}
+```
+
+#### Anotación "Animal vendido/fallecido" — no es un evento
+
+Cuando un animal muere o se vende con un ciclo reproductivo abierto, el ciclo queda sin `fecha_fin` ni `resultado` en la DB. No se cierra ni se sintetiza ningún evento.
+
+En su lugar, el carrusel muestra una anotación informativa en la **cabecera del slide** del ciclo:
+
+```
+Animal vendido · Historia reproductiva finalizada · 15/08/2026
+```
+
+Esta anotación se deriva de los props `estadoVital` y `fechaSalida` en tiempo de render. El badge del ciclo sigue mostrando "Abierto", que es el estado real en la DB.
+
+#### Resumen del patrón
+
+| Superficie | Tipo de entrada | ¿Persiste? | Mecanismo de distinción |
+|---|---|---|---|
+| Log historial | `EventoReal` | Sí (`eventos`) | `virtual: false` |
+| Log historial | `EventoVirtual` (`NUEVO_CICLO`) | No | `virtual: true`, id sintético |
+| Carrusel | `EventoHistorial` real | Sí (`eventos`) | `EntradaCiclo.tipo === 'real'` |
+| Carrusel | Entrada `cierre_manual` (ciclos antiguos) | No | `EntradaCiclo.tipo === 'cierre_manual'` |
+| Carrusel (cabecera) | Anotación vendido/fallecido | No | No es entrada del timeline; texto en header |
+
+---
+
+#### Por qué las entradas virtuales no deben persistirse
+
+La pregunta natural es: si ya diferenciamos eventos reales de virtuales, ¿no sería más simple persistirlos todos y consultarlos uniformemente?
+
+No. El criterio de persistencia no es la uniformidad de consulta — es la naturaleza del dato.
+
+**El test que decide:**
+
+> ¿Ocurrió algo que alguien hizo explícitamente?
+
+- Sí → evento real → persiste en `eventos`.
+- No, es una consecuencia derivada de otros hechos ya persistidos → no persiste. Vive en la query layer o en el render.
+
+`NUEVO_CICLO` no lo originó ninguna acción del usuario. Lo originan el parto, el aborto, el último destete. Esos sí están persistidos. El inicio de un ciclo es estado derivado que ya existe en `ciclo_reproductivo.fecha_inicio`. Persistir adicionalmente un evento `NUEVO_CICLO` duplicaría la misma verdad en dos sitios.
+
+**El riesgo concreto de persistir estado derivado:**
+
+Dos fuentes del mismo dato divergen con el tiempo. Si una migración corrige la `fecha_inicio` de un ciclo, ¿qué actualiza el evento `NUEVO_CICLO` persistido? Si el RPC lo olvida, hay inconsistencia silenciosa e indetectable sin auditoría manual. Este tipo de duplicidad es exactamente lo que los dashboards futuros tendrían que filtrar activamente para no contaminar resultados.
+
+**La lección del caso `cierre_manual`:**
+
+La entrada sintética de compatibilidad hacia atrás existe precisamente porque en su día no se persistió `CAMBIO_TIPO_PRODUCTIVO` cuando se debía. La acción "el usuario cambió el tipo productivo" era un hecho real y no se capturó como evento. El resultado fue deuda técnica y lógica de retrocompatibilidad.
+
+La lección no es "persistamos los virtuales". La lección es: **si hay una acción real del usuario, crea un evento real desde el principio**. Los virtuales son correctos únicamente cuando representan estado derivado.
+
+**Regla para este proyecto:**
+
+| Qué es | ¿Persiste? |
+|---|---|
+| Acción explícita del usuario | Sí, en `eventos` con tipo real |
+| Consecuencia derivada de hechos ya persistidos | No — query layer o render layer |
+| Ayuda visual sin semántica de dominio | No — nunca en la DB |
+
+---
+
+### 7. `getCicloAbierto` — robustez ante múltiples ciclos abiertos
+
+`getCicloAbierto()` en `repository.ts` usa `ORDER BY numero_ciclo DESC LIMIT 1` en lugar de `.single()`.
+
+Razón: pueden coexistir múltiples ciclos sin `fecha_fin` (p.ej. un ciclo gestante que no se cerró por un cambio de tipo histórico + un nuevo ciclo vacía). `.maybeSingle()` sin orden lanzaba PGRST116 en ese escenario. La solución siempre opera sobre el ciclo más reciente.
+
+Los tres flujos de acción (cubrición, confirmación de gestación, parto) llaman a `getCicloAbierto` y se benefician de esta corrección.
+
+---
+
+### 8. `FormCubricion` — macho obligatorio en cubrición natural
+
+En cubrición natural, el campo macho pasa a ser obligatorio.
+
+- "Desconocido" como primera opción del selector (sentinel `__desconocido__` → `undefined` al enviar al servidor).
+- Validación con `superRefine`: error si `tipo_cubricion === 'natural'` y no hay `macho_id`.
+- Label cambiado de `(opcional)` a `*`.
+
+---
+
+### 9. `FormConfirmacionGestacion` — padre obligatorio sin cubrición previa
+
+Cuando el animal está en estado `vacía` (sin cubrición previa registrada), el campo padre pasa a ser obligatorio.
+
+- "Desconocido" como primera opción del selector (mismo patrón que cubrición).
+- Campo siempre visible cuando `sinCubricionPrevia`, sin dependencia de `machos.length`.
+- Validación en `onSubmit` antes de `setIsSubmitting` (evita botón bloqueado en error de validación).
+- El RPC y `getPadreIdFromCiclo` ya gestionaban `padre_id` desde PRD008.
+
+---
+
+### Documentación permanente prevista
+
+Cuando el modelo reproductivo esté consolidado, trasladar principalmente a:
+
+- `documentacion/modelo/modelo_reproductivo.md` — regla de bloqueo en gestante, ciclos coexistentes, `cambiar_tipo_productivo`
+- `documentacion/flujos/reproductivo/cambio_tipo_productivo.md` — flujo completo con matriz de estados
+- `documentacion/arquitectura/` — patrón de compatibilidad hacia atrás en eventos del carrusel

@@ -54,9 +54,11 @@ export type Database = {
           estado_vital: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id: string | null
           evento_origen_id: string | null
+          fecha_entrada: string | null
           fecha_nacimiento: string | null
           fecha_nacimiento_estimada: string | null
           fecha_prevista_parto: string | null
+          fecha_salida: string | null
           id: string
           lote_id: string | null
           lote_origen_id: string | null
@@ -92,9 +94,11 @@ export type Database = {
           estado_vital?: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id?: string | null
           evento_origen_id?: string | null
+          fecha_entrada?: string | null
           fecha_nacimiento?: string | null
           fecha_nacimiento_estimada?: string | null
           fecha_prevista_parto?: string | null
+          fecha_salida?: string | null
           id?: string
           lote_id?: string | null
           lote_origen_id?: string | null
@@ -130,9 +134,11 @@ export type Database = {
           estado_vital?: Database["public"]["Enums"]["estado_vital_enum"]
           evento_creacion_id?: string | null
           evento_origen_id?: string | null
+          fecha_entrada?: string | null
           fecha_nacimiento?: string | null
           fecha_nacimiento_estimada?: string | null
           fecha_prevista_parto?: string | null
+          fecha_salida?: string | null
           id?: string
           lote_id?: string | null
           lote_origen_id?: string | null
@@ -1056,6 +1062,14 @@ export type Database = {
       }
       _resolve_motivo_id: { Args: { p_nombre: string }; Returns: string }
       _resolve_tipo_evento_id: { Args: { p_codigo: string }; Returns: string }
+      cambiar_tipo_productivo: {
+        Args: { p_animal_id: string; p_nuevo_tipo_productivo_id: string }
+        Returns: undefined
+      }
+      registrar_aborto: {
+        Args: { p_animal_id: string; p_fecha: string; p_observaciones?: string }
+        Returns: Json
+      }
       registrar_compra_animal: {
         Args: {
           p_crotal?: string
@@ -1074,7 +1088,7 @@ export type Database = {
       registrar_confirmacion_gestacion: {
         Args: {
           p_animal_id: string
-          p_ciclo_id?: string
+          p_ciclo_id: string
           p_fecha: string
           p_fecha_prevista_parto?: string
           p_observaciones?: string
@@ -1085,7 +1099,7 @@ export type Database = {
       registrar_cubricion: {
         Args: {
           p_animal_id: string
-          p_ciclo_id?: string
+          p_ciclo_id: string
           p_estado_reproductivo?: Database["public"]["Enums"]["estado_reproductivo_enum"]
           p_fecha: string
           p_fecha_prevista_parto?: string
@@ -1103,7 +1117,6 @@ export type Database = {
         Args: {
           p_animal_id: string
           p_ciclo_id: string
-          p_estado_reproductivo?: Database["public"]["Enums"]["estado_reproductivo_enum"]
           p_fecha: string
           p_numero_muertos: number
           p_numero_nacidos: number
@@ -1124,7 +1137,7 @@ export type Database = {
       especie_enum: "vacuno" | "porcino"
       estado_identificacion_enum: "pendiente" | "completa"
       estado_lote_enum: "activo" | "cerrado"
-      estado_reproductivo_enum: "vacia" | "cubierta" | "gestante" | "lactante"
+      estado_reproductivo_enum: "vacia" | "cubierta" | "gestante"
       estado_sanitario_enum:
         | "sano"
         | "en_observacion"
@@ -1133,12 +1146,7 @@ export type Database = {
       estado_vital_enum: "vivo" | "muerto" | "vendido"
       movimiento_estado_enum: "activo" | "cancelado"
       origen_animal_enum: "interno" | "compra"
-      resultado_ciclo_enum:
-        | "parto"
-        | "aborto"
-        | "desconocido"
-        | "venta"
-        | "muerte"
+      resultado_ciclo_enum: "parto" | "aborto" | "machorra" | "cierre_manual"
       rol_evento_animal_enum: "madre" | "cria"
       sexo_enum: "macho" | "hembra"
       tipo_base_movimiento_enum: "ENTRADA" | "SALIDA" | "MIXTO"
@@ -1279,7 +1287,7 @@ export const Constants = {
       especie_enum: ["vacuno", "porcino"],
       estado_identificacion_enum: ["pendiente", "completa"],
       estado_lote_enum: ["activo", "cerrado"],
-      estado_reproductivo_enum: ["vacia", "cubierta", "gestante", "lactante"],
+      estado_reproductivo_enum: ["vacia", "cubierta", "gestante"],
       estado_sanitario_enum: [
         "sano",
         "en_observacion",
@@ -1289,13 +1297,7 @@ export const Constants = {
       estado_vital_enum: ["vivo", "muerto", "vendido"],
       movimiento_estado_enum: ["activo", "cancelado"],
       origen_animal_enum: ["interno", "compra"],
-      resultado_ciclo_enum: [
-        "parto",
-        "aborto",
-        "desconocido",
-        "venta",
-        "muerte",
-      ],
+      resultado_ciclo_enum: ["parto", "aborto", "machorra", "cierre_manual"],
       rol_evento_animal_enum: ["madre", "cria"],
       sexo_enum: ["macho", "hembra"],
       tipo_base_movimiento_enum: ["ENTRADA", "SALIDA", "MIXTO"],

@@ -33,6 +33,8 @@ export interface Animal {
   estado_vinculo_materno: EstadoVinculoMaterno | null
   parto_evento_id: UUID | null
   ubicacion_actual_id: UUID | null
+  fecha_entrada: ISODate | null
+  fecha_salida: ISODate | null
   created_at: ISOTimestamp
   created_by: UUID | null
   updated_at: ISOTimestamp

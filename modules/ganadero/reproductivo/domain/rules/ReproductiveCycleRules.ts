@@ -1,47 +1,42 @@
 import type { ReproductiveContext, ReproductiveCycleDecision } from '../types'
 
-// Responde a: ¿qué debe pasar con el ciclo cuando llega este evento?
+// Responde a: ¿qué ciclo_id debe usarse para registrar este evento?
 // Opera exclusivamente sobre el contexto (datos ya cargados por el Use Case).
-// No accede a la DB, no crea ni cierra ciclos — eso lo hace el Use Case.
+// No accede a la DB, no crea ni cierra ciclos — eso lo hace el Use Case o el RPC.
 //
-// CUBRICION:
-//   ciclo abierto existente → reutilizar (repetición en el mismo ciclo)
-//   sin ciclo abierto       → crear      (primera cubrición o tras timeout/desconocido)
+// Regla fundamental: el ciclo debe existir previamente.
+// Se crea al convertirse el animal en REPRODUCTORA (o tras un desenlace: Parto, Aborto,
+// Machorra). Ni CUBRICION ni CONFIRMACION crean ciclos.
 //
-// CONFIRMACION_GESTACION:
-//   ciclo abierto existente → reutilizar (vino de cubrición previa)
-//   sin ciclo abierto       → crear      (PRD008: confirmación es el primer hecho del ciclo)
+// El PARTO fija resultado='parto' en el ciclo actual, pero el ciclo NO queda bloqueado:
+// puede seguir recibiendo eventos históricos (destetes). En paralelo, si la madre sigue
+// siendo reproductora, el RPC abre un nuevo ciclo_id en 'vacia'.
 //
-// PARTO, DESTETE, ABORTO: se implementarán cuando existan sus Use Cases.
+// DESTETE se gestiona en su propio Use Case; no pasa por evalCycleRules.
 export function evalCycleRules(ctx: ReproductiveContext): ReproductiveCycleDecision {
   switch (ctx.eventoSolicitado) {
     case 'CUBRICION':
-      return ctx.cicloAbierto !== null
-        ? { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
-        : { accion: 'crear',      cicloId: null }
-
     case 'CONFIRMACION_GESTACION':
-      return ctx.cicloAbierto !== null
-        ? { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
-        : { accion: 'crear',      cicloId: null }
-
     case 'PARTO':
-      // El Parto no crea ni cierra el ciclo — solo puede ocurrir con uno abierto.
-      // EligibilityRules garantiza que el estado es cubierta/gestante, lo que implica ciclo abierto.
+    case 'ABORTO':
       if (ctx.cicloAbierto === null) {
-        throw new Error('PARTO requiere un ciclo reproductivo abierto')
+        throw new Error(
+          `${ctx.eventoSolicitado} requiere un ciclo reproductivo existente. ` +
+          `El ciclo se crea al convertirse el animal en REPRODUCTORA.`
+        )
       }
       return { accion: 'reutilizar', cicloId: ctx.cicloAbierto.id }
 
     default:
       throw new Error(
-        `ReproductiveCycleRules: evento '${ctx.eventoSolicitado}' no implementado aún`,
+        `ReproductiveCycleRules: evento '${ctx.eventoSolicitado}' no gestionado aquí`,
       )
   }
 }
 
-// El ciclo debe cerrarse cuando no quedan crías con vínculo materno activo.
-// El caller (Use Case de destete) obtiene el count del repositorio y pasa aquí el resultado.
-export function shouldCloseCycle(activeBondsCount: number): boolean {
-  return activeBondsCount === 0
+// Determina si debe abrirse un nuevo ciclo VACÍA tras un desenlace reproductivo
+// (Aborto, Parto, Machorra). Solo aplica cuando la madre sigue siendo reproductora.
+// Si ya no lo es, la historia reproductiva queda consultable pero sin ciclo activo.
+export function shouldCreateNewCycleAfterDesenlace(esReproductora: boolean): boolean {
+  return esReproductora
 }

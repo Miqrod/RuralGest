@@ -10,11 +10,11 @@ const BASE_INPUT: RegistrarCompraAnimalInput = {
   tipo_productivo_id: 'uuid-tipo',
   fecha_compra:       '2024-03-15',
   crotal:             'ES001234',
-  num_hierro:         null,
+  num_hierro:         undefined,
   raza_id:            'uuid-raza',
   fecha_nacimiento:   '2022-01-10',
-  fecha_nacimiento_estimada: null,
-  lote_id:            null,
+  fecha_nacimiento_estimada: undefined,
+  lote_id:            undefined,
 }
 
 describe('EVAL: Compra de animal — reglas de dominio', () => {
@@ -25,15 +25,15 @@ describe('EVAL: Compra de animal — reglas de dominio', () => {
 
   it('acepta cuando solo hay fecha_nacimiento_estimada', () => {
     expect(() => assertFechaNacimientoPresente({
-      fecha_nacimiento: null,
+      fecha_nacimiento: undefined,
       fecha_nacimiento_estimada: '2022-01-01',
     })).not.toThrow()
   })
 
   it('lanza si no hay ninguna fecha de nacimiento', () => {
     expect(() => assertFechaNacimientoPresente({
-      fecha_nacimiento: null,
-      fecha_nacimiento_estimada: null,
+      fecha_nacimiento: undefined,
+      fecha_nacimiento_estimada: undefined,
     })).toThrow('Se requiere fecha_nacimiento o fecha_nacimiento_estimada')
   })
 
@@ -57,7 +57,7 @@ describe('EVAL: Compra de animal — mapper RPC', () => {
   })
 
   it('convierte null a undefined en campos opcionales', () => {
-    const args = mapCompraInputToRpcArgs({ ...BASE_INPUT, num_hierro: null, lote_id: null })
+    const args = mapCompraInputToRpcArgs({ ...BASE_INPUT, num_hierro: undefined, lote_id: undefined })
     expect(args.p_num_hierro).toBeUndefined()
     expect(args.p_lote_id).toBeUndefined()
   })

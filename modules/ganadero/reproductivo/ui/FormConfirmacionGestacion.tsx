@@ -15,6 +15,10 @@ import { submitConfirmacionGestacion } from '@/app/(main)/vacuno/animales/[id]/a
 import type { EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 
+// Sentinel para el selector cuando el padre es desconocido.
+// Se convierte a undefined antes de enviar al servidor.
+const PADRE_DESCONOCIDO = '__desconocido__'
+
 function machoToOption(m: MachoOption): AnimalOption {
   const label = [m.nombre, m.raza_nombre].filter(Boolean).join(' · ') || m.crotal || m.id
   return { id: m.id, label, sublabel: m.crotal ?? undefined }
@@ -22,7 +26,7 @@ function machoToOption(m: MachoOption): AnimalOption {
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
-// meses_estimados solo es obligatorio cuando no hay cubrición previa (desde vacia).
+// meses_estimados y padre_id son obligatorios cuando no hay cubrición previa (desde vacia).
 // La validación condicional la gestiona onSubmit: Zod valida formato, el submit valida presencia.
 const schema = z.object({
   fecha:           z.string().min(1, 'La fecha es obligatoria.'),
@@ -59,9 +63,13 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos
   })
 
   async function onSubmit(values: FormValues) {
-    // Validación de presencia para el campo condicional
+    // Validaciones de presencia para campos condicionales (antes del spinner)
     if (sinCubricionPrevia && values.meses_estimados === undefined) {
       form.setError('meses_estimados', { message: 'Indica los meses de gestación estimados.' })
+      return
+    }
+    if (sinCubricionPrevia && !values.padre_id) {
+      form.setError('padre_id', { message: 'Selecciona el padre o indica "Desconocido".' })
       return
     }
 
@@ -72,7 +80,7 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos
       animalId,
       values.fecha,
       sinCubricionPrevia ? values.meses_estimados : undefined,
-      sinCubricionPrevia ? (values.padre_id || undefined) : undefined,
+      sinCubricionPrevia ? (values.padre_id === PADRE_DESCONOCIDO ? undefined : values.padre_id) : undefined,
       values.observaciones || undefined,
     )
 
@@ -147,22 +155,24 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos
             </Field>
           )} />
 
-          {machos.length > 0 && (
-            <Controller name="padre_id" control={form.control} render={({ field }) => (
-              <Field>
-                <FieldLabel>Padre <span className="text-ink-muted font-normal">(opcional)</span></FieldLabel>
-                <AnimalSelector
-                  options={machos.map(machoToOption)}
-                  value={field.value ?? null}
-                  onChange={(id) => field.onChange(id ?? '')}
-                  placeholder="Seleccionar semental…"
-                />
-                <p className="text-xs text-ink-muted">
-                  Se asignará a las crías en el parto.
-                </p>
-              </Field>
-            )} />
-          )}
+          <Controller name="padre_id" control={form.control} render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel>Padre *</FieldLabel>
+              <AnimalSelector
+                options={[
+                  { id: PADRE_DESCONOCIDO, label: 'Desconocido' },
+                  ...machos.map(machoToOption),
+                ]}
+                value={field.value ?? null}
+                onChange={(id) => field.onChange(id ?? undefined)}
+                placeholder="Seleccionar semental…"
+              />
+              {fieldState.invalid
+                ? <FieldError errors={[fieldState.error]} />
+                : <p className="text-xs text-ink-muted">Se asignará a las crías en el parto.</p>
+              }
+            </Field>
+          )} />
         </div>
       )}
 

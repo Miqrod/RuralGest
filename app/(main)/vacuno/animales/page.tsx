@@ -14,7 +14,7 @@ export default async function AnimalesPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-world">Animales</h1>
-          <p className="text-sm text-ink-muted mt-1">{animales.length} animales en el sistema</p>
+          <p className="text-sm text-ink-muted mt-1">Gestión del rebaño</p>
         </div>
         {/* Link estilado como botón: semántica <a> correcta para navegación.
             h-auto libera la altura fija del variant para que py-2 px-6 tengan efecto. */}

@@ -10,17 +10,16 @@ import type { UUID } from '../../../../shared/types'
 // Registra la confirmación de gestación siguiendo el pipeline CRP completo:
 //   Contexto → EligibilityRules → CycleRules → Projection → RPC transaccional
 //
-// Soporta dos recorridos (PRD008):
+// El ciclo debe existir previamente en ambos recorridos:
 //
 //   Desde 'cubierta' (cubrición previa registrada):
-//     - CycleRules → reutilizar ciclo existente
 //     - Projection no calcula fecha_prevista_parto (ya está establecida desde la cubrición)
 //     - RPC recibe p_ciclo_id + p_fecha_prevista_parto = null
 //
-//   Desde 'vacia' (confirmación es el primer hecho conocido del ciclo):
-//     - CycleRules → crear nuevo ciclo
+//   Desde 'vacia' (extensivo: primera confirmación sin cubrición registrada):
+//     - El ciclo VACÍA ya existe (creado al convertirse en REPRODUCTORA o tras un desenlace)
 //     - Projection calcula fecha_prevista_parto a partir de meses_gestacion_estimados
-//     - RPC recibe p_ciclo_id = null (lo crea internamente) + p_fecha_prevista_parto calculada
+//     - RPC recibe p_ciclo_id + p_fecha_prevista_parto calculada
 //
 // meses_gestacion_estimados es un dato auxiliar efímero: nunca se persiste.
 export async function confirmarGestacion(
@@ -52,10 +51,12 @@ export async function confirmarGestacion(
     throw new Error(`Confirmación no permitida: ${eligibility.errors.join('; ')}`)
   }
 
-  // 4. Decisión de ciclo: reutilizar el existente (desde cubierta) o crear uno nuevo (desde vacia)
+  // 4. Decisión de ciclo: siempre reutilizar — el ciclo VACÍA ya existe previamente.
+  // evalCycleRules lanza si no hay ciclo abierto.
   const decision = evalCycleRules(ctx)
 
-  // 5. Proyección: calcula fecha_prevista_parto solo cuando se crea ciclo nuevo (desde vacia)
+  // 5. Proyección: calcula fecha_prevista_parto solo cuando se confirma desde 'vacia'
+  //    (sin cubrición previa → meses_gestacion_estimados indica cuánto lleva la gestación)
   const snapshot = buildSnapshot(ctx, decision.cicloId)
 
   // 6. Persistir: RPC maneja evento + ciclo (si procede) + snapshot en una sola transacción
@@ -63,7 +64,7 @@ export async function confirmarGestacion(
   const { data: eventoId, error } = await supabase.rpc('registrar_confirmacion_gestacion', {
     p_animal_id:            input.animal_id,
     p_fecha:                input.fecha_confirmacion,
-    p_ciclo_id:             decision.cicloId     ?? undefined,  // null → RPC crea el ciclo
+    p_ciclo_id:             decision.cicloId,
     p_fecha_prevista_parto: snapshot.fechaPrevistaParto ?? undefined,
     p_observaciones:        input.observaciones  ?? undefined,
     p_padre_id:             input.padre_id       ?? undefined,

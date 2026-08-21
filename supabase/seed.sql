@@ -23,10 +23,17 @@
 --     · Brutus: macho engorde
 --     · La Rubia: hembra vendida
 --
+--   FIXTURES PRD011 — Regla 1: es_reproductora=false no cierra ciclo abierto
+--     · Pastora   es_reproductora=false, ciclo ABIERTO (cubierta)
+--                 → registrar Aborto → ciclo cierra → sin nuevo ciclo → "sin ciclo activo"
+--     · Candela   es_reproductora=false, ciclo CERRADO (resultado='aborto')
+--                 → carousel "sin ciclo activo" testeable sin ninguna acción
+--
 -- IDs fijos (para facilitar referencias cruzadas en tests y desarrollo):
 --   Sementales:     aaaaaaaa-0001..0003
 --   Reproductoras:  aaaaaaaa-1001..1005
 --   Misceláneos:    aaaaaaaa-2001..2002
+--   Fixtures PRD011: aaaaaaaa-3001 (Pastora), aaaaaaaa-3002 (Candela)
 --   Crías:          aaaaaaaa-[madre][ciclo][letra] (ver comentarios inline)
 --   Ciclos:         cccccccc-[madre][ciclo]
 --   Eventos:        eeeeeeee-[madre][tipo][ciclo]
@@ -79,23 +86,23 @@ INSERT INTO animal (
   raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
   estado_vital, estado_reproductivo, estado_sanitario, fecha_prevista_parto
 ) VALUES
-  -- Fortuna: morucha, 3 ciclos, actualmente lactante (C3 abierto, crías sin destetar)
+  -- Fortuna: morucha, 3 ciclos históricos + C4 abierto en vacía (crías de C3 aún con vínculo activo)
   (
     'aaaaaaaa-1001-0000-0000-000000000001',
     'vacuno', 'cc000002-0000-0000-0000-000000000000',
     'Fortuna', 'ES001234561001', 'H-01',
     'bb000001-0000-0000-0000-000000000000',
     '2019-05-20', 'hembra', true, 'compra',
-    'vivo', 'lactante', 'sano', NULL
+    'vivo', 'vacia', 'sano', NULL
   ),
-  -- Esperanza: limusina, 2 ciclos, actualmente lactante (C2 abierto, crías sin destetar)
+  -- Esperanza: limusina, 2 ciclos históricos + C3 abierto en vacía (crías de C2 aún con vínculo activo)
   (
     'aaaaaaaa-1002-0000-0000-000000000002',
     'vacuno', 'cc000002-0000-0000-0000-000000000000',
     'Esperanza', 'ES001234561002', 'H-02',
     'bb000003-0000-0000-0000-000000000000',
     '2020-07-12', 'hembra', true, 'interno',
-    'vivo', 'lactante', 'sano', NULL
+    'vivo', 'vacia', 'sano', NULL
   ),
   -- Carmen: charolesa, 2 ciclos, actualmente cubierta (C2 abierto, sin parto aún)
   (
@@ -115,7 +122,7 @@ INSERT INTO animal (
     '2022-01-15', 'hembra', true, 'interno',
     'vivo', 'vacia', 'sano', NULL
   ),
-  -- Nube: morucha joven, sin ciclos todavía, vacía
+  -- Nube: morucha joven, C1 abierto en vacía (aún sin cubrición)
   (
     'aaaaaaaa-1005-0000-0000-000000000005',
     'vacuno', 'cc000002-0000-0000-0000-000000000000',
@@ -136,21 +143,32 @@ VALUES
   ('cccccccc-1001-0001-0000-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 1, '2022-04-01', '2023-03-15', 'parto'),
   -- Fortuna C2: 2023-07-01 → 2024-09-01 (cerrado tras destete)
   ('cccccccc-1001-0002-0000-000000000002', 'aaaaaaaa-1001-0000-0000-000000000001', 2, '2023-07-01', '2024-09-01', 'parto'),
-  -- Fortuna C3: 2025-10-01 → abierto (lactante, crías sin destetar)
-  ('cccccccc-1001-0003-0000-000000000003', 'aaaaaaaa-1001-0000-0000-000000000001', 3, '2025-10-01', NULL, NULL),
+  -- Fortuna C3: 2025-10-01 → abierto, resultado='parto' (parto 2026-07-10, crías con vínculo activo)
+  --   fecha_fin=NULL: ciclo sigue abierto hasta que se destete la última cría
+  ('cccccccc-1001-0003-0000-000000000003', 'aaaaaaaa-1001-0000-0000-000000000001', 3, '2025-10-01', NULL, 'parto'),
+  -- Fortuna C4: 2026-07-10 → abierto en vacía (abierto por registrar_parto al tener C3 parto)
+  ('cccccccc-1001-0004-0000-000000000004', 'aaaaaaaa-1001-0000-0000-000000000001', 4, '2026-07-10', NULL, NULL),
 
   -- Esperanza C1: 2022-06-01 → 2023-07-01 (cerrado)
   ('cccccccc-1002-0001-0000-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 1, '2022-06-01', '2023-07-01', 'parto'),
-  -- Esperanza C2: 2025-09-01 → abierto (lactante)
-  ('cccccccc-1002-0002-0000-000000000002', 'aaaaaaaa-1002-0000-0000-000000000002', 2, '2025-09-01', NULL, NULL),
+  -- Esperanza C2: 2025-09-01 → abierto, resultado='parto' (parto 2026-06-10, crías con vínculo activo)
+  --   fecha_fin=NULL: ciclo sigue abierto hasta que se destete la última cría
+  ('cccccccc-1002-0002-0000-000000000002', 'aaaaaaaa-1002-0000-0000-000000000002', 2, '2025-09-01', NULL, 'parto'),
+  -- Esperanza C3: 2026-06-10 → abierto en vacía (abierto por registrar_parto al tener C2 parto)
+  ('cccccccc-1002-0003-0000-000000000003', 'aaaaaaaa-1002-0000-0000-000000000002', 3, '2026-06-10', NULL, NULL),
 
   -- Carmen C1: 2023-06-01 → 2024-07-01 (cerrado)
   ('cccccccc-1003-0001-0000-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 1, '2023-06-01', '2024-07-01', 'parto'),
-  -- Carmen C2: 2026-06-15 → abierto (cubierta, sin parto)
-  ('cccccccc-1003-0002-0000-000000000002', 'aaaaaaaa-1003-0000-0000-000000000003', 2, '2026-06-15', NULL, NULL),
+  -- Carmen C2: 2024-07-01 → abierto (cubierta, sin parto aún; cubrición 2026-06-15)
+  ('cccccccc-1003-0002-0000-000000000002', 'aaaaaaaa-1003-0000-0000-000000000003', 2, '2024-07-01', NULL, NULL),
 
-  -- Maravilla C1: 2024-03-01 → 2025-04-01 (cerrado)
-  ('cccccccc-1004-0001-0000-000000000001', 'aaaaaaaa-1004-0000-0000-000000000004', 1, '2024-03-01', '2025-04-01', 'parto')
+  -- Maravilla C1: 2024-03-01 → 2025-04-01 (cerrado, cría destetada)
+  ('cccccccc-1004-0001-0000-000000000001', 'aaaaaaaa-1004-0000-0000-000000000004', 1, '2024-03-01', '2025-04-01', 'parto'),
+  -- Maravilla C2: 2025-04-01 → abierto en vacía (abierto al cerrar C1)
+  ('cccccccc-1004-0002-0000-000000000002', 'aaaaaaaa-1004-0000-0000-000000000004', 2, '2025-04-01', NULL, NULL),
+
+  -- Nube C1: 2023-04-08 → abierto en vacía (primer ciclo, aún sin cubrición)
+  ('cccccccc-1005-0001-0000-000000000001', 'aaaaaaaa-1005-0000-0000-000000000005', 1, '2023-04-08', NULL, NULL)
 
 ON CONFLICT (id) DO NOTHING;
 
@@ -550,3 +568,98 @@ INSERT INTO animal (
     'vendido', 'sano'
   )
 ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
+-- FIXTURES PRD011 — Regla 1: es_reproductora=false no cierra un ciclo abierto
+-- =============================================================================
+--
+-- Pastora: es_reproductora=false con ciclo ABIERTO en estado cubierta.
+--   Objetivo: registrar un Aborto sobre ella y verificar que:
+--     1) el ciclo se cierra con resultado='aborto'
+--     2) NO se crea un nuevo ciclo (porque es_reproductora=false)
+--     3) estado_reproductivo queda NULL
+--     4) el carrusel muestra "sin ciclo reproductivo activo"
+--   Simula el caso real: animal que dejó de ser reproductora durante un ciclo
+--   abierto. El cambio de tipo_productivo no existe todavía en UX (PRD futuro),
+--   por lo que se inserta directamente con el estado de llegada.
+--
+-- Candela: es_reproductora=false con ciclo CERRADO (resultado='aborto').
+--   Objetivo: testear el carrusel "sin ciclo activo" sin necesidad de realizar
+--   ninguna acción. Representa el estado final en el que quedaría Pastora
+--   después de registrar el Aborto. Permite validar el carousel de historial
+--   reproductivo desde el primer `db reset`.
+-- =============================================================================
+
+INSERT INTO animal (
+  id, especie, tipo_productivo_id, nombre, crotal, num_hierro,
+  raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
+  estado_vital, estado_reproductivo, estado_sanitario
+) VALUES
+  -- Pastora: fue reproductora, ahora es_reproductora=false, ciclo ABIERTO (cubierta).
+  -- Representa el caso "retirada de reproducción con ciclo en curso":
+  -- es_reproductora=false no cierra el ciclo — el ciclo continúa hasta su desenlace.
+  (
+    'aaaaaaaa-3001-0000-0000-000000000001',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000',
+    'Pastora', 'ES001234563001', 'H-06',
+    'bb000001-0000-0000-0000-000000000000',
+    '2020-06-10', 'hembra', false, 'compra',
+    'vivo', 'cubierta', 'sano'
+  ),
+  -- Candela: fue reproductora, ahora es_reproductora=false, sin ciclo activo
+  (
+    'aaaaaaaa-3002-0000-0000-000000000002',
+    'vacuno', 'cc000002-0000-0000-0000-000000000000',
+    'Candela', 'ES001234563002', 'H-07',
+    'bb000002-0000-0000-0000-000000000000',
+    '2019-09-22', 'hembra', false, 'compra',
+    'vivo', NULL, 'sano'
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Ciclos de Pastora y Candela
+INSERT INTO ciclo_reproductivo (id, animal_id, numero_ciclo, fecha_inicio, fecha_fin, resultado)
+VALUES
+  -- Pastora C1: abierto (cubierta, sin aborto aún — es el ciclo sobre el que se probará PRD011)
+  ('cccccccc-3001-0001-0000-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 1, '2026-01-15', NULL, NULL),
+  -- Candela C1: cerrado por aborto — estado final ya persistido para probar el carrusel
+  ('cccccccc-3002-0001-0000-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 1, '2025-06-01', '2025-10-15', 'aborto')
+ON CONFLICT (id) DO NOTHING;
+
+-- Eventos de Pastora y Candela
+INSERT INTO eventos (id, tipo_evento_id, especie, fecha, ciclo_id, metadata_json)
+SELECT ev.id::uuid,
+       (SELECT id FROM tipo_evento WHERE codigo = ev.codigo),
+       ev.especie::especie_enum,
+       ev.fecha::date,
+       ev.ciclo_id::uuid,
+       ev.meta::jsonb
+FROM (VALUES
+  -- ── Pastora C1 ────────────────────────────────────────────────────────────
+  -- Cubrición 2026-01-15 con Lucero (ciclo abierto, sin aborto aún)
+  ('eeeeeeee-3001-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2026-01-15',
+   'cccccccc-3001-0001-0000-000000000001',
+   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
+
+  -- ── Candela C1 ────────────────────────────────────────────────────────────
+  -- Cubrición 2025-06-01 con Titán
+  ('eeeeeeee-3002-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2025-06-01',
+   'cccccccc-3002-0001-0000-000000000001',
+   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
+  -- Aborto 2025-10-15 (ciclo ya cerrado — estado final para probar carrusel)
+  ('eeeeeeee-3002-0003-0001-000000000001', 'ABORTO', 'vacuno', '2025-10-15',
+   'cccccccc-3002-0001-0000-000000000001',
+   '{}')
+
+) AS ev(id, codigo, especie, fecha, ciclo_id, meta)
+ON CONFLICT (id) DO NOTHING;
+
+-- Asociaciones evento ↔ animal para Pastora y Candela
+INSERT INTO evento_animales (evento_id, animal_id, rol)
+VALUES
+  -- Pastora C1
+  ('eeeeeeee-3001-0001-0001-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 'madre'),
+  -- Candela C1
+  ('eeeeeeee-3002-0001-0001-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 'madre'),
+  ('eeeeeeee-3002-0003-0001-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 'madre')
+ON CONFLICT DO NOTHING;

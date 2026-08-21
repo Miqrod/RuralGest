@@ -42,7 +42,9 @@ export interface EventoDestete {
 export interface EventoHistorial {
   id: UUID
   fecha: ISODate
-  codigo: CodigoEventoReproductivo
+  // Código de tipo de evento: normalmente reproductivo, pero puede incluir
+  // CAMBIO_TIPO_PRODUCTIVO cuando el animal dejó de ser reproductora durante el ciclo.
+  codigo: CodigoEventoReproductivo | string
   // Campos de metadata_json relevantes para visualización
   metadata: Record<string, unknown> | null
   // Solo presente en eventos PARTO
@@ -179,7 +181,7 @@ export async function getHistorialReproductivo(animalId: UUID): Promise<CicloHis
     resultado: ciclo.resultado as ResultadoCiclo | null,
     eventos: ciclo.eventos
       .map(ev => {
-        const codigo = (ev.tipo_evento as { codigo: string } | null)?.codigo as CodigoEventoReproductivo
+        const codigo = (ev.tipo_evento as { codigo: string } | null)?.codigo as CodigoEventoReproductivo | string
         const partoRow = ev.evento_parto as {
           numero_nacidos: number
           numero_vivos: number

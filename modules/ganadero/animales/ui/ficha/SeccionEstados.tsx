@@ -25,7 +25,7 @@ export function SeccionEstados({ animal }: { animal: AnimalDetail }) {
         <EstadoVitalBadge estado={animal.estado_vital} />
       </FilaEstado>
 
-      {animal.es_reproductora && (
+      {animal.estado_reproductivo !== null && (
         <FilaEstado label="Reproductivo">
           <EstadoReproductivoBadge estado={animal.estado_reproductivo} />
         </FilaEstado>

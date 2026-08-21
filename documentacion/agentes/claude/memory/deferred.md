@@ -1,5 +1,33 @@
 # ⏳ Deferred
 
+## ~~DESTETE DE CRÍAS DE MADRE CON es_reproductora=false~~ ✅ RESUELTO
+
+El gate `esReproductora &&` fue eliminado de `getAvailableActions` y de la llamada a `getCriasParaDestete` en `page.tsx`. El destete ahora depende solo de `tieneCriasElegibles` (tipo='Cría', vínculo='activo'), independiente de `es_reproductora`. Eval actualizado.
+
+---
+
+## FILTRADO POR FECHA EN LISTADO DE ANIMALES + ANALÍTICA HISTÓRICA
+
+Dos necesidades distintas identificadas al implementar los filtros de estado vital (vivos/vendidos/muertos):
+
+**1. Filtro operacional** (corto plazo) — añadir date-range picker al listado `/vacuno/animales`.
+Aplica solo cuando hay estados no-vivos activos (vendidos/muertos). Filtra por la fecha del
+evento de salida. Se puede implementar en cliente con los datos ya cargados, o como parámetro
+de query. No requiere cambios de schema.
+
+**2. Analítica histórica / censo temporal** (módulo separado futuro) — responde preguntas como
+"¿cuántos vivos había el 01/01/2016?" o "¿cuántos se vendieron en 2024?". Requiere reconstruir
+el estado del sistema en un instante pasado recorriendo `eventos`. No es un filtro sobre
+`animal`; es una query analítica que produce series temporales.
+
+**Diseño propuesto:**
+- Listado (`/vacuno/animales`): date-range simple sobre fecha de evento de salida
+- Módulo analítica (futuro `/vacuno/historico` o dashboard ampliado): censos en fecha,
+  evolución del rebaño, ventas por periodo — todo contra la tabla `eventos`
+
+Cuando: el filtro operacional, cuando el usuario lo solicite. El módulo analítico, al diseñar
+el área de informes/estadísticas.
+
 ## ~~TRANSACCIONALIDAD EN OPERACIONES DE ESCRITURA MULTI-TABLA~~ ✅ RESUELTO EN PRD006
 
 Resuelto mediante RPCs transaccionales en `supabase/migrations/20260618000001_rpcs_transaccionales.sql`:
@@ -13,30 +41,14 @@ Resuelto con Sonner: `toast.success` / `toast.error` en Server Actions + Client 
 `<Toaster position="top-center" richColors />` añadido en `app/layout.tsx`.
 Patrón documentado en `patterns.md` — sección "Toasts con sonner".
 
-## ⚠️ PADRE AUSENTE EN CONFIRMACIÓN DE GESTACIÓN DIRECTA (sin cubrición previa)
+## ~~PADRE AUSENTE EN CONFIRMACIÓN DE GESTACIÓN DIRECTA~~ ✅ RESUELTO
 
-**Bug de trazabilidad genética — prioridad alta.**
-
-`RegistrarConfirmacionGestacionInput` no incluye `macho_id`. Cuando el ganadero confirma
-una gestación directamente desde estado `vacia` (sin cubrición registrada — habitual en
-extensivo), no tiene forma de informar el padre aunque lo conozca con certeza: en una
-explotación extensiva solo puede haber un semental por cercado, por lo que la paternidad
-es conocida aunque no se haya registrado la cubrición.
-
-**Consecuencia actual:** las crías nacidas de ciclos sin cubrición registrada tendrán
-`padre_id = null` aunque el padre sea conocido. Esto rompe la trazabilidad genética.
-
-**Solución:**
-1. Añadir `macho_id?: UUID` a `RegistrarConfirmacionGestacionInput`.
-2. Actualizar el RPC `registrar_confirmacion_gestacion` para persistir `macho_id`
-   en `eventos.metadata_json` del evento CONFIRMACION_GESTACION.
-3. Actualizar `getMachoIdFromCiclo` (repository reproductivo) para buscar `macho_id`
-   también en eventos CONFIRMACION_GESTACION cuando no haya CUBRICION en el ciclo.
-4. Actualizar el formulario `FormConfirmacionGestacion.tsx` para mostrar el selector
-   de macho cuando el animal está en estado `vacia`.
-
-Cuándo: en el siguiente PRD que toque el flujo reproductivo o antes de implementar
-genealogía y estadísticas de productividad reproductiva.
+Implementado en `FormConfirmacionGestacion.tsx` (PRD-correctivo, 2026-08-20):
+- Campo `padre_id` obligatorio cuando `estadoReproductivo === 'vacia'` (sin cubrición previa).
+- "Desconocido" como primera opción del selector (sentinel `__desconocido__` → `undefined` al enviar).
+- Campo siempre visible dentro del bloque `sinCubricionPrevia`, sin dependencia de `machos.length`.
+- Validación en `onSubmit` antes de `setIsSubmitting` para evitar botón bloqueado en error.
+- El RPC y `getPadreIdFromCiclo` (repository) ya gestionaban `padre_id` desde PRD008.
 
 ## LADO FINANCIERO DE LA COMPRA DE ANIMAL (precio_compra, proveedor)
 
@@ -115,6 +127,28 @@ Pendiente: ajustar el dropdown de usuario para que (1) no pise el header y apare
 claramente por debajo de él, y (2) tenga una animación de entrada suave (fade + slide-down).
 Cuando: al trabajar en la capa de UI/polish del header.
 
+## ~~REFINAMIENTO — COMPORTAMIENTO DEL CICLO SEGÚN ESTADO AL CAMBIAR A NO-REPRODUCTORA~~ ✅ RESUELTO
+
+Implementado en `cambiar_tipo_productivo` (migration 20260819000000) y UI (PRD-correctivo):
+
+- `gestante`: **cambio BLOQUEADO**. El drawer muestra mensaje de bloqueo en rojo sin formulario.
+  El RPC lanza `RAISE EXCEPTION` como red de seguridad a nivel DB.
+  Regla de dominio: una gestación en curso no puede interrumpirse cambiando el tipo productivo.
+- `cubierta`: cambio permitido con aviso + checkbox de confirmación obligatoria.
+  El ciclo se cierra con `resultado = 'cierre_manual'`.
+- `vacía`: cambio permitido con aviso informativo. El ciclo se cierra con `resultado = 'cierre_manual'`.
+- El carrusel muestra el evento `CAMBIO_TIPO_PRODUCTIVO` en rojo en el slide del ciclo afectado.
+- Compatibilidad hacia atrás: ciclos con `cierre_manual` anteriores a esta implementación
+  (sin evento vinculado) muestran una entrada sintética "Paso a no reproductora".
+
+---
+
+## ~~REGLA 2 PRD011 — REACTIVACIÓN REPRODUCTIVA (sin ciclo → REPRODUCTORA → nuevo ciclo VACÍA)~~ ✅ RESUELTO
+
+Implementado en `cambiar_tipo_productivo` (migration 20260819000000):
+al cambiar a Reproductora se crea SIEMPRE un nuevo ciclo en estado VACÍA,
+independientemente de si existen ciclos anteriores abiertos o cerrados.
+
 ## REPRODUCTIVEENGINE — INTÉRPRETE DEL DOMINIO REPRODUCTIVO
 
 Patrón identificado durante PRD007 pero diferido conscientemente hasta completar el módulo reproductivo.
@@ -179,6 +213,18 @@ Por ahora: el campo `observaciones` de `RegistrarCubricionInput` absorbe la refe
 de semen externo sin estructura formal.
 
 Cuando: al detectar necesidad real de consultas o métricas por línea genética.
+
+## ~~T162 — Renderizado de EventoVirtual y etiquetas CX en historial + carrusel~~ ✅ COMPLETADO
+
+Implementado: `listarEventosDeAnimal` inyecta `EventoVirtual` para ciclos C2+, `EventosList.tsx` los renderiza con opacidad reducida e itálica, `HistorialCarousel.tsx` muestra "Ciclo X" como pill gris y navegación dinámica `<< CX / CX >>`.
+
+## ~~T161 — Refactorizar AvailableActions~~ ✅ COMPLETADO
+
+Implementado: `modules/ganadero/animales/domain/availableActions.ts` con `getAvailableActions()`. `SeccionAcciones.tsx` usa `acciones.has('X')`. Eval en `evals/available-actions.eval.ts` (10 casos).
+
+## ~~WIDGET DE CRÍAS DEPENDIENTES~~ ✅ COMPLETADO
+
+Implementado: `getCriasConVinculoActivo.ts` + `SeccionCriasDependientes.tsx` (server) + `CriasDependientesWidget.tsx` (client con DrawerIdentificacion). Se renderiza debajo del carrusel en col 1 de la ficha. Grid con `items-start` para que cols 2 y 3 no se estiren. Desaparece automáticamente cuando no hay vínculos activos.
 
 ## DISCARDED HOOKS
 

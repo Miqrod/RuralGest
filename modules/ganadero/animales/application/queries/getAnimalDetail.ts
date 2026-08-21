@@ -31,6 +31,8 @@ export interface AnimalDetail {
   padre_id: UUID | null
   padre_crotal: string | null
   lote_id: UUID | null
+  fecha_entrada: ISODate | null
+  fecha_salida: ISODate | null
   created_at: ISOTimestamp
 }
 
@@ -68,6 +70,8 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
     padre_id:                  animal.padre_id,
     padre_crotal,
     lote_id:                   animal.lote_id,
+    fecha_entrada:             animal.fecha_entrada,
+    fecha_salida:              animal.fecha_salida,
     created_at:                animal.created_at,
   }
 }

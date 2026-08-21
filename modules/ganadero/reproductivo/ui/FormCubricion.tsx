@@ -24,11 +24,24 @@ import { submitCubricionAnimal } from '@/app/(main)/vacuno/animales/[id]/actions
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
+// Sentinel usado en el selector cuando el macho es desconocido.
+// Se convierte a undefined antes de enviar al servidor.
+const MACHO_DESCONOCIDO = '__desconocido__'
+
 const schema = z.object({
   fecha:           z.string().min(1, 'La fecha es obligatoria.'),
   tipo_cubricion:  z.enum(['natural', 'inseminacion'], { error: 'Selecciona el tipo de cubrición.' }),
   macho_id:        z.string().optional(),
   observaciones:   z.string().optional(),
+}).superRefine((data, ctx) => {
+  // En cubrición natural el macho es obligatorio: el usuario debe seleccionar uno o "Desconocido"
+  if (data.tipo_cubricion === 'natural' && !data.macho_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Selecciona el macho o indica "Desconocido".',
+      path: ['macho_id'],
+    })
+  }
 })
 
 type FormValues = z.infer<typeof schema>
@@ -75,7 +88,11 @@ export function FormCubricion({ animalId, machos, onSuccess, onCancel }: Props) 
   })
 
   const tipoCubricion = form.watch('tipo_cubricion')
-  const machoOptions  = machos.map(toAnimalOption)
+  // "Desconocido" siempre aparece primero; el sentinel se convierte a undefined al enviar
+  const machoOptions: AnimalOption[] = [
+    { id: MACHO_DESCONOCIDO, label: 'Desconocido' },
+    ...machos.map(toAnimalOption),
+  ]
 
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true)
@@ -85,7 +102,7 @@ export function FormCubricion({ animalId, machos, onSuccess, onCancel }: Props) 
       animalId,
       values.fecha,
       values.tipo_cubricion,
-      values.macho_id,
+      values.macho_id === MACHO_DESCONOCIDO ? undefined : values.macho_id,
       values.observaciones || undefined,
     )
 
@@ -146,19 +163,16 @@ export function FormCubricion({ animalId, machos, onSuccess, onCancel }: Props) 
             style={{ overflow: 'hidden' }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              <Controller name="macho_id" control={form.control} render={({ field }) => (
-                <Field>
-                  <FieldLabel>Macho <span className="text-ink-muted font-normal">(opcional)</span></FieldLabel>
+              <Controller name="macho_id" control={form.control} render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Macho *</FieldLabel>
                   <AnimalSelector
                     options={machoOptions}
                     value={field.value ?? null}
                     onChange={(id) => field.onChange(id ?? undefined)}
                     placeholder="Seleccionar macho…"
-                    disabled={machoOptions.length === 0}
                   />
-                  {machoOptions.length === 0 && (
-                    <p className="text-xs text-ink-muted mt-1">No hay machos registrados para esta especie.</p>
-                  )}
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )} />
             </div>

@@ -1,5 +1,23 @@
 # Decisions
 
+## es_reproductora y ciclo abierto son dimensiones independientes (PRD011)
+
+`es_reproductora` responde a: ¿puede participar en NUEVOS ciclos reproductivos?
+`ciclo abierto` responde a: ¿hay una historia reproductiva actualmente en curso?
+
+Son compatibles sin restricción:
+- `es_reproductora = false` + ciclo abierto + `estado_reproductivo = GESTANTE` → válido
+- `es_reproductora = false` + ciclo abierto + `estado_reproductivo = LACTANTE` → válido
+
+**Consecuencia**: eliminado el `CHECK chk_estado_reproductivo` (migración
+`20260814000000_drop_constraint_chk_estado_reproductivo.sql`), que expresaba
+una invariante obsoleta (`es_reproductora=false → estado_reproductivo IS NULL`).
+
+La nueva regla vive en los casos de uso:
+- **Cierre de ciclo**: si `es_reproductora=false` al cerrar → `estado_reproductivo=NULL`, sin nuevo ciclo.
+- **Cambio a reproductora** (futuro): si no hay ciclo abierto → abrir nuevo ciclo en VACÍA.
+- **Cambio a no-reproductora** (futuro): no cierra el ciclo en curso; el ciclo continúa hasta su desenlace.
+
 ## Eventos como source of truth
 
 - Los eventos no se editan nunca (`assertEventoNoEditable`)
@@ -365,3 +383,47 @@ Patrón visual unificado para el historial de eventos:
 Para movimientos (ENTRADA/SALIDA), la descripción es el campo `motivo`.
 Para eventos reproductivos, la descripción viene del mapa `EVENTO_DESCRIPCION` en `EventosList.tsx`.
 Todos los eventos futuros siguen este esquema añadiendo entradas en `BADGE_LABEL`, `BADGE_CLASS` y `EVENTO_DESCRIPCION`.
+
+## PRD-CORRECTIVO — Modelo reproductivo redefinido (previo PRD011)
+
+Redefinición conceptual del modelo reproductivo aplicada antes de implementar Aborto.
+
+**`lactante` eliminado como estado reproductivo.**
+La lactancia no es un estado reproductivo — es una relación temporal madre-cría.
+Se deriva de `estado_vinculo_materno = 'activo'` en las crías, nunca se persiste como `estado_reproductivo`.
+`EstadoReproductivo = 'vacia' | 'cubierta' | 'gestante'` únicamente.
+
+**`resultado` vs `fecha_fin` en ciclos: conceptos desacoplados.**
+- `resultado` = desenlace reproductivo (`'parto' | 'aborto' | 'machorra' | 'cierre_manual'`). Se fija cuando ocurre el hecho biológico.
+- `fecha_fin` = finalización histórica (cuando ya no pueden llegar más eventos al ciclo). Puede ser NULL con resultado ya fijado.
+- Tras Parto: `resultado='parto'`, `fecha_fin=NULL` mientras existan vínculos activos madre-cría. `fecha_fin` se establece al destetarse/morir/venderse la última cría.
+- Tras Aborto/Machorra/Cierre manual: `resultado` y `fecha_fin` coinciden en la misma fecha.
+
+**`evalCycleRules` siempre devuelve `'reutilizar'`.**
+Ningún evento reproductivo crea ciclos. Los ciclos se crean solo:
+- Al convertirse el animal en REPRODUCTORA (primer ciclo)
+- Tras un desenlace, por el RPC transaccional (atomicidad)
+Si no existe ciclo abierto al llamar a `evalCycleRules`, lanza excepción (nunca crea implícitamente).
+
+**Regla de elegibilidad contextual (`checkEligibility`).**
+`es_reproductora = true` solo se exige cuando `cicloAbierto === null`. Si hay ciclo abierto, se omite la comprobación del flag: un historial en curso debe poder completarse independientemente del tipo productivo actual.
+
+**`ResultadoCiclo` limpiado.**
+Valores válidos: `'parto' | 'aborto' | 'machorra' | 'cierre_manual'`. Eliminados: `'desconocido'`, `'venta'`, `'muerte'` (no son desenlaces reproductivos).
+
+## EventoVirtual: hitos de presentación, nunca persistidos
+
+El log de eventos mezcla `EventoReal` (persistidos en DB) y `EventoVirtual` (inyectados en la query layer).
+
+**Los `EventoVirtual` son ayudas visuales exclusivamente de presentación.** Se generan en `listarEventosDeAnimal` y nunca se persisten. No existe ningún `tipo_evento` 'INICIO_CICLO' ni 'NUEVO_CICLO' en la tabla `tipo_evento` de la DB.
+
+**Discriminated union:** `EventoEnHistorial = EventoReal | EventoVirtual`. El campo `virtual: boolean` permite al renderizador diferenciar sin castings. `EventoDeAnimal = EventoReal` es el alias de compatibilidad mientras todos los callers existentes migran al tipo union (T162).
+
+**Tipos actuales de EventoVirtual:**
+- `'NUEVO_CICLO'` — señala el inicio de un ciclo reproductivo tras un desenlace (Parto, Aborto, Machorra). Solo se inyecta para `numero_ciclo >= 2` (el primer ciclo no tiene un "nuevo ciclo" previo que señalizar).
+
+**Etiqueta ordinal CX (`ciclo_numero`):**
+- `ciclo_numero` es una etiqueta ordinal derivada de `numero_ciclo` en `ciclo_reproductivo` — nunca calculada en el momento del evento ni persistida en `evento`.
+- Se resuelve en batch en `listarEventosDeAnimal` (una sola query `ciclo_reproductivo` para todos los `ciclo_id` del animal).
+- Los eventos no-reproductivos tienen `ciclo_numero = null`.
+- El label "C1", "C2"... es exclusivamente de presentación.

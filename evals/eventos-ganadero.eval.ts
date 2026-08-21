@@ -26,7 +26,7 @@ const TIPO_EVENTO_ACTIVO: TipoEvento = {
   id:              'uuid-tipo',
   codigo:          'SALIDA',
   descripcion:     'Salida de animal',
-  tipo_tecnico:    'movimiento',
+  tipo_tecnico:    'OPERATIVO',
   tipo_negocio:    'salida',
   es_biologico:    false,
   requiere_motivo: true,
@@ -39,7 +39,7 @@ const TIPO_EVENTO_ACTIVO: TipoEvento = {
 const MOTIVO: MotivoMovimiento = {
   id:             'uuid-motivo',
   nombre:         'Venta',
-  tipo_base:      'salida',
+  tipo_base:      'SALIDA',
   descripcion:    null,
   es_monetizable: true,
   tipo_economico: 'ingreso',

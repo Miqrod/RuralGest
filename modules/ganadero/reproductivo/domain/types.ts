@@ -69,6 +69,18 @@ export interface RegistrarDesteteResult {
   cicloCerrado:  boolean
 }
 
+export interface RegistrarAbortoInput {
+  animal_id:      UUID     // la madre cuya gestación se ha perdido
+  fecha_aborto:   ISODate
+  observaciones?: string
+}
+
+export interface RegistrarAbortoResult {
+  eventoId:        UUID
+  cicloCerrado:    boolean  // siempre true: el aborto cierra el ciclo en todos los casos
+  nuevoCicloCreado: boolean // true si la madre sigue siendo reproductora y se abrió un nuevo ciclo VACÍA
+}
+
 // ─── Tipos del patrón CRP ───────────────────────────────────────────────────
 
 // Códigos de evento reproductivo válidos. Coinciden con las claves de TRANSICIONES en rules.ts.
@@ -98,10 +110,12 @@ export interface ReproductiveContext {
 
 // Decisión que devuelve ReproductiveCycleRules tras evaluar el contexto.
 // El Use Case actúa sobre ella: llama a abrirCiclo() o reutiliza el cicloId existente.
-export type ReproductiveCycleAction = 'crear' | 'reutilizar'
+// El ciclo siempre existe previamente: se crea al convertirse en REPRODUCTORA o tras un desenlace.
+// evalCycleRules solo devuelve 'reutilizar' — ningún evento reproductivo crea ciclos por sí mismo.
+export type ReproductiveCycleAction = 'reutilizar'
 export interface ReproductiveCycleDecision {
   accion: ReproductiveCycleAction
-  cicloId: UUID | null  // null cuando accion = 'crear' (el id se asigna tras insertar)
+  cicloId: UUID
 }
 
 // Proyección derivada que ReproductiveProjection construye a partir del contexto.
@@ -109,7 +123,7 @@ export interface ReproductiveCycleDecision {
 // diasRestantes no se persiste: se recalcula en UI como fecha_prevista_parto - hoy.
 export interface ReproductiveSnapshot {
   estadoReproductivo: EstadoReproductivo
-  cicloActivoId: UUID | null
+  cicloActivoId: UUID
   fechaPrevistaParto: ISODate | null
   diasRestantes: number | null
 }

@@ -14,6 +14,7 @@ import { FormConfirmacionGestacion } from '@/modules/ganadero/reproductivo/ui/Fo
 import { FormParto } from '@/modules/ganadero/reproductivo/ui/FormParto'
 import { FormDestete } from '@/modules/ganadero/reproductivo/ui/FormDestete'
 import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
+import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 import type { CriaParaDesteteItem } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
 
@@ -110,12 +111,20 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
     setAccionActiva(null)
     setPanelOpen(false)
     toast.success('Destete registrado correctamente', {
-      description: cicloCerrado ? 'Todas las crías destetadas. La madre vuelve a estado vacía.' : undefined,
+      description: cicloCerrado ? 'Todas las crías destetadas. Ciclo completado.' : undefined,
     })
     router.refresh()
   }
 
   if (estadoVital !== 'vivo') return null
+
+  const acciones = getAvailableActions({
+    estadoVital,
+    estadoReproductivo,
+    tieneCicloAbierto,
+    esReproductora,
+    tieneCriasElegibles: criasElegibles.length > 0,
+  })
 
   return (
     <div className="rounded-lg border border-divider shadow-sm overflow-hidden">
@@ -166,7 +175,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                 >
                   Registrar salida
                 </Button>
-                {esReproductora && (estadoReproductivo === 'vacia' || estadoReproductivo === 'cubierta') && (
+                {acciones.has('cubricion') && (
                   <Button
                     type="button"
                     variant={accionActiva === 'cubricion' ? 'outline' : 'default'}
@@ -176,7 +185,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     {estadoReproductivo === 'cubierta' ? 'Registrar nueva cubrición' : 'Registrar cubrición'}
                   </Button>
                 )}
-                {esReproductora && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'vacia') && (
+                {acciones.has('confirmacion') && (
                   <Button
                     type="button"
                     variant={accionActiva === 'confirmacion' ? 'outline' : 'default'}
@@ -186,7 +195,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     Confirmar gestación
                   </Button>
                 )}
-                {esReproductora && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'gestante') && tieneCicloAbierto && (
+                {acciones.has('parto') && (
                   <Button
                     type="button"
                     variant={accionActiva === 'parto' ? 'outline' : 'default'}
@@ -196,7 +205,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     Registrar parto
                   </Button>
                 )}
-                {esReproductora && estadoReproductivo === 'lactante' && criasElegibles.length > 0 && (
+                {acciones.has('destete') && (
                   <Button
                     type="button"
                     variant={accionActiva === 'destete' ? 'outline' : 'default'}

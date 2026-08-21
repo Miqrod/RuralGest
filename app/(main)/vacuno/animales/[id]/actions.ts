@@ -8,6 +8,7 @@ import { confirmarGestacion } from '@/modules/ganadero/reproductivo/application/
 import { identificarAnimal } from '@/modules/ganadero/animales/application/identificarAnimal'
 import { registrarParto } from '@/modules/ganadero/reproductivo/application/actions/registrarParto'
 import { registrarDestete } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
+import { cambiarTipoProductivo } from '@/modules/ganadero/animales/application/actions/cambiarTipoProductivo'
 import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteResult } from '@/modules/ganadero/reproductivo/domain/types'
 import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
 
@@ -116,6 +117,23 @@ export async function submitRegistrarDestete(
   } catch (err) {
     console.error('[submitRegistrarDestete]', err)
     return { error: extractMessage(err, 'Error al registrar el destete') }
+  }
+}
+
+export async function submitCambiarTipoProductivo(
+  animalId: string,
+  nuevoTipoProductivoId: string,
+): Promise<{ error: string } | null> {
+  try {
+    await cambiarTipoProductivo({
+      animal_id:              animalId,
+      nuevo_tipo_productivo_id: nuevoTipoProductivoId,
+    })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return null
+  } catch (err) {
+    console.error('[submitCambiarTipoProductivo]', err)
+    return { error: extractMessage(err, 'Error al cambiar el tipo productivo') }
   }
 }
 

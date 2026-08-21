@@ -1,7 +1,6 @@
 import { getAnimalById } from '../infrastructure/repository'
-import { evaluarIdentificacion } from '../domain/IdentificationRules'
+import { evaluarIdentificacion, buildIdentificationStatus, isValidCrotalFormat } from '../domain/IdentificationRules'
 import type { AnimalIdentificationStatus } from '../domain/IdentificationRules'
-import { buildIdentificationStatus } from '../domain/IdentificationRules'
 import { createServerClient } from '../../../shared/db'
 import type { UUID } from '../../../shared/types'
 import type { Sexo } from '../../shared/domain/types'
@@ -30,6 +29,11 @@ export async function identificarAnimal(
     throw new Error('Este animal no está sujeto al workflow de identificación')
   }
 
+  // El crotal es opcional, pero si se proporciona debe tener el formato correcto.
+  if (input.crotal && !isValidCrotalFormat(input.crotal)) {
+    throw new Error('Formato de crotal inválido. Usa 2 letras de país + 12 dígitos (ej. ES123456789012)')
+  }
+
   // Calcular el nuevo estado aplicando los valores entrantes sobre el snapshot actual
   const datosActualizados = {
     crotal: input.crotal ?? animal.crotal,
@@ -49,7 +53,12 @@ export async function identificarAnimal(
       ...(input.nombre     !== undefined && { nombre:     input.nombre }),
     })
     .eq('id', input.animal_id)
-  if (error) throw error
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error(`El crotal '${input.crotal}' ya está registrado en otro animal. Los crotales deben ser únicos.`)
+    }
+    throw error
+  }
 
   return buildIdentificationStatus(datosActualizados)
 }

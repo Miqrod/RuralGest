@@ -111,10 +111,9 @@ describe('EVAL: CONFIRMACION_GESTACION — decisión de ciclo', () => {
     expect(decision.cicloId).toBe('uuid-ciclo')
   })
 
-  it('desde vacia sin ciclo abierto: crear (PRD008)', () => {
-    const decision = evalCycleRules(CTX_DESDE_VACIA)
-    expect(decision.accion).toBe('crear')
-    expect(decision.cicloId).toBeNull()
+  it('desde vacia sin ciclo abierto: lanza (PRD-CORRECTIVO: todo animal activo tiene ciclo abierto)', () => {
+    // evalCycleRules requiere cicloAbierto != null — el modelo no permite 'crear' ciclos desde cero
+    expect(() => evalCycleRules(CTX_DESDE_VACIA)).toThrow()
   })
 
 })
@@ -131,9 +130,9 @@ describe('EVAL: CONFIRMACION_GESTACION — proyección', () => {
   })
 
   it('desde vacia con 3 meses estimados: calcula fechaPrevistaParto (PRD008)', () => {
-    const snapshot = buildSnapshot(CTX_DESDE_VACIA, null)
+    const snapshot = buildSnapshot(CTX_DESDE_VACIA, 'uuid-ciclo-nuevo')
     expect(snapshot.estadoReproductivo).toBe('gestante')
-    expect(snapshot.cicloActivoId).toBeNull()  // RPC asigna el id real
+    expect(snapshot.cicloActivoId).toBe('uuid-ciclo-nuevo')  // id del ciclo reutilizado
     // vacuno: 283 días − 3 meses × 30 = 283 − 90 = 193 días desde la confirmación
     const esperada = addDays(parseISO('2026-07-15'), 193).toISOString().split('T')[0]
     expect(snapshot.fechaPrevistaParto).toBe(esperada)
@@ -142,7 +141,7 @@ describe('EVAL: CONFIRMACION_GESTACION — proyección', () => {
 
   it('desde vacia sin meses estimados: fechaPrevistaParto null', () => {
     const ctx: ReproductiveContext = { ...CTX_DESDE_VACIA, mesesGestacionEstimados: undefined }
-    const snapshot = buildSnapshot(ctx, null)
+    const snapshot = buildSnapshot(ctx, 'uuid-ciclo-nuevo')
     expect(snapshot.fechaPrevistaParto).toBeNull()
   })
 

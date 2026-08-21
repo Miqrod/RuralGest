@@ -4,27 +4,32 @@ import type { UUID } from '../../../shared/types'
 import type { CicloReproductivo } from '../domain/types'
 import type { ResultadoCiclo } from '../../shared/domain/types'
 
-// Las columnas de ciclo_reproductivo coinciden exactamente con el tipo de dominio.
 function mapCicloRow(row: DbRow<'ciclo_reproductivo'>): CicloReproductivo {
   return {
     id:           row.id,
     animal_id:    row.animal_id,
     numero_ciclo: row.numero_ciclo,
     fecha_inicio: row.fecha_inicio,
-    fecha_fin:    row.fecha_fin    ?? null,
-    resultado:    row.resultado    ?? null,
+    fecha_fin:    row.fecha_fin  ?? null,
+    resultado:    row.resultado  ?? null,
     created_at:   row.created_at,
-    created_by:   row.created_by  ?? null,
+    created_by:   row.created_by ?? null,
   }
 }
 
 export async function getCicloAbierto(animalId: UUID): Promise<CicloReproductivo | null> {
   const supabase = await createServerClient()
+  // ORDER BY numero_ciclo DESC + limit(1): puede haber múltiples ciclos sin fecha_fin
+  // (p.ej. un ciclo gestante interrumpido por cambio de tipo + un nuevo ciclo vacía).
+  // Siempre devolvemos el más reciente para que la UI opere sobre el ciclo activo correcto.
   const { data, error } = await supabase
     .from('ciclo_reproductivo')
     .select('*')
     .eq('animal_id', animalId)
     .is('fecha_fin', null)
+    .is('resultado', null)
+    .order('numero_ciclo', { ascending: false })
+    .limit(1)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
@@ -56,7 +61,7 @@ export async function insertCiclo(
       numero_ciclo: numeroCiclo,
       fecha_inicio: input.fecha_inicio,
       fecha_fin:    input.fecha_fin    ?? undefined,
-      resultado:    input.resultado    ?? undefined,
+      resultado:    input.resultado   ?? undefined,
       created_by:   input.created_by  ?? undefined,
     })
     .select('*')

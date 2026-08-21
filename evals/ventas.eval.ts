@@ -58,7 +58,7 @@ describe('EVAL: Ventas — assertVentaTieneLineas', () => {
   it('venta sin líneas → lanza', () => {
     // Una venta vacía no tiene ningún significado financiero ni ganadero.
     // Podría ocurrir por un bug en el formulario o una llamada incorrecta a la API.
-    expect(() => assertVentaTieneLineas({ lineas: [] } as CrearVentaInput))
+    expect(() => assertVentaTieneLineas({ lineas: [] } as unknown as CrearVentaInput))
       .toThrow(/al menos una línea/)
   })
 

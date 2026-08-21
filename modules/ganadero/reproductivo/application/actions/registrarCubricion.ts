@@ -10,9 +10,8 @@ import type { UUID } from '../../../../shared/types'
 // Registra una cubrición siguiendo el pipeline CRP:
 //   Contexto → EligibilityRules → CycleRules → Projection → RPC transaccional
 //
-// El ciclo reproductivo se crea o reutiliza dentro del RPC (una sola transacción).
-// No se llama a abrirCiclo() desde aquí: evita el gap de atomicidad entre
-// la inserción del ciclo y la del evento.
+// El ciclo debe existir previamente (creado al convertirse el animal en REPRODUCTORA).
+// evalCycleRules siempre devuelve 'reutilizar': la Cubrición no crea ciclos.
 export async function registrarCubricion(input: RegistrarCubricionInput): Promise<UUID> {
   // 1. Cargar datos necesarios para el contexto
   const animal = await getAnimalById(input.animal_id)
@@ -51,7 +50,7 @@ export async function registrarCubricion(input: RegistrarCubricionInput): Promis
   const { data: eventoId, error } = await supabase.rpc('registrar_cubricion', {
     p_animal_id:             input.animal_id,
     p_fecha:                 input.fecha_cubricion,
-    p_ciclo_id:              decision.cicloId     ?? undefined,  // null → RPC crea el ciclo
+    p_ciclo_id:              decision.cicloId,
     p_estado_reproductivo:   snapshot.estadoReproductivo,
     p_fecha_prevista_parto:  snapshot.fechaPrevistaParto ?? undefined,
     p_tipo_cubricion:        input.tipo_cubricion,

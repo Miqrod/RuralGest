@@ -1,0 +1,21 @@
+-- Eliminar constraint chk_estado_reproductivo
+--
+-- El constraint original forzaba:
+--   es_reproductora = false → estado_reproductivo IS NULL
+--
+-- Esta invariante ha dejado de ser cierta en PRD011.
+-- Las dos dimensiones son independientes:
+--
+--   es_reproductora     → ¿puede participar en NUEVOS ciclos?
+--   ciclo abierto       → ¿hay una historia reproductiva actualmente en curso?
+--
+-- Son compatibles:
+--   es_reproductora = false + ciclo abierto + estado_reproductivo = GESTANTE  → válido
+--   es_reproductora = false + ciclo abierto + estado_reproductivo = LACTANTE  → válido
+--
+-- La nueva regla se traslada a los casos de uso:
+--   1. Cambio de tipo productivo (futuro): es_reproductora = false no cierra ciclo abierto.
+--   2. Cierre de ciclo (procesarCiclo): si es_reproductora = false al cerrar,
+--      estado_reproductivo → NULL y no se abre nuevo ciclo.
+
+ALTER TABLE animal DROP CONSTRAINT IF EXISTS chk_estado_reproductivo;

@@ -10,21 +10,39 @@ export interface EligibilityResult {
 // Responde únicamente a: ¿puede este animal recibir este evento reproductivo?
 // No modifica estados, no crea ciclos, no proyecta información.
 // El Use Case llama a esta función antes de invocar ReproductiveCycleRules.
+//
+// Dos tipos de operaciones reproductivas:
+//
+//   A) Iniciar historia reproductiva (primer ciclo sin historial previo):
+//      Solo puede ocurrir cuando el animal se convierte en REPRODUCTORA.
+//      Ese flujo crea el ciclo VACÍA, no pasa por aquí.
+//
+//   B) Continuar ciclo existente (CUBRICION, CONFIRMACION, PARTO, ABORTO):
+//      La validación se centra en el estado del ciclo actual.
+//      es_reproductora es necesario para que el animal tenga un ciclo,
+//      pero si ya existe un ciclo (ctx.cicloAbierto != null), es porque
+//      el animal era reproductora cuando se creó — y ese historial debe
+//      poder completarse aunque el flag haya cambiado después.
+//
+//   C) DESTETE: se valida por separado con canWean/getWeaningBlockers.
+//      No pasa por checkEligibility.
 export function checkEligibility(ctx: ReproductiveContext): EligibilityResult {
   const errors: string[] = []
 
-  // Regla 1: solo hembras con tipo productivo 'Reproductora' pueden recibir eventos reproductivos.
-  // es_reproductora lo calcula el backend (ver decisions.md § es_reproductora).
-  if (!ctx.animal.es_reproductora) {
-    errors.push('El animal no es reproductora (requiere hembra con tipo productivo "Reproductora")')
+  // Regla 1: es_reproductora solo es requisito cuando no existe ciclo previo.
+  // Con ciclo abierto la historia reproductiva ya está en curso y debe poder
+  // completarse independientemente del valor actual del flag.
+  if (!ctx.animal.es_reproductora && ctx.cicloAbierto === null) {
+    errors.push('El animal no es reproductora — condición necesaria para iniciar un nuevo ciclo')
   }
 
-  // Regla 2: el estado reproductivo actual debe permitir el evento solicitado.
-  // null significa que el módulo reproductivo no aplica (es_reproductora = false),
-  // y estadoPermiteEvento retorna false directamente en ese caso.
-  if (!estadoPermiteEvento(ctx.animal.estado_reproductivo, ctx.eventoSolicitado)) {
-    const estado = ctx.animal.estado_reproductivo ?? '(no aplica)'
-    errors.push(`Estado '${estado}' no permite registrar el evento ${ctx.eventoSolicitado}`)
+  // Regla 2: el estado reproductivo actual debe ser compatible con el evento.
+  // DESTETE no pasa por aquí (validado en canWean), por eso el cast es seguro.
+  if (ctx.eventoSolicitado !== 'DESTETE') {
+    if (!estadoPermiteEvento(ctx.animal.estado_reproductivo, ctx.eventoSolicitado)) {
+      const estado = ctx.animal.estado_reproductivo ?? '(sin ciclo activo)'
+      errors.push(`Estado '${estado}' no permite registrar el evento ${ctx.eventoSolicitado}`)
+    }
   }
 
   return { eligible: errors.length === 0, errors }

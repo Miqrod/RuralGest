@@ -3,14 +3,14 @@ import type { UUID } from '../../../shared/types'
 import type { CicloReproductivo } from '../domain/types'
 import type { ResultadoCiclo } from '../../shared/domain/types'
 
-// Crea un nuevo ciclo reproductivo para el animal.
+// Crea un nuevo ciclo reproductivo en estado VACÍA para el animal.
 //
-// Llamar SOLO cuando ReproductiveCycleRules determine que no hay ciclo abierto.
-// La decisión "crear vs. reutilizar" pertenece a ReproductiveCycleRules (tarea #75),
-// que opera sobre el ReproductiveContext que el Use Case construye previamente.
-// Es válido tener varias cubriciones dentro de un mismo ciclo (fallos, repeticiones).
+// Cuándo se llama:
+//   - Al convertirse el animal en REPRODUCTORA (primer ciclo)
+//   - Tras un desenlace (Parto, Aborto, Machorra) si sigue siendo reproductora
 //
-// Elegibilidad (es_reproductora, sexo = hembra) → validada en ReproductiveEligibilityRules.
+// Los RPCs de Parto/Aborto crean el nuevo ciclo internamente (atomicidad).
+// Esta función se usará principalmente en el flujo de cambio de tipo productivo (T152).
 export async function abrirCiclo(animalId: UUID, fechaInicio: string): Promise<CicloReproductivo> {
   return insertCiclo({
     animal_id:  animalId,
@@ -21,16 +21,17 @@ export async function abrirCiclo(animalId: UUID, fechaInicio: string): Promise<C
   })
 }
 
-// Cierra el ciclo con su resultado definitivo.
+// Informa la fecha_fin del ciclo cuando ya no quedan eventos pendientes.
 //
-// Regla de cuándo cierra cada evento y si se abre uno nuevo (lo coordina el Use Case):
-//   aborto  → cierra (resultado='aborto')  + abrir nuevo inmediatamente (estado VACÍA)
-//   destete → cierra (resultado='parto')   + abrir nuevo (estado VACÍA)
-//   venta   → cierra (resultado='venta')   + NO abrir nuevo
-//   muerte  → cierra (resultado='muerte')  + NO abrir nuevo
-//   timeout → cierra (resultado='desconocido') + NO abrir nuevo
+// Distinción importante:
+//   resultado  → desenlace reproductivo (parto, aborto, machorra, cierre_manual)
+//   fecha_fin  → finalización histórica (cuando ya no pueden llegar más eventos al ciclo)
 //
-// Nota: PARTO no cierra el ciclo. Es un hito interno; el ciclo sigue abierto hasta el destete.
+// Tras un Parto: resultado='parto', fecha_fin=NULL mientras existan vínculos madre-cría.
+//   El Destete del último vínculo activa fecha_fin en el ciclo del Parto.
+// Tras un Aborto/Machorra/Cierre manual: resultado y fecha_fin coinciden en la misma fecha.
+//
+// shouldCreateNewCycleAfterDesenlace determina si se abre un nuevo ciclo en 'vacia'.
 export async function cerrarCiclo(
   cicloId: UUID,
   resultado: ResultadoCiclo,

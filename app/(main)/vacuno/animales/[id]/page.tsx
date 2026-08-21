@@ -3,14 +3,18 @@ import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { getAnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
 import { getMachosDisponibles } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
+import { getTiposProductivosDisponibles } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
 import { AnimalHeader } from '@/modules/ganadero/animales/ui/ficha/AnimalHeader'
 import { SeccionEstados } from '@/modules/ganadero/animales/ui/ficha/SeccionEstados'
 import { SeccionOrigen } from '@/modules/ganadero/animales/ui/ficha/SeccionOrigen'
 import { SeccionAcciones } from '@/modules/ganadero/animales/ui/ficha/SeccionAcciones'
 import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEventos'
+import { SeccionUsoProductivo } from '@/modules/ganadero/animales/ui/ficha/SeccionUsoProductivo'
 import { SeccionHistorialReproductivo } from '@/modules/ganadero/reproductivo/ui/SeccionHistorialReproductivo'
+import { SeccionCriasDependientes } from '@/modules/ganadero/reproductivo/ui/SeccionCriasDependientes'
 import { getCicloAbierto } from '@/modules/ganadero/reproductivo/infrastructure/repository'
 import { getCriasParaDestete } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
+import { tieneCiclosReproductivos } from '@/modules/ganadero/reproductivo/application/queries/tieneCiclosReproductivos'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -22,17 +26,26 @@ export default async function AnimalDetailPage({ params }: Props) {
 
   if (!animal) notFound()
 
-  // Solo necesario para hembras reproductoras; en el resto el panel no mostrará los botones.
-  const [machos, cicloAbierto, criasElegibles] = await Promise.all([
+  const [machos, cicloAbierto, criasElegibles, tiposDisponibles, tieneHistorial] = await Promise.all([
     animal.es_reproductora ? getMachosDisponibles(animal.especie) : Promise.resolve([]),
-    animal.es_reproductora &&
-    (animal.estado_reproductivo === 'gestante' || animal.estado_reproductivo === 'cubierta')
+    // Fetch del ciclo siempre que el animal tenga módulo reproductivo activo (estado != null).
+    // Un animal con es_reproductora=false puede tener ciclo abierto si fue retirada de
+    // reproducción durante un ciclo en curso — ese ciclo debe poder completarse.
+    animal.estado_reproductivo !== null
       ? getCicloAbierto(animal.id)
       : Promise.resolve(null),
-    // Crías elegibles para destete: solo cuando la madre está lactante
-    animal.es_reproductora && animal.estado_reproductivo === 'lactante'
-      ? getCriasParaDestete(animal.id)
+    // Crías elegibles para destete: independiente de es_reproductora.
+    // La query filtra tipo_productivo='Cría' + estado_vinculo_materno='activo'; devuelve []
+    // si no hay crías, por lo que es seguro llamarla siempre.
+    getCriasParaDestete(animal.id),
+    // Tipos disponibles para el drawer de cambio. Solo tiene sentido para animales vivos;
+    // en vendidos/muertos el drawer no se monta, pero pasamos [] por coherencia.
+    animal.estado_vital === 'vivo'
+      ? getTiposProductivosDisponibles(animal.especie, animal.sexo)
       : Promise.resolve([]),
+    // Necesario para mostrar el carrusel incluso cuando estado_reproductivo=null
+    // (animal que dejó de ser reproductora pero tiene historial de ciclos).
+    tieneCiclosReproductivos(animal.id),
   ])
 
   return (
@@ -59,19 +72,33 @@ export default async function AnimalDetailPage({ params }: Props) {
           machos={machos}
           criasElegibles={criasElegibles}
         />
-        {animal.es_reproductora ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SeccionHistorialReproductivo
-          animalId={animal.id}
-          madreCrotal={animal.crotal}
-          fechaPrevistaParto={animal.fecha_prevista_parto}
-        />
-            <SeccionEstados animal={animal} />
+        {(animal.estado_reproductivo !== null || tieneHistorial) ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+            <div className="flex flex-col gap-4">
+              <SeccionHistorialReproductivo
+                animalId={animal.id}
+                madreCrotal={animal.crotal}
+                fechaPrevistaParto={animal.fecha_prevista_parto}
+                estadoVital={animal.estado_vital}
+                fechaSalida={animal.fecha_salida}
+              />
+              <SeccionCriasDependientes
+                animalId={animal.id}
+                madreCrotal={animal.crotal}
+              />
+            </div>
+            <div className="flex flex-col gap-4">
+              <SeccionUsoProductivo animal={animal} tiposDisponibles={tiposDisponibles} />
+              <SeccionEstados animal={animal} />
+            </div>
             <SeccionOrigen animal={animal} />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SeccionEstados animal={animal} />
+            <div className="flex flex-col gap-4">
+              <SeccionUsoProductivo animal={animal} tiposDisponibles={tiposDisponibles} />
+              <SeccionEstados animal={animal} />
+            </div>
             <SeccionOrigen animal={animal} />
           </div>
         )}

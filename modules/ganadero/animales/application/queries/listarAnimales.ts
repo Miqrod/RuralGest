@@ -7,6 +7,7 @@ import { listAnimales } from '../../infrastructure/repository'
 export interface AnimalListItem {
   id: UUID
   crotal: string | null
+  nombre: string | null
   sexo: Sexo
   especie: Especie
   tipo_productivo_nombre: string | null
@@ -24,6 +25,7 @@ export async function listarAnimales(): Promise<AnimalListItem[]> {
   return animales.map((a) => ({
     id:                        a.id,
     crotal:                    a.crotal,
+    nombre:                    a.nombre,
     sexo:                      a.sexo,
     especie:                   a.especie,
     tipo_productivo_nombre:    a.tipo_productivo_nombre,

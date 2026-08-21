@@ -270,7 +270,7 @@ export function FormParto({ animalId, crotal, nombre, onSuccess, onCancel }: Pro
                 </li>
               </ul>
               <p className="text-ink-muted text-xs pt-1">
-                Esta acción creará las crías correspondientes y actualizará el estado reproductivo de la madre a <span className="font-medium">lactante</span>.
+                Esta acción registrará las crías, fijará el desenlace del ciclo actual como <span className="font-medium">parto</span> e iniciará un nuevo ciclo reproductivo en estado <span className="font-medium">vacía</span>.
               </p>
             </div>
           )}

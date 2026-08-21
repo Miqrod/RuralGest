@@ -10,21 +10,19 @@ import { buildSnapshot } from '@/modules/ganadero/reproductivo/domain/rules/Repr
 import type { ReproductiveContext } from '@/modules/ganadero/reproductivo/domain/types'
 
 // =============================================================================
-// EVAL: Transiciones reproductivas — cobertura completa de eventos
+// EVAL: Transiciones reproductivas — modelo PRD-CORRECTIVO
 //
-// confirmacion-gestacion.eval.ts ya cubre CONFIRMACION_GESTACION en detalle.
-// Este archivo cubre los 4 eventos restantes:
+// Estados válidos: VACÍA, CUBIERTA, GESTANTE, NULL
+// LACTANTE queda obsoleto: la lactación es historia de maternidad, no reproductiva.
 //
-//   CUBRICION             → estado destino: cubierta
-//   PARTO                 → estado destino: lactante
-//   DESTETE               → estado destino: vacia
-//   ABORTO                → estado destino: vacia
+// DESTETE no transiciona el estado reproductivo (finaliza vínculos madre-cría).
+// validarTransicionReproductiva('DESTETE', x) devuelve el mismo estado que recibe.
 //
-// Para cada evento se verifica:
-//   a) validarTransicionReproductiva: los orígenes válidos e inválidos
-//   b) estadoPermiteEvento: la misma lógica en modo booleano (sin lanzar)
-//   c) evalCycleRules: qué hace el ciclo reproductivo con el evento
-//   d) buildSnapshot (CUBRICION y PARTO): la proyección de estado calculada
+// El ciclo debe existir antes de cualquier evento: ni CUBRICION ni CONFIRMACION
+// crean ciclos. evalCycleRules siempre devuelve 'reutilizar'.
+//
+// PARTO fija resultado='parto' en el ciclo actual + abre nuevo ciclo VACÍA.
+// El estado resultante en el animal es 'vacia' (refleja el nuevo ciclo).
 //
 // Ningún test accede a la BD — toda la lógica es pura.
 // =============================================================================
@@ -54,8 +52,6 @@ const CICLO_ABIERTO: NonNullable<ReproductiveContext['cicloAbierto']> = {
 describe('EVAL: Transiciones — CUBRICION', () => {
 
   it('vacia → cubierta: primera cubrición del ciclo reproductivo', () => {
-    // Estado inicial de la reproductora. La cubrición (monta o inseminación) abre
-    // el ciclo y marca el inicio del cómputo de gestación.
     expect(validarTransicionReproductiva('CUBRICION', 'vacia')).toBe('cubierta')
   })
 
@@ -67,15 +63,7 @@ describe('EVAL: Transiciones — CUBRICION', () => {
   })
 
   it('gestante → lanza: no se puede cubrir un animal que ya está gestante', () => {
-    // Una vez confirmada la gestación la reproductora no puede recibir cubrición
-    // hasta que concluya el ciclo (parto o aborto). Esto protege la integridad del ciclo.
     expect(() => validarTransicionReproductiva('CUBRICION', 'gestante')).toThrow()
-  })
-
-  it('lactante → lanza: no se puede cubrir un animal que está amamantando', () => {
-    // El destete debe producirse antes de iniciar un nuevo ciclo reproductivo.
-    // Permitirlo daría lugar a ciclos solapados sin sentido biológico.
-    expect(() => validarTransicionReproductiva('CUBRICION', 'lactante')).toThrow()
   })
 
 })
@@ -84,29 +72,18 @@ describe('EVAL: Transiciones — CUBRICION', () => {
 
 describe('EVAL: Transiciones — PARTO', () => {
 
-  it('cubierta → lactante: parto sin confirmación de gestación previa (válido en extensivo)', () => {
-    // En explotación extensiva muchos partos se registran sin haber pasado por
-    // CONFIRMACION_GESTACION. El sistema permite llegar al parto directamente
-    // desde cubierta para no bloquear al ganadero.
-    expect(validarTransicionReproductiva('PARTO', 'cubierta')).toBe('lactante')
+  it('cubierta → vacia: parto sin confirmación de gestación previa (válido en extensivo)', () => {
+    // El estado resultante es 'vacia' porque el Parto abre un nuevo ciclo en ese estado.
+    // El ciclo anterior recibe resultado='parto' pero puede seguir recibiendo destetes.
+    expect(validarTransicionReproductiva('PARTO', 'cubierta')).toBe('vacia')
   })
 
-  it('gestante → lactante: flujo completo con confirmación previa', () => {
-    // Camino estándar: CUBRICION → CONFIRMACION_GESTACION → PARTO.
-    // El parto cambia el estado a lactante y arranca el período de lactación.
-    expect(validarTransicionReproductiva('PARTO', 'gestante')).toBe('lactante')
+  it('gestante → vacia: flujo completo con confirmación previa', () => {
+    expect(validarTransicionReproductiva('PARTO', 'gestante')).toBe('vacia')
   })
 
   it('vacia → lanza: no puede parir sin haber sido cubierta', () => {
-    // Registrar un parto en una vaca vacía sería una inconsistencia de datos grave.
-    // La regla actúa como primera línea de defensa (el RPC añade una segunda con FOR UPDATE).
     expect(() => validarTransicionReproductiva('PARTO', 'vacia')).toThrow()
-  })
-
-  it('lactante → lanza: no puede parir estando en período de lactación', () => {
-    // Biológicamente imposible y semánticamente incorrecto. Un doble parto sin
-    // destete previo indicaría un error en el flujo de datos.
-    expect(() => validarTransicionReproductiva('PARTO', 'lactante')).toThrow()
   })
 
 })
@@ -115,23 +92,12 @@ describe('EVAL: Transiciones — PARTO', () => {
 
 describe('EVAL: Transiciones — DESTETE', () => {
 
-  it('lactante → vacia: destete completa el ciclo reproductivo', () => {
-    // El destete es el evento que libera a la madre: cierra el vínculo materno
-    // con cada cría y, cuando no quedan crías activas, devuelve la madre a estado vacia.
-    // Es la transición final del ciclo y el único origen válido de DESTETE.
-    expect(validarTransicionReproductiva('DESTETE', 'lactante')).toBe('vacia')
-  })
-
-  it('cubierta → lanza: el destete no tiene sentido si no hay lactación activa', () => {
-    // Protege contra usos incorrectos del formulario. Si el estado no es lactante,
-    // el ganadero ha tomado un camino equivocado en la UI.
-    expect(() => validarTransicionReproductiva('DESTETE', 'cubierta')).toThrow()
-  })
-
-  it('vacia → lanza: no puede destetar sin haber parido', () => {
-    // Una reproductora vacía no tiene crías que destetar. Este caso detectaría
-    // un bug en la navegación o en la carga de datos de la ficha.
-    expect(() => validarTransicionReproductiva('DESTETE', 'vacia')).toThrow()
+  it('DESTETE no transiciona el estado reproductivo: devuelve el mismo estado', () => {
+    // El Destete finaliza vínculos madre-cría, no cambia el ciclo reproductivo.
+    // La madre puede estar en cualquier estado reproductivo mientras lacta.
+    expect(validarTransicionReproductiva('DESTETE', 'vacia')).toBe('vacia')
+    expect(validarTransicionReproductiva('DESTETE', 'cubierta')).toBe('cubierta')
+    expect(validarTransicionReproductiva('DESTETE', 'gestante')).toBe('gestante')
   })
 
 })
@@ -141,26 +107,14 @@ describe('EVAL: Transiciones — DESTETE', () => {
 describe('EVAL: Transiciones — ABORTO', () => {
 
   it('cubierta → vacia: aborto tras cubrición sin confirmación gestacional', () => {
-    // El aborto puede ocurrir en cualquier momento tras la cubrición.
-    // No es necesario haber confirmado la gestación para registrar la pérdida.
     expect(validarTransicionReproductiva('ABORTO', 'cubierta')).toBe('vacia')
   })
 
   it('gestante → vacia: aborto después de confirmación gestacional', () => {
-    // Más habitual clínicamente (aborto tardío). El ciclo se cierra y la madre
-    // vuelve a estado vacia lista para un nuevo ciclo.
     expect(validarTransicionReproductiva('ABORTO', 'gestante')).toBe('vacia')
   })
 
-  it('lactante → lanza: no se puede registrar aborto durante la lactación', () => {
-    // Si ya hubo parto (y por tanto está lactante), el ciclo progresó más allá
-    // del punto donde un aborto tendría sentido. Indicaría error en la secuencia de eventos.
-    expect(() => validarTransicionReproductiva('ABORTO', 'lactante')).toThrow()
-  })
-
   it('vacia → lanza: no puede abortar sin estar cubierta o gestante', () => {
-    // Una reproductora vacía no tiene gestación en curso. Registrar un aborto
-    // desde este estado indicaría un error de flujo o datos duplicados.
     expect(() => validarTransicionReproductiva('ABORTO', 'vacia')).toThrow()
   })
 
@@ -168,92 +122,70 @@ describe('EVAL: Transiciones — ABORTO', () => {
 
 // ── estadoPermiteEvento — tabla completa ─────────────────────────────────────
 // Versión booleana de validarTransicionReproductiva.
-// Usada por EligibilityRules para componer múltiples condiciones sin lanzar excepciones.
+// DESTETE no aparece aquí: no se valida mediante esta función.
 
 describe('EVAL: estadoPermiteEvento — matriz de estados y eventos', () => {
 
-  // CUBRICION ─────────────────────────────────────────────────────────────────
-  it('CUBRICION desde vacia → permitido (primer monta del ciclo)', () => {
+  // CUBRICION
+  it('CUBRICION desde vacia → permitido', () => {
     expect(estadoPermiteEvento('vacia', 'CUBRICION')).toBe(true)
   })
-  it('CUBRICION desde cubierta → permitido (monta repetida en el mismo ciclo)', () => {
+  it('CUBRICION desde cubierta → permitido (monta repetida)', () => {
     expect(estadoPermiteEvento('cubierta', 'CUBRICION')).toBe(true)
   })
-  it('CUBRICION desde gestante → denegado (ya está gestante)', () => {
+  it('CUBRICION desde gestante → denegado', () => {
     expect(estadoPermiteEvento('gestante', 'CUBRICION')).toBe(false)
   })
-  it('CUBRICION desde lactante → denegado (debe destetar antes de reiniciar ciclo)', () => {
-    expect(estadoPermiteEvento('lactante', 'CUBRICION')).toBe(false)
-  })
 
-  // PARTO ─────────────────────────────────────────────────────────────────────
+  // PARTO
   it('PARTO desde cubierta → permitido (parto sin confirmación, típico en extensivo)', () => {
     expect(estadoPermiteEvento('cubierta', 'PARTO')).toBe(true)
   })
-  it('PARTO desde gestante → permitido (flujo completo con confirmación previa)', () => {
+  it('PARTO desde gestante → permitido', () => {
     expect(estadoPermiteEvento('gestante', 'PARTO')).toBe(true)
   })
-  it('PARTO desde vacia → denegado (no puede parir sin haber sido cubierta)', () => {
+  it('PARTO desde vacia → denegado', () => {
     expect(estadoPermiteEvento('vacia', 'PARTO')).toBe(false)
   })
-  it('PARTO desde lactante → denegado (no puede parir estando en lactación)', () => {
-    expect(estadoPermiteEvento('lactante', 'PARTO')).toBe(false)
-  })
 
-  // DESTETE ───────────────────────────────────────────────────────────────────
-  it('DESTETE desde lactante → permitido (único estado válido para destetar)', () => {
-    expect(estadoPermiteEvento('lactante', 'DESTETE')).toBe(true)
-  })
-  it('DESTETE desde vacia → denegado (no hay crías que destetar)', () => {
-    expect(estadoPermiteEvento('vacia', 'DESTETE')).toBe(false)
-  })
-  it('DESTETE desde cubierta → denegado (aún no ha parido)', () => {
-    expect(estadoPermiteEvento('cubierta', 'DESTETE')).toBe(false)
-  })
-
-  // ABORTO ────────────────────────────────────────────────────────────────────
-  it('ABORTO desde cubierta → permitido (pérdida antes de confirmación)', () => {
+  // ABORTO
+  it('ABORTO desde cubierta → permitido', () => {
     expect(estadoPermiteEvento('cubierta', 'ABORTO')).toBe(true)
   })
-  it('ABORTO desde gestante → permitido (aborto tardío)', () => {
+  it('ABORTO desde gestante → permitido', () => {
     expect(estadoPermiteEvento('gestante', 'ABORTO')).toBe(true)
   })
-  it('ABORTO desde lactante → denegado (ya parió; el ciclo avanzó más allá del aborto)', () => {
-    expect(estadoPermiteEvento('lactante', 'ABORTO')).toBe(false)
+  it('ABORTO desde vacia → denegado', () => {
+    expect(estadoPermiteEvento('vacia', 'ABORTO')).toBe(false)
   })
 
-  // null ──────────────────────────────────────────────────────────────────────
-  it('estado null → deniega todos los eventos (el módulo reproductivo no aplica a este animal)', () => {
-    // null significa es_reproductora=false. Ningún evento reproductivo es válido para estos animales.
-    // Separación crítica de dominio: null ≠ 'vacia'.
+  // null — módulo reproductivo no aplica
+  it('estado null → deniega todos los eventos (es_reproductora=false)', () => {
+    // null ≠ 'vacia': son conceptos distintos. null = el módulo reproductivo no aplica.
     expect(estadoPermiteEvento(null, 'CUBRICION')).toBe(false)
     expect(estadoPermiteEvento(null, 'PARTO')).toBe(false)
-    expect(estadoPermiteEvento(null, 'DESTETE')).toBe(false)
+    expect(estadoPermiteEvento(null, 'ABORTO')).toBe(false)
   })
 
 })
 
-// ── evalCycleRules — CUBRICION ────────────────────────────────────────────────
+// ── evalCycleRules ────────────────────────────────────────────────────────────
 
 describe('EVAL: ReproductiveCycleRules — CUBRICION', () => {
 
-  it('sin ciclo abierto → acción "crear" (primera cubrición, arranca el ciclo)', () => {
-    // Si no existe ciclo abierto, el Use Case debe crear uno nuevo.
-    // cicloId=null porque el id real lo asignará el RPC en la transacción.
+  it('sin ciclo abierto → lanza (el ciclo debe existir antes de la cubrición)', () => {
+    // El ciclo se crea al convertirse el animal en REPRODUCTORA.
+    // Intentar una cubrición sin ciclo indica un fallo en el flujo previo.
     const ctx: ReproductiveContext = {
       animal:           ANIMAL_VACIA,
       cicloAbierto:     null,
       eventoSolicitado: 'CUBRICION',
       fechaEvento:      '2026-07-01',
     }
-    const decision = evalCycleRules(ctx)
-    expect(decision.accion).toBe('crear')
-    expect(decision.cicloId).toBeNull()
+    expect(() => evalCycleRules(ctx)).toThrow(/CUBRICION requiere un ciclo/)
   })
 
-  it('con ciclo abierto → acción "reutilizar" (cubrición repetida, no abre nuevo ciclo)', () => {
-    // Si ya existe ciclo abierto es que ya hubo una cubrición previa.
-    // La nueva cubrición se registra en el mismo ciclo y actualiza la proyección.
+  it('con ciclo abierto → acción "reutilizar" (cubrición dentro del ciclo activo)', () => {
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, estado_reproductivo: 'cubierta' },
       cicloAbierto:     CICLO_ABIERTO,
@@ -267,13 +199,9 @@ describe('EVAL: ReproductiveCycleRules — CUBRICION', () => {
 
 })
 
-// ── evalCycleRules — PARTO ────────────────────────────────────────────────────
-
 describe('EVAL: ReproductiveCycleRules — PARTO', () => {
 
-  it('con ciclo abierto → acción "reutilizar" (el parto ocurre dentro del ciclo vigente)', () => {
-    // El parto no crea ni cierra el ciclo por sí mismo; simplemente ocurre dentro de él.
-    // El ciclo se cierra más tarde, cuando todas las crías son destetadas (PRD010).
+  it('con ciclo abierto → acción "reutilizar" (el parto fija el resultado del ciclo activo)', () => {
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, estado_reproductivo: 'gestante' },
       cicloAbierto:     CICLO_ABIERTO,
@@ -286,8 +214,6 @@ describe('EVAL: ReproductiveCycleRules — PARTO', () => {
   })
 
   it('sin ciclo abierto → lanza (el parto sin ciclo previo indica corrupción de datos)', () => {
-    // EligibilityRules garantiza que el estado sea cubierta/gestante antes de llegar aquí,
-    // lo que implica que siempre existe un ciclo abierto. Si no lo hay, algo falló antes.
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, estado_reproductivo: 'gestante' },
       cicloAbierto:     null,
@@ -304,40 +230,32 @@ describe('EVAL: ReproductiveCycleRules — PARTO', () => {
 describe('EVAL: ReproductiveProjection — buildSnapshot CUBRICION', () => {
 
   it('vacuno: estado → cubierta y fechaPrevistaParto = fechaEvento + 283 días', () => {
-    // La cubrición es el evento que dispara el cálculo de fecha prevista de parto.
-    // Para vacuno la duración media de gestación es 283 días (rango real: 270-290).
-    // Esta fecha se persiste en animal.fecha_prevista_parto para el widget KPI.
     const ctx: ReproductiveContext = {
       animal:           ANIMAL_VACIA,
-      cicloAbierto:     null,
+      cicloAbierto:     CICLO_ABIERTO,
       eventoSolicitado: 'CUBRICION',
       fechaEvento:      '2026-07-01',
     }
-    const snapshot = buildSnapshot(ctx, null)
+    const snapshot = buildSnapshot(ctx, 'uuid-ciclo')
     expect(snapshot.estadoReproductivo).toBe('cubierta')
     const esperada = addDays(parseISO('2026-07-01'), 283).toISOString().split('T')[0]
     expect(snapshot.fechaPrevistaParto).toBe(esperada)
-    // diasRestantes se calcula contra new Date() — solo verificamos que no es null
     expect(snapshot.diasRestantes).not.toBeNull()
   })
 
-  it('porcino: fechaPrevistaParto = fechaEvento + 114 días (regla 3-3-3: 3 meses + 3 semanas + 3 días)', () => {
-    // Para cerdas la duración de gestación es 114 días, conocida como "la regla de los tres treses".
-    // El cálculo debe usar la especie del animal, no un valor hardcodeado global.
+  it('porcino: fechaPrevistaParto = fechaEvento + 114 días', () => {
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, especie: 'porcino' },
-      cicloAbierto:     null,
+      cicloAbierto:     CICLO_ABIERTO,
       eventoSolicitado: 'CUBRICION',
       fechaEvento:      '2026-07-01',
     }
-    const snapshot = buildSnapshot(ctx, null)
+    const snapshot = buildSnapshot(ctx, 'uuid-ciclo')
     const esperada = addDays(parseISO('2026-07-01'), 114).toISOString().split('T')[0]
     expect(snapshot.fechaPrevistaParto).toBe(esperada)
   })
 
   it('cicloActivoId se propaga al snapshot tal cual lo recibe', () => {
-    // El Use Case llama a buildSnapshot con el id del ciclo ya resuelto.
-    // La función no debe modificarlo; lo propaga transparentemente al snapshot.
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, estado_reproductivo: 'cubierta' },
       cicloAbierto:     CICLO_ABIERTO,
@@ -354,10 +272,10 @@ describe('EVAL: ReproductiveProjection — buildSnapshot CUBRICION', () => {
 
 describe('EVAL: ReproductiveProjection — buildSnapshot PARTO', () => {
 
-  it('gestante → lactante; fechaPrevistaParto es null (el RPC limpia el campo en BD)', () => {
-    // El parto no recalcula la fecha prevista: esa fecha ya cumplió su propósito.
-    // Devolver null aquí es correcto; el RPC se encarga de limpiar la columna en la BD
-    // para que el widget KPI deje de mostrar la cuenta atrás.
+  it('gestante → vacia; fechaPrevistaParto es null (el parto abrió un nuevo ciclo VACÍA)', () => {
+    // El estado 'vacia' refleja que el animal ya tiene un nuevo ciclo reproductivo activo.
+    // El ciclo anterior recibió resultado='parto' pero sigue sin fecha_fin mientras
+    // existan vínculos madre-cría pendientes de destete.
     const ctx: ReproductiveContext = {
       animal:           { ...ANIMAL_VACIA, estado_reproductivo: 'gestante' },
       cicloAbierto:     CICLO_ABIERTO,
@@ -365,7 +283,7 @@ describe('EVAL: ReproductiveProjection — buildSnapshot PARTO', () => {
       fechaEvento:      '2026-10-01',
     }
     const snapshot = buildSnapshot(ctx, 'uuid-ciclo')
-    expect(snapshot.estadoReproductivo).toBe('lactante')
+    expect(snapshot.estadoReproductivo).toBe('vacia')
     expect(snapshot.fechaPrevistaParto).toBeNull()
     expect(snapshot.diasRestantes).toBeNull()
   })

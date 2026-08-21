@@ -12,9 +12,8 @@ const DIAS_GESTACION: Record<'vacuno' | 'porcino', number> = {
 
 // Construye el snapshot observable del animal tras aplicar el evento reproductivo.
 //
-// cicloActivoId: resuelto por el Use Case antes de llamar a esta función.
-//   Si la decisión fue 'reutilizar' → id del ciclo existente.
-//   Si la decisión fue 'crear'      → null (el id real lo asigna el RPC dentro de su transacción).
+// cicloActivoId: siempre el id del ciclo abierto existente, resuelto por evalCycleRules.
+// evalCycleRules solo devuelve 'reutilizar' — nunca crea ciclos, siempre hay un id real.
 //
 // Precondición: checkEligibility(ctx) debe haber devuelto eligible=true antes de llamar aquí.
 // validarTransicionReproductiva lanzará si el estado es incoherente (nunca debería ocurrir).
@@ -27,10 +26,10 @@ const DIAS_GESTACION: Record<'vacuno' | 'porcino', number> = {
 //   Todo lo demás                      → null (la fecha ya estaba calculada o no aplica)
 export function buildSnapshot(
   ctx: ReproductiveContext,
-  cicloActivoId: UUID | null,
+  cicloActivoId: UUID,
 ): ReproductiveSnapshot {
-  // Precondición garantizada por checkEligibility: si llegamos aquí, es_reproductora = true
-  // y estado_reproductivo nunca puede ser null (null = módulo no aplica).
+  // Precondición garantizada por checkEligibility: el ciclo existe y estado_reproductivo
+  // no es null (null = módulo no aplica; si hay ciclo abierto el estado siempre es válido).
   const estadoActual = ctx.animal.estado_reproductivo!
   const estadoReproductivo = validarTransicionReproductiva(ctx.eventoSolicitado, estadoActual)
 

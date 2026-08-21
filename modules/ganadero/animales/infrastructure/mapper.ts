@@ -89,6 +89,8 @@ export function mapAnimalRowToDomain(row: AnimalRowWithJoins): Animal {
     estado_vinculo_materno:    row.estado_vinculo_materno,
     parto_evento_id:           row.parto_evento_id,
     ubicacion_actual_id:       row.ubicacion_actual_id,
+    fecha_entrada:             row.fecha_entrada ?? null,
+    fecha_salida:              row.fecha_salida  ?? null,
     created_at:                row.created_at,
     created_by:                row.created_by,
     updated_at:                row.updated_at,

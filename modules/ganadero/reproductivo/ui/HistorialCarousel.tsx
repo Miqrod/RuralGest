@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { formatFecha } from '@/lib/format'
 import type { CicloHistorial, EventoHistorial, CriaResumen, CriaDesteteResumen } from '../application/queries/getHistorialReproductivo'
-import type { ResultadoCiclo } from '../../shared/domain/types'
+import type { ResultadoCiclo, EstadoVital } from '../../shared/domain/types'
+import type { ISODate } from '@/modules/shared/types'
 import { DrawerIdentificacion } from '@/modules/ganadero/animales/ui/identificacion/DrawerIdentificacion'
 
 // ─── Badges ────────────────────────────────────────────────────────────────────
@@ -14,11 +15,10 @@ import { DrawerIdentificacion } from '@/modules/ganadero/animales/ui/identificac
 const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium'
 
 const RESULTADO_CONFIG: Record<ResultadoCiclo, { label: string; className: string }> = {
-  parto:        { label: 'Parto',        className: 'bg-success-soft text-success' },
-  aborto:       { label: 'Aborto',       className: 'bg-alert-soft text-alert' },
-  venta:        { label: 'Venta',        className: 'bg-surface-alt text-ink-muted' },
-  muerte:       { label: 'Muerte',       className: 'bg-alert-soft text-alert' },
-  desconocido:  { label: 'Desconocido',  className: 'bg-surface-alt text-ink-muted' },
+  parto:        { label: 'Parto',         className: 'bg-success-soft text-success'  },
+  aborto:       { label: 'Aborto',        className: 'bg-alert-soft text-alert'      },
+  machorra:     { label: 'Machorra',      className: 'bg-surface-alt text-ink-muted' },
+  cierre_manual:{ label: 'Cierre manual', className: 'bg-surface-alt text-ink-muted' },
 }
 
 function ResultadoBadge({ resultado }: { resultado: ResultadoCiclo | null }) {
@@ -53,6 +53,7 @@ function EstadoVitalCriaBadge({ estado, sexo }: { estado: string; sexo: string |
 // ─── Evento: línea del timeline ─────────────────────────────────────────────────
 
 const CODIGO_LABEL: Record<string, string> = {
+  CAMBIO_TIPO_PRODUCTIVO: 'Paso a no reproductora',
   CUBRICION:             'Cubrición',
   CONFIRMACION_GESTACION: 'Confirmación gestación',
   PARTO:                 'Parto',
@@ -121,20 +122,26 @@ function EventoRow({
   madreCrotal: string | null
   onIdentificar: (cria: CriaResumen) => void
 }) {
-  const label = CODIGO_LABEL[evento.codigo] ?? evento.codigo
-  const meta  = evento.metadata
+  const label        = CODIGO_LABEL[evento.codigo] ?? evento.codigo
+  const meta         = evento.metadata
+  const esCambioTipo = evento.codigo === 'CAMBIO_TIPO_PRODUCTIVO'
 
   return (
     <div className="flex gap-3 py-2.5 border-b border-divider last:border-0">
       {/* Dot de timeline */}
       <div className="flex flex-col items-center pt-1 flex-shrink-0">
-        <span className="w-2 h-2 rounded-full bg-ink-muted/30 border border-ink-muted/40" />
+        <span className={cn(
+          'w-2 h-2 rounded-full border',
+          esCambioTipo
+            ? 'bg-alert/40 border-alert/60'
+            : 'bg-ink-muted/30 border-ink-muted/40',
+        )} />
         <span className="flex-1 w-px bg-divider mt-1" />
       </div>
 
       <div className="flex-1 min-w-0 pb-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-medium text-ink">{label}</span>
+          <span className={cn('text-sm font-medium', esCambioTipo ? 'text-alert' : 'text-ink')}>{label}</span>
           <span className="text-xs text-ink-muted">{formatFecha(evento.fecha)}</span>
         </div>
 
@@ -209,6 +216,40 @@ function EventoRow({
   )
 }
 
+// ─── Entrada sintética de cierre manual ─────────────────────────────────────────
+// Cuando un ciclo se cerró por cambio de tipo productivo (resultado='cierre_manual'),
+// se inyecta una entrada sintética con la fecha del cierre para que aparezca ordenada
+// cronológicamente junto al resto de eventos del ciclo.
+// Importante: si hubiera eventos posteriores al cierre (ej. gestante → parto tardío),
+// la entrada se insertaría en la posición temporal correcta, NO siempre al final.
+
+type EntradaCiclo =
+  | { tipo: 'real';          evento: EventoHistorial }
+  | { tipo: 'cierre_manual'; fecha: string }
+
+function buildEntradasOrdenadas(
+  ciclo: CicloHistorial,
+): EntradaCiclo[] {
+  const entradas: EntradaCiclo[] = agruparDestetes(ciclo.eventos)
+    .map(ev => ({ tipo: 'real' as const, evento: ev }))
+
+  // Entrada sintética de cierre_manual solo para ciclos antiguos sin evento real vinculado.
+  // Los ciclos creados con la nueva versión del RPC tienen ya el evento CAMBIO_TIPO_PRODUCTIVO
+  // ligado al ciclo (ciclo_id), por lo que EventoRow lo renderiza directamente.
+  const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
+  if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
+    entradas.push({ tipo: 'cierre_manual' as const, fecha: ciclo.fecha_fin })
+    // Ordenar por fecha para mantener la cronología del timeline
+    entradas.sort((a, b) => {
+      const fa = a.tipo === 'real' ? a.evento.fecha : a.fecha
+      const fb = b.tipo === 'real' ? b.evento.fecha : b.fecha
+      return fa <= fb ? -1 : 1
+    })
+  }
+
+  return entradas
+}
+
 // ─── Agrupamiento de DESTETE ────────────────────────────────────────────────────
 // Todos los eventos DESTETE de un ciclo se muestran como una sola fila.
 // La fecha del título es la del último destete (cuando la madre quedó libre).
@@ -234,12 +275,15 @@ function agruparDestetes(eventos: EventoHistorial[]): EventoHistorial[] {
 // ─── Carousel ───────────────────────────────────────────────────────────────────
 
 interface Props {
-  ciclos: CicloHistorial[]
-  madreCrotal: string | null
+  ciclos:             CicloHistorial[]
+  madreCrotal:        string | null
   fechaPrevistaParto: string | null
+  // Necesarios para la anotación contextual en animales vendidos/fallecidos
+  estadoVital:        EstadoVital
+  fechaSalida:        ISODate | null
 }
 
-export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto }: Props) {
+export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, estadoVital, fechaSalida }: Props) {
   const router = useRouter()
   // ciclos[0] es el más reciente (query devuelve ORDER BY numero_ciclo DESC)
   const [idx, setIdx] = useState(0)
@@ -251,29 +295,33 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto }: P
     <div>
       {/* Navegación entre ciclos */}
       <div className="flex items-center justify-between mb-3">
+        {/* Ciclo más reciente (menor idx). Invisible cuando ya estamos en el más reciente. */}
         <button
           onClick={() => setIdx(i => i - 1)}
           disabled={idx === 0}
-          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          aria-label="Ciclo más reciente"
+          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-0 disabled:cursor-default transition-colors min-w-[80px]"
+          aria-label={idx > 0 ? `Ir a Ciclo ${ciclos[idx - 1].numero_ciclo}` : undefined}
         >
-          ← Más reciente
+          {'<<'} C{ciclos[idx - 1]?.numero_ciclo ?? ''}
         </button>
 
         <div className="text-center">
-          <span className="text-sm font-semibold text-ink">Ciclo {ciclo.numero_ciclo}</span>
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-surface-alt text-ink-muted">
+            Ciclo {ciclo.numero_ciclo}
+          </span>
           {ciclos.length > 1 && (
-            <span className="block text-xs text-ink-muted">{idx + 1} de {ciclos.length}</span>
+            <span className="block text-xs text-ink-muted mt-0.5">{idx + 1} de {ciclos.length}</span>
           )}
         </div>
 
+        {/* Ciclo anterior (mayor idx). Invisible cuando ya estamos en el más antiguo. */}
         <button
           onClick={() => setIdx(i => i + 1)}
           disabled={idx === ciclos.length - 1}
-          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          aria-label="Ciclo anterior"
+          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-0 disabled:cursor-default transition-colors min-w-[80px] justify-end"
+          aria-label={idx < ciclos.length - 1 ? `Ir a Ciclo ${ciclos[idx + 1].numero_ciclo}` : undefined}
         >
-          Anterior →
+          C{ciclos[idx + 1]?.numero_ciclo ?? ''} {'>>'}
         </button>
       </div>
 
@@ -284,31 +332,63 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto }: P
             {formatFecha(ciclo.fecha_inicio)}
             {ciclo.fecha_fin ? ` – ${formatFecha(ciclo.fecha_fin)}` : ''}
           </span>
-          {/* Fecha prevista solo visible en el ciclo abierto actual */}
-          {idx === 0 && !ciclo.fecha_fin && fechaPrevistaParto && (
+          {/* Fecha prevista solo visible en el ciclo abierto actual de un animal vivo */}
+          {idx === 0 && !ciclo.fecha_fin && fechaPrevistaParto && estadoVital === 'vivo' && (
             <p className="text-xs text-ink-muted mt-0.5">
               Parto previsto: <span className="font-medium text-ink">{formatFecha(fechaPrevistaParto)}</span>
+            </p>
+          )}
+          {/* Anotación contextual: ciclo abierto en animal vendido o fallecido.
+              El ciclo quedó sin cerrar porque la salida ya no cierra ciclos propios.
+              fechaSalida se usa como referencia temporal de la historia reproductiva. */}
+          {!ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo' && (
+            <p className="text-xs text-alert mt-0.5">
+              Animal {estadoVital === 'vendido' ? 'vendido' : 'fallecido'} · Historia reproductiva finalizada
+              {fechaSalida ? ` · ${formatFecha(fechaSalida)}` : ''}
             </p>
           )}
         </div>
         <ResultadoBadge resultado={ciclo.resultado} />
       </div>
 
-      {/* Eventos del ciclo — los DESTETE del mismo día se agrupan en una sola fila */}
-      {ciclo.eventos.length === 0 ? (
-        <p className="text-sm text-ink-muted py-3">Sin eventos registrados en este ciclo.</p>
-      ) : (
-        <div>
-          {agruparDestetes(ciclo.eventos).map(ev => (
-            <EventoRow
-              key={ev.id}
-              evento={ev}
-              madreCrotal={madreCrotal}
-              onIdentificar={setCriaSeleccionada}
-            />
-          ))}
-        </div>
-      )}
+      {/* Eventos del ciclo — incluye entrada sintética de cierre manual si aplica */}
+      {(() => {
+        const entradas = buildEntradasOrdenadas(ciclo)
+        if (entradas.length === 0) {
+          return <p className="text-sm text-ink-muted py-3">Sin eventos registrados en este ciclo.</p>
+        }
+        return (
+          <div>
+            {entradas.map((entrada, i) => {
+              if (entrada.tipo === 'real') {
+                return (
+                  <EventoRow
+                    key={entrada.evento.id}
+                    evento={entrada.evento}
+                    madreCrotal={madreCrotal}
+                    onIdentificar={setCriaSeleccionada}
+                  />
+                )
+              }
+              // Entrada sintética: mismo layout que EventoRow pero con texto en rojo
+              return (
+                <div key={`cierre-manual-${i}`} className="flex gap-3 py-2.5 border-b border-divider last:border-0">
+                  <div className="flex flex-col items-center pt-1 flex-shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-alert/40 border border-alert/60" />
+                    <span className="flex-1 w-px bg-divider mt-1" />
+                  </div>
+                  <div className="flex-1 min-w-0 pb-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-alert">Paso a no reproductora</span>
+                      <span className="text-xs text-ink-muted">{formatFecha(entrada.fecha)}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Drawer de identificación — se monta una sola vez, se controla por criaSeleccionada */}
       {criaSeleccionada && (

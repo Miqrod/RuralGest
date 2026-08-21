@@ -5,7 +5,6 @@ import {
   getWeaningBlockers,
   type CriaParaDestete,
 } from '@/modules/ganadero/reproductivo/domain/rules/ReproductiveEligibilityRules'
-import { shouldCloseCycle } from '@/modules/ganadero/reproductivo/domain/rules/ReproductiveCycleRules'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -109,20 +108,7 @@ describe('EVAL: Destete — getWeaningBlockers', () => {
 
 })
 
-// ── shouldCloseCycle ──────────────────────────────────────────────────────────
-
-describe('EVAL: Destete — shouldCloseCycle', () => {
-
-  it('0 vínculos activos → debe cerrar el ciclo', () => {
-    expect(shouldCloseCycle(0)).toBe(true)
-  })
-
-  it('1 vínculo activo → ciclo sigue abierto', () => {
-    expect(shouldCloseCycle(1)).toBe(false)
-  })
-
-  it('N vínculos activos → ciclo sigue abierto', () => {
-    expect(shouldCloseCycle(3)).toBe(false)
-  })
-
-})
+// shouldCloseCycle queda obsoleto en el modelo PRD-CORRECTIVO.
+// El Destete ya no cierra ciclos reproductivos — finaliza vínculos madre-cría.
+// Cuando se finaliza el último vínculo de un ciclo con resultado='parto',
+// el RPC actualiza fecha_fin de ese ciclo (historia paralela, no reproductiva).
