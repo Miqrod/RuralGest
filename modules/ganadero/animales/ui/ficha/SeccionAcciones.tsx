@@ -13,12 +13,13 @@ import { FormCubricion } from '@/modules/ganadero/reproductivo/ui/FormCubricion'
 import { FormConfirmacionGestacion } from '@/modules/ganadero/reproductivo/ui/FormConfirmacionGestacion'
 import { FormParto } from '@/modules/ganadero/reproductivo/ui/FormParto'
 import { FormDestete } from '@/modules/ganadero/reproductivo/ui/FormDestete'
+import { FormAborto } from '@/modules/ganadero/reproductivo/ui/FormAborto'
 import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
 import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 import type { CriaParaDesteteItem } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
 
-type AccionActiva = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | null
+type AccionActiva = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto' | null
 
 function buildPartoToastMessage(vivos: number, muertos: number): string {
   const a = (n: number, singular: string, plural: string) =>
@@ -77,6 +78,10 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
     setAccionActiva(accionActiva !== 'destete' ? 'destete' : null)
   }
 
+  function handleAbortoClick() {
+    setAccionActiva(accionActiva !== 'aborto' ? 'aborto' : null)
+  }
+
   function handleSalidaSuccess() {
     setAccionActiva(null)
     setPanelOpen(false)
@@ -113,6 +118,13 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
     toast.success('Destete registrado correctamente', {
       description: cicloCerrado ? 'Todas las crías destetadas. Ciclo completado.' : undefined,
     })
+    router.refresh()
+  }
+
+  function handleAbortoSuccess() {
+    setAccionActiva(null)
+    setPanelOpen(false)
+    toast.success('Aborto registrado correctamente')
     router.refresh()
   }
 
@@ -213,6 +225,16 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     onClick={handleDesteteClick}
                   >
                     Registrar destete
+                  </Button>
+                )}
+                {acciones.has('aborto') && (
+                  <Button
+                    type="button"
+                    variant={accionActiva === 'aborto' ? 'outline' : 'default'}
+                    className="h-auto py-2 px-5"
+                    onClick={handleAbortoClick}
+                  >
+                    Registrar aborto
                   </Button>
                 )}
               </div>
@@ -326,6 +348,27 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         madreCrotal={crotal}
                         criasElegibles={criasElegibles}
                         onSuccess={handleDesteteSuccess}
+                        onCancel={() => setAccionActiva(null)}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {accionActiva === 'aborto' && (
+                  <motion.div
+                    key="form-aborto"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="bg-canvas rounded-lg border border-divider p-5 mt-1">
+                      <FormAborto
+                        animalId={animalId}
+                        crotal={crotal}
+                        nombre={nombre}
+                        onSuccess={handleAbortoSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />
                     </div>

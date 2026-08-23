@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { crotalZodField, normalizeCrotal } from '@/modules/ganadero/animales/domain/IdentificationRules'
 import { submitEntradaCompra } from '@/app/(main)/vacuno/animales/entrada/actions'
 import type { RazaOption } from '@/modules/ganadero/animales/application/queries/listarRazas'
 import type { TipoProductivoOption } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
@@ -30,7 +31,7 @@ const schema = z
     // Zod v4: usa 'message' como catch-all en lugar de 'required_error'
     sexo:               z.enum(['macho', 'hembra'], { message: 'Selecciona el sexo.' }),
     tipo_productivo_id: z.string().min(1, 'Selecciona un tipo productivo.'),
-    crotal:             z.string().optional(),
+    crotal:             crotalZodField,
     num_hierro:         z.string().optional(),
     raza_id:            z.string().optional(),
     // El toggle determina si la fecha es exacta o estimada; siempre es obligatoria
@@ -45,14 +46,6 @@ const schema = z
         code: z.ZodIssueCode.custom,
         message: 'La fecha de nacimiento es obligatoria.',
         path: ['fecha_nac'],
-      })
-    }
-    // Crotal: si se rellena debe tener formato ES + 12 dígitos
-    if (data.crotal && !/^[A-Z]{2}\d{12}$/.test(data.crotal)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Formato: 2 letras + 12 dígitos (ej. ES001234567890).',
-        path: ['crotal'],
       })
     }
   })
@@ -126,7 +119,7 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
           <Controller name="crotal" control={form.control} render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={field.name}>Crotal</FieldLabel>
-              <Input {...field} id={field.name} placeholder="ES001234567890" aria-invalid={fieldState.invalid} />
+              <Input {...field} onChange={(e) => field.onChange(normalizeCrotal(e.target.value))} id={field.name} placeholder="ES001234567890" aria-invalid={fieldState.invalid} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )} />

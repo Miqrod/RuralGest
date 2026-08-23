@@ -42,7 +42,8 @@ describe('EVAL: AvailableActions — animal vivo sin módulo reproductivo', () =
 
 describe('EVAL: AvailableActions — estados reproductivos', () => {
 
-  it('vacía con ciclo → salida + cubrición + confirmación', () => {
+  it('vacía con ciclo → salida + cubrición + confirmación (sin parto ni aborto)', () => {
+    // En estado vacía no hay gestación activa: parto y aborto no tienen sentido.
     const acciones = getAvailableActions({
       ...BASE,
       estadoReproductivo:  'vacia',
@@ -52,10 +53,13 @@ describe('EVAL: AvailableActions — estados reproductivos', () => {
     expect(acciones.has('cubricion')).toBe(true)
     expect(acciones.has('confirmacion')).toBe(true)
     expect(acciones.has('parto')).toBe(false)
+    expect(acciones.has('aborto')).toBe(false)
     expect(acciones.has('destete')).toBe(false)
   })
 
-  it('cubierta con ciclo → salida + cubrición + confirmación + parto', () => {
+  it('cubierta con ciclo → salida + cubrición + confirmación + parto + aborto', () => {
+    // Cubierta = cubrición registrada, gestación posible. Se puede confirmar,
+    // ir a parto directamente, o registrar aborto si la gestación se pierde.
     const acciones = getAvailableActions({
       ...BASE,
       estadoReproductivo:  'cubierta',
@@ -65,10 +69,13 @@ describe('EVAL: AvailableActions — estados reproductivos', () => {
     expect(acciones.has('cubricion')).toBe(true)
     expect(acciones.has('confirmacion')).toBe(true)
     expect(acciones.has('parto')).toBe(true)
+    expect(acciones.has('aborto')).toBe(true)
     expect(acciones.has('destete')).toBe(false)
   })
 
-  it('gestante con ciclo → salida + parto (no cubrición, no confirmación)', () => {
+  it('gestante con ciclo → salida + parto + aborto (no cubrición, no confirmación)', () => {
+    // Gestación confirmada: solo puede resolverse con parto o aborto.
+    // Nueva cubrición y confirmación no aplican hasta que se cierre el ciclo.
     const acciones = getAvailableActions({
       ...BASE,
       estadoReproductivo:  'gestante',
@@ -78,6 +85,7 @@ describe('EVAL: AvailableActions — estados reproductivos', () => {
     expect(acciones.has('cubricion')).toBe(false)
     expect(acciones.has('confirmacion')).toBe(false)
     expect(acciones.has('parto')).toBe(true)
+    expect(acciones.has('aborto')).toBe(true)
     expect(acciones.has('destete')).toBe(false)
   })
 
@@ -122,6 +130,7 @@ describe('EVAL: AvailableActions — invariante: ciclo cerrado bloquea reproduct
   it('estado reproductivo presente pero sin ciclo abierto → no acciones reproductivas', () => {
     // Escenario PRD-CORRECTIVO: ciclo con resultado='parto' pendiente de destetes.
     // getCicloAbierto filtra resultado IS NULL, por lo que tieneCicloAbierto=false.
+    // Ninguna acción reproductiva debe aparecer, incluido aborto.
     const acciones = getAvailableActions({
       ...BASE,
       estadoReproductivo:  'vacia',
@@ -130,6 +139,7 @@ describe('EVAL: AvailableActions — invariante: ciclo cerrado bloquea reproduct
     expect(acciones.has('cubricion')).toBe(false)
     expect(acciones.has('confirmacion')).toBe(false)
     expect(acciones.has('parto')).toBe(false)
+    expect(acciones.has('aborto')).toBe(false)
   })
 
 })

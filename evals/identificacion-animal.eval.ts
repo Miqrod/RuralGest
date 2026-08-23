@@ -68,7 +68,7 @@ describe('EVAL: Animal — evaluarIdentificacion', () => {
   it('crotal y sexo presentes → completa, sin criterios faltantes', () => {
     // Caso feliz: el ganadero ha informado todos los datos obligatorios.
     // La función debe confirmar que no faltan criterios.
-    const result = evaluarIdentificacion({ crotal: 'ES001234', sexo: 'hembra' })
+    const result = evaluarIdentificacion({ crotal: 'ES001234560001', sexo: 'hembra' })
     expect(result.completa).toBe(true)
     expect(result.criteriosFaltantes).toHaveLength(0)
   })
@@ -93,7 +93,7 @@ describe('EVAL: Animal — evaluarIdentificacion', () => {
   it('sin sexo → pendiente; sexo aparece en criteriosFaltantes', () => {
     // En ganadería extensiva el sexo puede desconocerse al nacimiento (camadas grandes,
     // partos nocturnos). El animal se registra como sexo=null y se identifica después.
-    const result = evaluarIdentificacion({ crotal: 'ES001234', sexo: null })
+    const result = evaluarIdentificacion({ crotal: 'ES001234560001', sexo: null })
     expect(result.completa).toBe(false)
     expect(result.criteriosFaltantes).toContain('sexo')
   })
@@ -117,7 +117,7 @@ describe('EVAL: Animal — buildIdentificationStatus', () => {
   it('datos completos → estado "completa" y array de criterios vacío', () => {
     // buildIdentificationStatus es el wrapper que la UI y el dashboard consumen.
     // Cuando la identificación es completa, el estado debe ser 'completa' (no null, no true).
-    const status = buildIdentificationStatus({ crotal: 'ES001234', sexo: 'macho' })
+    const status = buildIdentificationStatus({ crotal: 'ES001234560001', sexo: 'macho' })
     expect(status.estado).toBe('completa')
     expect(status.criteriosFaltantes).toHaveLength(0)
   })
@@ -133,7 +133,7 @@ describe('EVAL: Animal — buildIdentificationStatus', () => {
   it('falta sexo → estado "pendiente" con sexo en criteriosFaltantes', () => {
     // Mismo invariante que el anterior pero verificando el otro criterio.
     // buildIdentificationStatus debe delegar en evaluarIdentificacion sin duplicar lógica.
-    const status = buildIdentificationStatus({ crotal: 'ES001234', sexo: null })
+    const status = buildIdentificationStatus({ crotal: 'ES001234560001', sexo: null })
     expect(status.estado).toBe('pendiente')
     expect(status.criteriosFaltantes).toContain('sexo')
   })

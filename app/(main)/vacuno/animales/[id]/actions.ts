@@ -8,6 +8,7 @@ import { confirmarGestacion } from '@/modules/ganadero/reproductivo/application/
 import { identificarAnimal } from '@/modules/ganadero/animales/application/identificarAnimal'
 import { registrarParto } from '@/modules/ganadero/reproductivo/application/actions/registrarParto'
 import { registrarDestete } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
+import { registrarAborto } from '@/modules/ganadero/reproductivo/application/actions/registrarAborto'
 import { cambiarTipoProductivo } from '@/modules/ganadero/animales/application/actions/cambiarTipoProductivo'
 import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteResult } from '@/modules/ganadero/reproductivo/domain/types'
 import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
@@ -134,6 +135,21 @@ export async function submitCambiarTipoProductivo(
   } catch (err) {
     console.error('[submitCambiarTipoProductivo]', err)
     return { error: extractMessage(err, 'Error al cambiar el tipo productivo') }
+  }
+}
+
+export async function submitRegistrarAborto(
+  animalId: string,
+  fecha: string,
+  observaciones?: string,
+): Promise<{ error: string } | null> {
+  try {
+    await registrarAborto({ animal_id: animalId, fecha_aborto: fecha, observaciones })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return null
+  } catch (err) {
+    console.error('[submitRegistrarAborto]', err)
+    return { error: extractMessage(err, 'Error al registrar el aborto') }
   }
 }
 

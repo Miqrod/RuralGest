@@ -1,3 +1,4 @@
+import * as z from 'zod'
 import type { Animal } from './types'
 import type { EstadoIdentificacion } from '../../shared/domain/types'
 
@@ -19,11 +20,27 @@ type AnimalIdentificationInput = Pick<Animal, 'crotal' | 'sexo'>
 // Ejemplo España: ES001234561001. Coincide con el estándar SITRAN y el placeholder del formulario.
 export const CROTAL_REGEX = /^[A-Z]{2}\d{12}$/
 
+// Normaliza el crotal antes de validar: elimina espacios y convierte a mayúsculas.
+// Usar en el onChange del input para que el usuario no deba escribir en mayúsculas.
+export function normalizeCrotal(value: string): string {
+  return value.trim().toUpperCase()
+}
+
 // Devuelve true si el crotal tiene el formato correcto. El campo es opcional:
 // no rellenarlo no es un error — tenerlo con formato incorrecto sí lo es.
 export function isValidCrotalFormat(crotal: string): boolean {
-  return CROTAL_REGEX.test(crotal.trim())
+  return CROTAL_REGEX.test(normalizeCrotal(crotal))
 }
+
+// Fragmento Zod reutilizable para el campo crotal en cualquier formulario.
+// Importar en el schema en lugar de reescribir la validación en cada form.
+export const crotalZodField = z
+  .string()
+  .refine(
+    (val) => !val || isValidCrotalFormat(val),
+    { message: 'Formato inválido. Usa 2 letras de país + 12 dígitos (ej. ES001234567890).' },
+  )
+  .optional()
 
 const CRITERIOS: Array<{
   nombre: string
@@ -31,7 +48,7 @@ const CRITERIOS: Array<{
 }> = [
   {
     nombre: 'crotal',
-    cumplido: (a) => a.crotal !== null && CROTAL_REGEX.test(a.crotal.trim()),
+    cumplido: (a) => a.crotal !== null && isValidCrotalFormat(a.crotal),
   },
   {
     nombre: 'sexo',

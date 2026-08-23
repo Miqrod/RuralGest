@@ -67,18 +67,18 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
         // Layout: Badge → fecha → CX pill → descripción
         if (evento.virtual) {
           return (
-            <motion.li key={evento.id} variants={item} className="flex items-center gap-3 text-sm opacity-55">
+            <motion.li key={evento.id} variants={item} className="flex items-center gap-3 text-sm opacity-70">
               <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-600">
                 Reproductivo
               </span>
               <span className="text-xs text-ink-muted/60">{formatFecha(evento.fecha)}</span>
               <span
                 title={`Ciclo reproductivo ${evento.ciclo_numero}`}
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-surface-alt text-ink-muted cursor-default"
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-success-soft text-success cursor-default"
               >
                 C{evento.ciclo_numero}
               </span>
-              <span className="text-ink-muted italic">Nuevo ciclo · Vacía</span>
+              <span className="text-ink-muted/60">Nuevo ciclo · Vacía</span>
             </motion.li>
           )
         }
@@ -92,8 +92,12 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
             ? `Cambio productivo: ${String(evento.metadata_json?.tipo_nuevo ?? '—')}`
             : EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
 
-        // Etiqueta de ciclo solo para eventos reproductivos: C1, C2…
-        const cicloLabel = evento.ciclo_numero !== null ? `C${evento.ciclo_numero}` : null
+        // Etiqueta de ciclo solo para eventos con badge Reproductivo.
+        // CAMBIO_TIPO_PRODUCTIVO tiene badge Gestión y puede tener ciclo_numero;
+        // mostrarlo junto a un evento de gestión genera confusión semántica.
+        const cicloLabel = evento.ciclo_numero !== null && badgeLabel === 'Reproductivo'
+          ? `C${evento.ciclo_numero}`
+          : null
 
         // Para DESTETE cuando este animal es la madre: mostrar crías destetadas con ♂/♀
         const criasLabel = evento.tipo_codigo === 'DESTETE' && evento.rol === 'madre' && evento.crias_destetadas.length > 0

@@ -6,13 +6,14 @@ import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/
 // Esta función es la única fuente de verdad sobre qué botones aparecen en SeccionAcciones.
 // Reglas de disponibilidad:
 //
-//   salida        → siempre disponible para animales vivos
-//   cubricion     → ciclo abierto + animal en vacía o cubierta (permite re-cubrición)
-//   confirmacion  → ciclo abierto + animal en cubierta o vacía (PRD008: confirmación directa)
-//   parto         → ciclo abierto + animal en cubierta o gestante
-//   destete       → tiene crías elegibles con vínculo activo (independiente de es_reproductora)
+//   salida           → siempre disponible para animales vivos
+//   cubricion        → ciclo abierto + animal en vacía o cubierta (permite re-cubrición)
+//   confirmacion     → ciclo abierto + animal en cubierta o vacía (PRD008: confirmación directa)
+//   parto            → ciclo abierto + animal en cubierta o gestante
+//   destete          → tiene crías elegibles con vínculo activo (independiente de es_reproductora)
+//   aborto           → ciclo abierto + animal en cubierta o gestante (PRD011)
 
-export type AccionDisponible = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete'
+export type AccionDisponible = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto'
 
 export interface AvailableActionsInput {
   estadoVital:         EstadoVital
@@ -38,6 +39,9 @@ export function getAvailableActions(input: AvailableActionsInput): Set<AccionDis
   }
   if (tieneCicloAbierto && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'gestante')) {
     acciones.add('parto')
+  }
+  if (tieneCicloAbierto && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'gestante')) {
+    acciones.add('aborto')
   }
   if (tieneCriasElegibles) {
     acciones.add('destete')

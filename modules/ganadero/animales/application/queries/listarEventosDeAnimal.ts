@@ -42,6 +42,8 @@ export interface EventoVirtual {
   virtual: true
   id: string             // identificador sintético, e.g. 'virtual-ciclo-{ciclo_id}'
   fecha: ISODate
+  created_at: string     // ciclo_reproductivo.created_at — el RPC lo inserta DESPUÉS del evento
+                         // que lo origina, por lo que su timestamp es naturalmente posterior
   tipo_codigo: 'NUEVO_CICLO'
   ciclo_numero: number   // número del ciclo que comienza (C2, C3…)
 }
@@ -85,7 +87,7 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
   //   - generación de EventoVirtual 'NUEVO_CICLO' para ciclos C2, C3… (marca de inicio de ciclo)
   const { data: todosCiclos } = await supabase
     .from('ciclo_reproductivo')
-    .select('id, numero_ciclo, fecha_inicio')
+    .select('id, numero_ciclo, fecha_inicio, created_at')
     .eq('animal_id', animalId)
 
   const cicloNumero: Record<string, number> = {}
@@ -97,6 +99,7 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
       virtual:      true  as const,
       id:           `virtual-ciclo-${c.id}`,
       fecha:        c.fecha_inicio as ISODate,
+      created_at:   c.created_at,
       tipo_codigo:  'NUEVO_CICLO' as const,
       ciclo_numero: c.numero_ciclo,
     }))
@@ -155,16 +158,19 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
     }
   })
 
-  // Ordenación descendente. Los virtuales usan '￿' como tiebreaker de created_at
-  // para aparecer encima de los eventos reales del mismo día (el nuevo ciclo se marca
-  // justo antes del desenlace que lo abrió en la lectura descendente).
+  // Ordenación descendente: más reciente arriba.
+  //
+  // Estrategia: todos los eventos (reales y virtuales) tienen ahora `created_at`.
+  // El RPC inserta el nuevo ciclo_reproductivo en el mismo transaction DESPUÉS
+  // del evento que lo origina, por lo que ciclo.created_at > evento.created_at.
+  // Esto garantiza que el virtual "Nuevo ciclo" aparezca por encima del evento
+  // causante en el log, sin necesidad de casos especiales.
+  //
+  // fecha.slice(0, 10): normaliza "YYYY-MM-DD" y "YYYY-MM-DDTHH:MM:SSZ" por
+  // si el cliente de Supabase devuelve DATE en formatos distintos según la query.
   return [...eventosReales, ...virtuales].sort((a, b) => {
-    const aFecha = a.fecha
-    const bFecha = b.fecha
-    const byFecha = bFecha.localeCompare(aFecha)
+    const byFecha = b.fecha.slice(0, 10).localeCompare(a.fecha.slice(0, 10))
     if (byFecha !== 0) return byFecha
-    const aTs = a.virtual ? '￿' : a.created_at
-    const bTs = b.virtual ? '￿' : b.created_at
-    return bTs.localeCompare(aTs)
+    return b.created_at.localeCompare(a.created_at)
   })
 }
