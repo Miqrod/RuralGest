@@ -811,33 +811,43 @@ Usa su propia unión discriminada `EntradaCiclo`:
 type EntradaCiclo =
   | { tipo: 'real';          evento: EventoHistorial }
   | { tipo: 'cierre_manual'; fecha: string }
+  | { tipo: 'salida';        fecha: string; motivo: 'vendido' | 'muerto' }
 ```
 
 - **`tipo: 'real'`**: evento real leído de `getHistorialReproductivo` (tabla `eventos`). Renderizado por `EventoRow`.
-- **`tipo: 'cierre_manual'`**: entrada sintética inyectada por `buildEntradasOrdenadas()` en el render. No persiste. Solo existe para ciclos ANTERIORES a la implementación del evento `CAMBIO_TIPO_PRODUCTIVO`, que tienen `resultado = 'cierre_manual'` pero ningún evento vinculado.
+- **`tipo: 'cierre_manual'`**: entrada sintética de compatibilidad hacia atrás. Solo existe para ciclos ANTERIORES a la implementación del evento `CAMBIO_TIPO_PRODUCTIVO`, que tienen `resultado = 'cierre_manual'` pero ningún evento vinculado. Renderiza "Paso a no reproductora".
+- **`tipo: 'salida'`**: entrada sintética para ciclos cerrados por venta/muerte del animal. Renderiza "Animal vendido/fallecido · Historia reproductiva finalizada" con la fecha de `ciclo.fecha_fin`.
 
 Para ciclos NUEVOS (creados a partir del PRD-correctivo), "Paso a no reproductora" es un `EventoReal` (`CAMBIO_TIPO_PRODUCTIVO`) persisitido en `eventos` con `ciclo_id`. Aparece como `tipo: 'real'` y lo renderiza `EventoRow` con dot y label en rojo (`text-alert`).
 
-La guarda de compatibilidad en `buildEntradasOrdenadas()`:
+La lógica de `buildEntradasOrdenadas()` (recibe `estadoVital` como segundo parámetro):
 
 ```typescript
-const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
-if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
-  // solo ciclos antiguos: inyectar entrada sintética
+// Cierre por salida: fecha_fin existe pero resultado es NULL (señal intencional)
+if (ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo') {
+  entradas.push({ tipo: 'salida', fecha: ciclo.fecha_fin, motivo: estadoVital })
+} else {
+  // Compatibilidad ciclos antiguos: cierre_manual sin evento real vinculado
+  const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
+  if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
+    entradas.push({ tipo: 'cierre_manual', fecha: ciclo.fecha_fin })
+  }
 }
 ```
 
-#### Anotación "Animal vendido/fallecido" — no es un evento
+#### Anotación "Animal vendido/fallecido" — entrada en la timeline
 
-Cuando un animal muere o se vende con un ciclo reproductivo abierto, el ciclo queda sin `fecha_fin` ni `resultado` en la DB. No se cierra ni se sintetiza ningún evento.
+Cuando un animal es vendido o muere, `registrar_salida_animal` cierra el ciclo reproductivo propio con **solo `fecha_fin`** — el campo `resultado` queda `NULL` intencionalmente. Esta combinación (`fecha_fin IS NOT NULL AND resultado IS NULL`) es la señal que distingue el cierre por salida de cualquier cierre reproductivo (que siempre tiene resultado: `'parto' | 'aborto' | 'machorra' | 'cierre_manual'`).
 
-En su lugar, el carrusel muestra una anotación informativa en la **cabecera del slide** del ciclo:
+`buildEntradasOrdenadas` detecta esta señal e inyecta una entrada `tipo: 'salida'` en el timeline del ciclo, igual que "Paso a no reproductora":
 
 ```
-Animal vendido · Historia reproductiva finalizada · 15/08/2026
+● Animal vendido · Historia reproductiva finalizada    23/08/2026
 ```
 
-Esta anotación se deriva de los props `estadoVital` y `fechaSalida` en tiempo de render. El badge del ciclo sigue mostrando "Abierto", que es el estado real en la DB.
+El badge de resultado (`ResultadoBadge`) se oculta para estos ciclos — no hay resultado reproductivo que mostrar.
+
+Solo se aplica a animales reproductores (el carrusel únicamente aparece para ellos).
 
 #### Resumen del patrón
 
@@ -847,7 +857,7 @@ Esta anotación se deriva de los props `estadoVital` y `fechaSalida` en tiempo d
 | Log historial | `EventoVirtual` (`NUEVO_CICLO`) | No | `virtual: true`, id sintético |
 | Carrusel | `EventoHistorial` real | Sí (`eventos`) | `EntradaCiclo.tipo === 'real'` |
 | Carrusel | Entrada `cierre_manual` (ciclos antiguos) | No | `EntradaCiclo.tipo === 'cierre_manual'` |
-| Carrusel (cabecera) | Anotación vendido/fallecido | No | No es entrada del timeline; texto en header |
+| Carrusel | Entrada `salida` (venta/muerte) | No | `EntradaCiclo.tipo === 'salida'`; señal: `fecha_fin && !resultado && estadoVital !== 'vivo'` |
 
 ---
 
@@ -917,10 +927,45 @@ Cuando el animal está en estado `vacía` (sin cubrición previa registrada), el
 
 ---
 
+---
+
+### 10. Salida de animal — venta y muerte
+
+Implementado en agosto 2026. RPC `registrar_salida_animal` (última versión en `20260823153813_salida_sin_resultado_destete_implicito.sql`).
+
+#### Consecuencias del RPC (atómicas)
+
+1. Crea evento `SALIDA` real en `eventos` con `motivo_id = 'venta'/'muerte'`.
+2. Actualiza `animal`: `estado_vital = 'vendido'/'muerto'`, `estado_reproductivo = NULL`, `fecha_prevista_parto = NULL`.
+3. Si el animal era **una cría con vínculo activo** (`estado_vinculo_materno = 'activo'`): finaliza el vínculo y evalúa si la madre puede cerrar su ciclo (si no quedan más crías activas).
+4. Si el animal tiene **crías propias con vínculo activo** (era la madre): crea un evento `DESTETE` implícito por cada cría con `metadata_json = {"cierre_por_salida": "venta"/"muerte"}`. El `ciclo_id` del DESTETE se resuelve desde `cria.parto_evento_id → eventos.ciclo_id` para que el evento aparezca en el slide correcto del carrusel. La cría pasa a `Recría` si aún estaba en etapa `Cría`.
+5. Cierra el ciclo reproductivo propio si existe: solo `fecha_fin = p_fecha`, **resultado queda `NULL`**.
+
+#### Señal `resultado = NULL` en ciclo cerrado
+
+La combinación `fecha_fin IS NOT NULL AND resultado IS NULL` es la convención que distingue los ciclos cerrados por salida de los cerrados por evento reproductivo. Los cierres reproductivos siempre tienen resultado: `'parto' | 'aborto' | 'machorra' | 'cierre_manual'`. El carousel la usa para inyectar la entrada "Animal vendido/fallecido" en el timeline (ver sección 6).
+
+#### Destete implícito — anotación en historial de la cría
+
+El evento `DESTETE` creado por el RPC aparece en el historial de la cría con el campo `metadata_json.cierre_por_salida`. `EventosList` lo renderiza como:
+
+```
+Reproductivo   23/08/2026   C3   Destete (venta madre)
+```
+
+La anotación solo aparece cuando `evento.rol !== 'madre'` (desde la ficha de la cría, no desde la de la madre). Desde la madre el evento muestra las crías afectadas mediante `criasLabel`, sin nota de causa (sería redundante).
+
+#### Regla de integridad: `getMachosDisponibles` y animales vendidos/muertos
+
+`getMachosDisponibles` filtra `.eq('estado_vital', 'vivo')`: los machos vendidos o muertos no aparecen como opciones en cubrición natural ni confirmación de gestación.
+
+---
+
 ### Documentación permanente prevista
 
 Cuando el modelo reproductivo esté consolidado, trasladar principalmente a:
 
-- `documentacion/modelo/modelo_reproductivo.md` — regla de bloqueo en gestante, ciclos coexistentes, `cambiar_tipo_productivo`
+- `documentacion/modelo/modelo_reproductivo.md` — regla de bloqueo en gestante, ciclos coexistentes, `cambiar_tipo_productivo`, señal resultado=NULL para salida
 - `documentacion/flujos/reproductivo/cambio_tipo_productivo.md` — flujo completo con matriz de estados
-- `documentacion/arquitectura/` — patrón de compatibilidad hacia atrás en eventos del carrusel
+- `documentacion/flujos/reproductivo/salida_animal.md` — consecuencias reproductivas de venta/muerte, destete implícito
+- `documentacion/arquitectura/` — patrón de compatibilidad hacia atrás en eventos del carrusel, `EntradaCiclo` union type
