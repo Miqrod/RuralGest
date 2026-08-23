@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { CensoVacunoVivo } from '../../application/queries/getCensoVivo'
 
 interface Props {
@@ -9,8 +10,8 @@ export function KPIBannerVacuno({ censo }: Props) {
     <div className="bg-world-gradient rounded-2xl p-8 text-white relative overflow-hidden shadow-md">
       <div className="relative z-10 flex flex-col md:flex-row justify-between items-end gap-6">
 
-        {/* Total */}
-        <div>
+        {/* Total — link al listado de animales; -m-3 p-3 cancela el padding en reposo */}
+        <Link href="/vacuno/animales" className="block rounded-2xl p-3 -m-3 transition-colors hover:bg-white/10">
           <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 inline-block">
             Vacuno · censo en activo
           </span>
@@ -18,7 +19,7 @@ export function KPIBannerVacuno({ censo }: Props) {
             <span className="text-7xl font-extrabold tracking-tighter">{censo.total}</span>
             <span className="text-white/60 text-base font-medium">cabezas</span>
           </div>
-        </div>
+        </Link>
 
         {/* Desglose por tipo productivo */}
         {censo.porTipoProductivo.length > 0 && (

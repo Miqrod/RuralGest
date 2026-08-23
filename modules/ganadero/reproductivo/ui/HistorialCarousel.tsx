@@ -295,14 +295,17 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, est
     <div>
       {/* Navegación entre ciclos */}
       <div className="flex items-center justify-between mb-3">
-        {/* Ciclo más reciente (menor idx). Invisible cuando ya estamos en el más reciente. */}
+        {/* Ciclo más reciente (menor idx). Muestra "Actual" cuando ya estamos en el más reciente. */}
         <button
           onClick={() => setIdx(i => i - 1)}
           disabled={idx === 0}
-          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-0 disabled:cursor-default transition-colors min-w-[80px]"
-          aria-label={idx > 0 ? `Ir a Ciclo ${ciclos[idx - 1].numero_ciclo}` : undefined}
+          className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink disabled:opacity-50 disabled:cursor-default transition-colors min-w-[80px]"
+          aria-label={idx > 0 ? `Ir a Ciclo ${ciclos[idx - 1].numero_ciclo}` : 'Ciclo actual'}
         >
-          {'<<'} C{ciclos[idx - 1]?.numero_ciclo ?? ''}
+          {idx === 0
+            ? 'Actual'
+            : <><span>{'<<'}</span> C{ciclos[idx - 1].numero_ciclo}</>
+          }
         </button>
 
         <div className="text-center">
