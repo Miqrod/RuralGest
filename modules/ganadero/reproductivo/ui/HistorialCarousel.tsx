@@ -226,20 +226,30 @@ function EventoRow({
 type EntradaCiclo =
   | { tipo: 'real';          evento: EventoHistorial }
   | { tipo: 'cierre_manual'; fecha: string }
+  | { tipo: 'salida';        fecha: string; motivo: 'vendido' | 'muerto' }
 
 function buildEntradasOrdenadas(
   ciclo: CicloHistorial,
+  estadoVital: EstadoVital,
 ): EntradaCiclo[] {
   const entradas: EntradaCiclo[] = agruparDestetes(ciclo.eventos)
     .map(ev => ({ tipo: 'real' as const, evento: ev }))
 
-  // Entrada sintética de cierre_manual solo para ciclos antiguos sin evento real vinculado.
-  // Los ciclos creados con la nueva versión del RPC tienen ya el evento CAMBIO_TIPO_PRODUCTIVO
-  // ligado al ciclo (ciclo_id), por lo que EventoRow lo renderiza directamente.
-  const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
-  if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
-    entradas.push({ tipo: 'cierre_manual' as const, fecha: ciclo.fecha_fin })
-    // Ordenar por fecha para mantener la cronología del timeline
+  // Ciclo cerrado por salida del animal: fecha_fin existe pero resultado es NULL.
+  // Se inyecta una entrada de timeline en lugar de badge de resultado.
+  if (ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo') {
+    entradas.push({ tipo: 'salida' as const, fecha: ciclo.fecha_fin, motivo: estadoVital as 'vendido' | 'muerto' })
+  } else {
+    // Entrada sintética de cierre_manual solo para ciclos sin evento CAMBIO_TIPO_PRODUCTIVO.
+    // Los ciclos nuevos tienen el evento real ligado al ciclo y no necesitan entrada sintética.
+    const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
+    if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
+      entradas.push({ tipo: 'cierre_manual' as const, fecha: ciclo.fecha_fin })
+    }
+  }
+
+  // Ordenar cronológicamente solo si hay entradas sintéticas
+  if (entradas.some(e => e.tipo !== 'real')) {
     entradas.sort((a, b) => {
       const fa = a.tipo === 'real' ? a.evento.fecha : a.fecha
       const fb = b.tipo === 'real' ? b.evento.fecha : b.fecha
@@ -341,22 +351,16 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, est
               Parto previsto: <span className="font-medium text-ink">{formatFecha(fechaPrevistaParto)}</span>
             </p>
           )}
-          {/* Anotación contextual: ciclo abierto en animal vendido o fallecido.
-              El ciclo quedó sin cerrar porque la salida ya no cierra ciclos propios.
-              fechaSalida se usa como referencia temporal de la historia reproductiva. */}
-          {!ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo' && (
-            <p className="text-xs text-alert mt-0.5">
-              Animal {estadoVital === 'vendido' ? 'vendido' : 'fallecido'} · Historia reproductiva finalizada
-              {fechaSalida ? ` · ${formatFecha(fechaSalida)}` : ''}
-            </p>
-          )}
         </div>
-        <ResultadoBadge resultado={ciclo.resultado} />
+        {/* Ocultar badge cuando el ciclo fue cerrado por salida (resultado=NULL intencionalmente) */}
+        {(estadoVital === 'vivo' || ciclo.resultado) && (
+          <ResultadoBadge resultado={ciclo.resultado} />
+        )}
       </div>
 
-      {/* Eventos del ciclo — incluye entrada sintética de cierre manual si aplica */}
+      {/* Eventos del ciclo — incluye entradas sintéticas de cierre si aplica */}
       {(() => {
-        const entradas = buildEntradasOrdenadas(ciclo)
+        const entradas = buildEntradasOrdenadas(ciclo, estadoVital)
         if (entradas.length === 0) {
           return <p className="text-sm text-ink-muted py-3">Sin eventos registrados en este ciclo.</p>
         }
@@ -373,7 +377,26 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, est
                   />
                 )
               }
-              // Entrada sintética: mismo layout que EventoRow pero con texto en rojo
+              // Entrada sintética de salida: animal vendido o fallecido
+              if (entrada.tipo === 'salida') {
+                return (
+                  <div key={`salida-${i}`} className="flex gap-3 py-2.5 border-b border-divider last:border-0">
+                    <div className="flex flex-col items-center pt-1 flex-shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-alert/40 border border-alert/60" />
+                      <span className="flex-1 w-px bg-divider mt-1" />
+                    </div>
+                    <div className="flex-1 min-w-0 pb-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-medium text-alert">
+                          Animal {entrada.motivo === 'vendido' ? 'vendido' : 'fallecido'} · Historia reproductiva finalizada
+                        </span>
+                        <span className="text-xs text-ink-muted">{formatFecha(entrada.fecha)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              // Entrada sintética de cierre_manual: paso a no reproductora (ciclos legados)
               return (
                 <div key={`cierre-manual-${i}`} className="flex gap-3 py-2.5 border-b border-divider last:border-0">
                   <div className="flex flex-col items-center pt-1 flex-shrink-0">

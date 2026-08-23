@@ -126,6 +126,12 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
             {descripcion && (
               <span className="text-ink-muted capitalize">{descripcion}</span>
             )}
+            {/* Causa del destete implícito: se muestra solo desde la ficha de la cría */}
+            {evento.tipo_codigo === 'DESTETE' && evento.rol !== 'madre' && !!evento.metadata_json?.cierre_por_salida && (
+              <span className="text-xs text-ink-muted">
+                ({evento.metadata_json.cierre_por_salida === 'muerte' ? 'muerte madre' : 'venta madre'})
+              </span>
+            )}
             {criasLabel && (
               <span className="text-ink-muted">{criasLabel}</span>
             )}
