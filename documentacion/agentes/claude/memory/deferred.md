@@ -6,23 +6,11 @@ El gate `esReproductora &&` fue eliminado de `getAvailableActions` y de la llama
 
 ---
 
-## PAGE.TSX IMPORTA DIRECTAMENTE DE INFRASTRUCTURE/REPOSITORY — PRD013
+## ~~PAGE.TSX IMPORTA DIRECTAMENTE DE INFRASTRUCTURE/REPOSITORY — PRD013~~ ✅ RESUELTO
 
-`app/(main)/vacuno/animales/[id]/page.tsx` importa `getCicloAbierto` y `getLastEventoFechaForCiclo`
-directamente de `modules/ganadero/reproductivo/infrastructure/repository`, saltando la capa `application/`.
-
-La arquitectura establece `UI → Use Case/Query → Repository`. Este shortcut rompe el contrato: si alguna
-de esas queries adquiriera lógica adicional en el futuro (validaciones, transformaciones, caching),
-la página no la vería.
-
-**Solución:** crear dos queries en `application/queries/`:
-- `getCicloAbiertoParaFicha(animalId)` — wrappea `getCicloAbierto` del repository
-- `getLastEventoFechaParaCiclo(cicloId)` — wrappea `getLastEventoFechaForCiclo`
-
-O alternativamente, incluir `fechaUltimoEvento` directamente en `getAnimalDetail` para evitar
-la segunda query serial.
-
-Identificado en: tarea 190 (PRD013). Resolver antes de cerrar PRD013.
+Resuelto creando `getCicloAbiertoParaFicha(animalId)` en `reproductivo/application/queries/`.
+La nueva query combina ciclo + fecha del último evento en una sola round-trip (join interno),
+eliminando la consulta serial que había en `page.tsx` y las dos importaciones directas de infrastructure.
 
 ---
 

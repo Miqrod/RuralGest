@@ -12,7 +12,7 @@ import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEven
 import { SeccionUsoProductivo } from '@/modules/ganadero/animales/ui/ficha/SeccionUsoProductivo'
 import { SeccionHistorialReproductivo } from '@/modules/ganadero/reproductivo/ui/SeccionHistorialReproductivo'
 import { SeccionCriasDependientes } from '@/modules/ganadero/reproductivo/ui/SeccionCriasDependientes'
-import { getCicloAbierto, getLastEventoFechaForCiclo } from '@/modules/ganadero/reproductivo/infrastructure/repository'
+import { getCicloAbiertoParaFicha } from '@/modules/ganadero/reproductivo/application/queries/getCicloAbiertoParaFicha'
 import { getCriasParaDestete } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
 import { tieneCiclosReproductivos } from '@/modules/ganadero/reproductivo/application/queries/tieneCiclosReproductivos'
 import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
@@ -32,8 +32,9 @@ export default async function AnimalDetailPage({ params }: Props) {
     // Fetch del ciclo siempre que el animal tenga módulo reproductivo activo (estado != null).
     // Un animal con es_reproductora=false puede tener ciclo abierto si fue retirada de
     // reproducción durante un ciclo en curso — ese ciclo debe poder completarse.
+    // Incluye fechaUltimoEvento en la misma query para evitar una segunda consulta serial.
     animal.estado_reproductivo !== null
-      ? getCicloAbierto(animal.id)
+      ? getCicloAbiertoParaFicha(animal.id)
       : Promise.resolve(null),
     // Crías elegibles para destete: independiente de es_reproductora.
     // La query filtra tipo_productivo='Cría' + estado_vinculo_materno='activo'; devuelve []
@@ -49,13 +50,7 @@ export default async function AnimalDetailPage({ params }: Props) {
     tieneCiclosReproductivos(animal.id),
   ])
 
-  // Segunda consulta ligera: fecha del último evento del ciclo abierto.
-  // Necesaria para limitar el DatePicker en los formularios (coherencia temporal frontend).
-  // Fallback a fecha_inicio: si el ciclo no tiene eventos aún (ej. ciclo recién abierto
-  // tras machorra o parto), la fecha mínima es el inicio del ciclo, no undefined.
-  const fechaUltimoEvento = cicloAbierto
-    ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
-    : null
+  const fechaUltimoEvento = cicloAbierto?.fechaUltimoEvento ?? null
 
   const acciones = getAvailableActions({
     estadoVital:         animal.estado_vital,
