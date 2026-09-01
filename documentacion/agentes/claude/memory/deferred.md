@@ -157,23 +157,17 @@ Implementado en `cambiar_tipo_productivo` (migration 20260819000000):
 al cambiar a Reproductora se crea SIEMPRE un nuevo ciclo en estado VACÍA,
 independientemente de si existen ciclos anteriores abiertos o cerrados.
 
-## REPRODUCTIVEENGINE — INTÉRPRETE DEL DOMINIO REPRODUCTIVO
+## ~~REPRODUCTIVEENGINE — INTÉRPRETE DEL DOMINIO REPRODUCTIVO~~ CANCELADO POR AHORA
 
-Patrón identificado durante PRD007 pero diferido conscientemente hasta completar el módulo reproductivo.
+Tras la consolidación del dominio reproductivo en PRD013, no se ha identificado una responsabilidad
+compartida de suficiente complejidad que justifique una capa adicional. Los Use Cases actuales
+presentan una orquestación simple y auditable, mientras que las garantías críticas se resuelven
+en las operaciones transaccionales correspondientes.
 
-`ReproductiveEngine` encapsula el pipeline `Context → EligibilityRules → CycleRules → Projection`
-como intérprete reutilizable del dominio reproductivo — distinto del Use Case, que sigue siendo
-el orquestador. Su rol es interpretar el significado biológico de un evento, no coordinarlo.
-
-`buildReproductiveContext()` también viviría dentro del engine, no como fichero independiente.
-Por ahora cada Use Case construye el `ReproductiveContext` directamente como objeto literal.
-
-**No es una refactorización puntual.** Es la pieza que culminará todo el módulo reproductivo.
-Su momento natural es cuando todos los eventos del ciclo estén implementados:
-Cubrición ✅ · Confirmación de Gestación ✅ · Parto ✅ (PRD009) · Destete ✅ (PRD010) · Aborto.
-
-Cuando: tras implementar Aborto y Destete — cuando el ciclo reproductivo completo esté consolidado.
-Referencia: `documentacion/base_conocimiento/arquitectura/patterns/context-rules-projection-pattern.md`
+El Engine podrá reconsiderarse únicamente ante una necesidad concreta, como múltiples consumidores
+del mismo pipeline reproductivo, lógica de proyección sustancialmente reutilizada o nuevos módulos
+que requieran coordinar el dominio reproductivo de forma transversal. No existe actualmente un
+problema que el Engine resuelva. Cuando exista, volveremos a evaluar la abstracción con evidencia.
 
 ## INFERENCIA DE PADRE Y RAZA EN ALTA DE CRÍAS (PARTO)
 
