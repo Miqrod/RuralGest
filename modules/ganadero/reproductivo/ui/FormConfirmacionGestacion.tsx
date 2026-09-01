@@ -14,6 +14,7 @@ import type { AnimalOption } from '@/components/ui/animal-selector'
 import { submitConfirmacionGestacion } from '@/app/(main)/vacuno/animales/[id]/actions'
 import type { EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
+import { isoStringToDate } from '@/lib/format'
 
 // Sentinel para el selector cuando el padre es desconocido.
 // Se convierte a undefined antes de enviar al servidor.
@@ -44,13 +45,14 @@ interface Props {
   crotal?:            string | null
   estadoReproductivo: EstadoReproductivo
   machos?:            MachoOption[]
+  fechaUltimoEvento?: string | null
   onSuccess:          () => void
   onCancel:           () => void
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos = [], onSuccess, onCancel }: Props) {
+export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos = [], fechaUltimoEvento, onSuccess, onCancel }: Props) {
   const [serverError, setServerError]   = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -115,6 +117,7 @@ export function FormConfirmacionGestacion({ animalId, estadoReproductivo, machos
               value={field.value || undefined}
               onChange={(v) => field.onChange(v ?? '')}
               maxDate={new Date()}
+              minDate={fechaUltimoEvento ? isoStringToDate(fechaUltimoEvento) : undefined}
               placeholder="dd/mm/aaaa"
               aria-invalid={fieldState.invalid}
             />

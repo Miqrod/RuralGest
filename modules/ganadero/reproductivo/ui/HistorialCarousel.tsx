@@ -9,6 +9,8 @@ import type { CicloHistorial, EventoHistorial, CriaResumen, CriaDesteteResumen }
 import type { ResultadoCiclo, EstadoVital } from '../../shared/domain/types'
 import type { ISODate } from '@/modules/shared/types'
 import { DrawerIdentificacion } from '@/modules/ganadero/animales/ui/identificacion/DrawerIdentificacion'
+import { ConfirmMachorraModal } from './ConfirmMachorraModal'
+import { Button } from '@/components/ui/button'
 
 // ─── Badges ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +61,7 @@ const CODIGO_LABEL: Record<string, string> = {
   PARTO:                 'Parto',
   DESTETE:               'Destete',
   ABORTO:                'Aborto',
+  MACHORRA:              'Machorra',
 }
 
 const CUBRICION_TIPO_LABEL: Record<string, string> = {
@@ -286,19 +289,23 @@ function agruparDestetes(eventos: EventoHistorial[]): EventoHistorial[] {
 
 interface Props {
   ciclos:             CicloHistorial[]
+  animalId:           string
+  animalNombre?:      string | null
   madreCrotal:        string | null
   fechaPrevistaParto: string | null
   // Necesarios para la anotación contextual en animales vendidos/fallecidos
   estadoVital:        EstadoVital
   fechaSalida:        ISODate | null
+  canMachorra:        boolean
 }
 
-export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, estadoVital, fechaSalida }: Props) {
+export function HistorialCarousel({ ciclos, animalId, animalNombre, madreCrotal, fechaPrevistaParto, estadoVital, fechaSalida, canMachorra }: Props) {
   const router = useRouter()
   // ciclos[0] es el más reciente (query devuelve ORDER BY numero_ciclo DESC)
   const [idx, setIdx] = useState(0)
   // Cría seleccionada para identificar; null = drawer cerrado
   const [criaSeleccionada, setCriaSeleccionada] = useState<CriaResumen | null>(null)
+  const [machorraOpen, setMachorraOpen] = useState(false)
   const ciclo = ciclos[idx]
 
   return (
@@ -415,6 +422,38 @@ export function HistorialCarousel({ ciclos, madreCrotal, fechaPrevistaParto, est
           </div>
         )
       })()}
+
+      {/* Acción Machorra — solo en el ciclo actual, solo si el animal es elegible */}
+      {idx === 0 && !ciclo.fecha_fin && canMachorra && (
+        <div className="mt-4 pt-4 border-t border-divider">
+          <div className="space-y-3 flex flex-col items-center text-center">
+            <p className="text-xs text-warning">
+              Esta vaca no ha quedado gestante. Puedes marcarla como machorra y dar por terminada esta oportunidad reproductiva.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto py-2 px-4 text-sm border-warning text-warning hover:bg-warning/10 hover:text-warning"
+              onClick={() => setMachorraOpen(true)}
+            >
+              Marcar como machorra
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación de Machorra */}
+      <ConfirmMachorraModal
+        open={machorraOpen}
+        onClose={() => setMachorraOpen(false)}
+        animalId={animalId}
+        crotal={madreCrotal}
+        nombre={animalNombre}
+        onSuccess={() => {
+          setMachorraOpen(false)
+          router.refresh()
+        }}
+      />
 
       {/* Drawer de identificación — se monta una sola vez, se controla por criaSeleccionada */}
       {criaSeleccionada && (

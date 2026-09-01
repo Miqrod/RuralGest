@@ -44,9 +44,11 @@ interface Props {
   tieneCicloAbierto:   boolean
   machos:              MachoOption[]
   criasElegibles:      CriaParaDesteteItem[]
+  // Fecha del último evento del ciclo abierto (YYYY-MM-DD). Limita el DatePicker hacia atrás.
+  fechaUltimoEvento?:  string | null
 }
 
-export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esReproductora, estadoReproductivo, tieneCicloAbierto, machos, criasElegibles }: Props) {
+export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esReproductora, estadoReproductivo, tieneCicloAbierto, machos, criasElegibles, fechaUltimoEvento }: Props) {
   const router = useRouter()
   const [panelOpen,     setPanelOpen]     = useState(false)
   const [accionActiva,  setAccionActiva]  = useState<AccionActiva>(null)
@@ -282,6 +284,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         animalId={animalId}
                         crotal={crotal}
                         machos={machos}
+                        fechaUltimoEvento={fechaUltimoEvento}
                         onSuccess={handleCubricionSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />
@@ -304,6 +307,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         crotal={crotal}
                         estadoReproductivo={estadoReproductivo!}
                         machos={machos}
+                        fechaUltimoEvento={fechaUltimoEvento}
                         onSuccess={handleConfirmacionSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />
@@ -325,6 +329,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         animalId={animalId}
                         crotal={crotal}
                         nombre={nombre}
+                        fechaUltimoEvento={fechaUltimoEvento}
                         onSuccess={handlePartoSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />
@@ -368,6 +373,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         animalId={animalId}
                         crotal={crotal}
                         nombre={nombre}
+                        fechaUltimoEvento={fechaUltimoEvento}
                         onSuccess={handleAbortoSuccess}
                         onCancel={() => setAccionActiva(null)}
                       />

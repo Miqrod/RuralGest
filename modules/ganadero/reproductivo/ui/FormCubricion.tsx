@@ -21,6 +21,7 @@ import { AnimalSelector } from '@/components/ui/animal-selector'
 import type { AnimalOption } from '@/components/ui/animal-selector'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 import { submitCubricionAnimal } from '@/app/(main)/vacuno/animales/[id]/actions'
+import { isoStringToDate } from '@/lib/format'
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -49,11 +50,12 @@ type FormValues = z.infer<typeof schema>
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  animalId: string
-  crotal?:  string | null
-  machos:   MachoOption[]
-  onSuccess: () => void
-  onCancel:  () => void
+  animalId:          string
+  crotal?:           string | null
+  machos:            MachoOption[]
+  fechaUltimoEvento?: string | null
+  onSuccess:         () => void
+  onCancel:          () => void
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -73,7 +75,7 @@ function toAnimalOption(m: MachoOption): AnimalOption {
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormCubricion({ animalId, machos, onSuccess, onCancel }: Props) {
+export function FormCubricion({ animalId, machos, fechaUltimoEvento, onSuccess, onCancel }: Props) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -127,6 +129,7 @@ export function FormCubricion({ animalId, machos, onSuccess, onCancel }: Props) 
               value={field.value || undefined}
               onChange={(v) => field.onChange(v ?? '')}
               maxDate={new Date()}
+              minDate={fechaUltimoEvento ? isoStringToDate(fechaUltimoEvento) : undefined}
               placeholder="dd/mm/aaaa"
               aria-invalid={fieldState.invalid}
             />

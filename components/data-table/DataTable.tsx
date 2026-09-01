@@ -68,9 +68,9 @@ export function DataTable<TData>({
 
       <div className="bg-canvas rounded-xl shadow-sm border border-divider/30 overflow-hidden">
         <Table>
-          <TableHeader className="bg-stone-200/50">
+          <TableHeader className="bg-surface-alt">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-stone-100">
+              <TableRow key={headerGroup.id} className="border-divider/30">
                 {headerGroup.headers.map((header) => {
                   const sorted = header.column.getIsSorted()
                   const canSort = header.column.getCanSort()
@@ -83,7 +83,7 @@ export function DataTable<TData>({
                         <button
                           onClick={header.column.getToggleSortingHandler()}
                           className={cn(
-                            'flex items-center gap-1',
+                            'flex items-center gap-1 dark:text-ink dark:hover:text-ink-muted',
                             canSort && 'cursor-pointer select-none hover:text-ink transition-colors',
                           )}
                         >
@@ -111,7 +111,7 @@ export function DataTable<TData>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="border-stone-100 hover:bg-stone-50/50 transition-colors"
+                  className="border-divider/30 hover:bg-surface-alt/50 transition-colors"
                   data-state={row.getIsSelected() ? 'selected' : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -134,8 +134,8 @@ export function DataTable<TData>({
           </TableBody>
         </Table>
 
-        <div className="px-6 py-3 flex items-center justify-between bg-stone-200/50 border-t border-stone-100">
-          <span className="text-xs text-ink-muted font-medium">
+        <div className="px-6 py-3 flex items-center justify-between bg-surface-alt border-t border-divider/30">
+          <span className="text-xs text-ink-muted dark:text-ink font-medium">
             {filteredCount === 0
               ? 'Sin resultados'
               : `Mostrando ${from}–${to} de ${filteredCount}`}
@@ -144,14 +144,14 @@ export function DataTable<TData>({
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-muted hover:bg-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-muted dark:text-ink hover:bg-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
             {getPaginationRange(pageIndex + 1, table.getPageCount()).map((page, i) =>
               page === '...' ? (
-                <span key={`ellipsis-${i}`} className="text-ink-muted px-1 text-xs">
+                <span key={`ellipsis-${i}`} className="text-ink-muted dark:text-ink px-1 text-xs">
                   ...
                 </span>
               ) : (
@@ -162,7 +162,7 @@ export function DataTable<TData>({
                     'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors',
                     page === pageIndex + 1
                       ? 'bg-world text-white shadow-sm'
-                      : 'text-ink-muted hover:bg-canvas',
+                      : 'text-ink-muted dark:text-ink hover:bg-canvas',
                   )}
                 >
                   {page}
@@ -173,7 +173,7 @@ export function DataTable<TData>({
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-muted hover:bg-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-muted dark:text-ink hover:bg-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

@@ -122,8 +122,8 @@ El Parto constituye un evento reproductivo real registrado por el usuario.
 El evento:
 
 * pertenece al ciclo reproductivo correspondiente;
-* cambia el estado reproductivo de la madre a `LACTANTE`;
-* NO finaliza el ciclo reproductivo;
+* cambia el estado reproductivo de la madre a `VACÍA` (el RPC abre inmediatamente un nuevo ciclo vacía — `LACTANTE` nunca se implementó);
+* NO finaliza el ciclo de parto (queda con `resultado='parto'` y `fecha_fin=NULL` hasta el último destete);
 * inicia la fase de dependencia funcional madre-cría.
 
 El Parto debe poder registrarse cuando el ciclo se encuentre en:
@@ -444,15 +444,17 @@ Se inicia el Dashboard operacional mediante un primer widget:
 
 ### Decisiones arquitectónicas
 
-#### ReproductiveEngine
+#### ReproductiveEngine — evaluación pendiente en PRD013
 
-Se mantiene el patrón actual:
+El patrón actual `Context → Rules → Projection` se mantiene por convención documentada mientras no existe una abstracción compartida.
 
-Context → Rules → Projection
+PRD013 evaluará si implementar `ReproductiveEngine` es conveniente o no. Las preguntas que debe responder esa evaluación:
 
-La incorporación de un futuro `ReproductiveEngine` queda expresamente pospuesta hasta que la complejidad del dominio justifique centralizar las reglas reproductivas compartidas.
+- ¿El modelo porcino comparte suficientes invariantes con el vacuno para beneficiarse del mismo engine, o tendrá reglas propias que lo harían incompatible?
+- ¿La duplicación actual entre use cases genera un problema de mantenimiento real, o sigue siendo manejable por convención?
+- ¿La indirección que introduce el engine compensa en legibilidad y seguridad, o oscurece comportamiento crítico de dominio?
 
-Se evita introducir una abstracción prematura.
+Hasta que PRD013 responda estas preguntas, no se introduce ni se descarta la abstracción.
 
 ---
 
@@ -660,9 +662,143 @@ Esta decisión mejora la representación del ciclo de vida del animal y simplifi
 
 ---
 
+---
+
+## PRD011 — Aborto
+
+> Pendiente de incorporar a documentación permanente.
+
+### Flujo del Aborto
+
+El Aborto registra la pérdida de gestación desde los estados `CUBIERTA` o `GESTANTE`.
+
+```text
+CUBIERTA | GESTANTE
+       ↓
+  resultado = 'aborto'
+  fecha_fin = fecha del aborto
+       ↓
+  Si es_reproductora → nuevo ciclo VACÍA
+  Si no → estado_reproductivo = NULL
+```
+
+El Aborto **cierra el ciclo inmediatamente** con `fecha_fin`. A diferencia del Parto, no hay crías ni vínculos maternos pendientes que mantener abiertos.
+
+### RPC `registrar_aborto` como patrón de referencia
+
+`registrar_aborto` es el patrón de referencia para coherencia temporal y robustez transaccional en el dominio reproductivo. Implementa:
+
+- Validación de que el ciclo es del animal correcto y está abierto.
+- Validación temporal: `p_fecha >= MAX(fecha) de eventos del ciclo`.
+- Cierre atómico del ciclo y apertura del nuevo ciclo vacía en la misma transacción.
+
+### Relación con Machorra
+
+El Aborto es el flujo correcto cuando la gestación ya fue confirmada (`GESTANTE`) y se pierde. La Machorra no puede registrarse desde `GESTANTE` — si el veterinario determina que la confirmación fue incorrecta, el camino es registrar un Aborto.
+
+### Documentación permanente prevista
+
+```text
+documentacion/flujos/reproductivos/aborto.md
+```
+
+---
+
+## PRD012 — Machorra
+
+> Pendiente de incorporar a documentación permanente.
+
+### Flujo de Machorra
+
+La Machorra registra el fracaso reproductivo de un ciclo: la hembra no ha quedado gestante tras una o varias cubriciones, o se decide cerrar el ciclo sin gestación.
+
+```text
+VACÍA | CUBIERTA  (NO desde GESTANTE)
+       ↓
+  resultado = 'machorra'
+  fecha_fin = CURRENT_DATE  (sin fecha elegida por el usuario)
+       ↓
+  Si es_reproductora → nuevo ciclo VACÍA
+  Si no → estado_reproductivo = NULL
+```
+
+### Restricción desde GESTANTE
+
+La Machorra **no puede registrarse desde `GESTANTE`**. Si la gestación ya fue confirmada, el flujo correcto es `ABORTO`. Esta regla está implementada en dos capas:
+
+- **UI**: la acción `machorra` no aparece en `getAvailableActions` cuando `estadoReproductivo === 'gestante'`.
+- **RPC**: `registrar_machorra` valida el estado y lanza excepción si el animal está en `GESTANTE`.
+
+### Presentación — carrusel, no SeccionAcciones
+
+La acción de registrar Machorra se presenta en el carrusel del ciclo activo (dentro de `HistorialCarousel`), no en `SeccionAcciones` junto a las demás operaciones reproductivas. Razón: la Machorra es un desenlace del ciclo visible en su contexto histórico, no una acción operativa del día a día.
+
+La prop `canMachorra` fluye: `page.tsx → SeccionHistorialReproductivo → HistorialCarousel`.
+
+### Invariante de audit confirmado (PRD012, tarea 179)
+
+El patrón `resultado='parto' AND fecha_fin IS NULL` en `ciclo_reproductivo` es **diseño intencional**, no un defecto:
+
+- El RPC `registrar_parto` fija `resultado='parto'` pero no pone `fecha_fin`.
+- El ciclo de parto queda "semiabierto" hasta que el último destete lo cierre con `fecha_fin`.
+- `getCicloAbierto()` filtra `resultado IS NULL` — devuelve siempre el ciclo activo correcto, nunca el ciclo de parto pendiente de destete.
+- **Este filtro es un invariante crítico que no debe eliminarse.**
+
+Pueden coexistir dos ciclos con `fecha_fin IS NULL` por animal: el ciclo de parto (resultado='parto') y el ciclo activo nuevo (resultado=NULL). Esto es correcto y esperado.
+
+### Documentación permanente prevista
+
+```text
+documentacion/flujos/reproductivos/machorra.md  (existe, actualizar con detalle de implementación)
+```
+
+---
+
+## PRD012 — Validación temporal en frontend (tarea 177)
+
+> Pendiente de incorporar a documentación permanente de patrones.
+
+### `getLastEventoFechaForCiclo`
+
+Nueva función en `repository.ts` que devuelve `MAX(fecha)` de `eventos` para un `ciclo_id`. Devuelve `null` si el ciclo no tiene eventos aún (ciclo recién abierto).
+
+Uso en `page.tsx`:
+
+```ts
+const fechaUltimoEvento = cicloAbierto
+  ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
+  : null
+```
+
+El fallback a `fecha_inicio` es necesario: ciclos recién abiertos no tienen eventos y sin fallback el DatePicker no tendría restricción mínima.
+
+### `isoStringToDate` — columnas TIMESTAMP vs DATE
+
+`eventos.fecha` es `TIMESTAMP NOT NULL`, no `DATE`. Supabase lo devuelve como `'2026-07-15T10:30:00+00:00'`. La función `isoStringToDate` en `lib/format.ts` usa `.slice(0, 10)` antes de parsear para ser robusta frente a ambos tipos:
+
+```ts
+export function isoStringToDate(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+```
+
+**Regla:** verificar siempre en la migración si una columna de fecha es `DATE` o `TIMESTAMP` antes de parsearla. Nunca asumir `YYYY-MM-DD`.
+
+### Reglas del DatePicker con `captionLayout="dropdown"`
+
+Dos invariantes del componente `DatePicker` que no deben violarse:
+
+1. **`startMonth` ≠ `minDate`**: `startMonth` es el límite de navegación del calendario (siempre `new Date(FROM_YEAR, 0)`). `minDate` es la restricción de selección y va exclusivamente en `disabled`. Usar `minDate` como `startMonth` rompe el dropdown de año.
+
+2. **`disabled` como función, no como array de objetos**: con `captionLayout="dropdown"`, el matcher `[{ before: minDate }]` no funciona. Usar siempre `(date: Date) => boolean`.
+
+---
+
 ## Plan de testing de integración — pendiente de implementar
 
-> Anotado en PRD010 (2026-08-12). Implementar al inicio del siguiente PRD.
+> Anotado en PRD010 (2026-08-12). Pendiente tras PRD011 y PRD012 sin haberse implementado.
+> Existe `tests/machorra.test.ts` con 25 `it.todo` que marcan explícitamente los escenarios de integración pendientes.
 
 ### Contexto
 

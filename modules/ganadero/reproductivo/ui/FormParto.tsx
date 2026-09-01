@@ -25,7 +25,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { submitRegistrarParto } from '@/app/(main)/vacuno/animales/[id]/actions'
-import { formatFecha } from '@/lib/format'
+import { formatFecha, isoStringToDate } from '@/lib/format'
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -47,11 +47,12 @@ type FormValues = z.infer<typeof schema>
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  animalId:  string
-  crotal?:   string | null
-  nombre?:   string | null
-  onSuccess: (vivos: number, muertos: number) => void
-  onCancel:  () => void
+  animalId:          string
+  crotal?:           string | null
+  nombre?:           string | null
+  fechaUltimoEvento?: string | null
+  onSuccess:         (vivos: number, muertos: number) => void
+  onCancel:          () => void
 }
 
 const TIPO_LABEL: Record<'natural' | 'asistido', string> = {
@@ -61,7 +62,7 @@ const TIPO_LABEL: Record<'natural' | 'asistido', string> = {
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormParto({ animalId, crotal, nombre, onSuccess, onCancel }: Props) {
+export function FormParto({ animalId, crotal, nombre, fechaUltimoEvento, onSuccess, onCancel }: Props) {
   const [serverError,   setServerError]   = useState<string | null>(null)
   const [isSubmitting,  setIsSubmitting]  = useState(false)
   // Valores pendientes de confirmación; no-null significa que el dialog está abierto.
@@ -130,6 +131,7 @@ export function FormParto({ animalId, crotal, nombre, onSuccess, onCancel }: Pro
                 value={field.value || undefined}
                 onChange={(v) => field.onChange(v ?? '')}
                 maxDate={new Date()}
+                minDate={fechaUltimoEvento ? isoStringToDate(fechaUltimoEvento) : undefined}
                 placeholder="dd/mm/aaaa"
                 aria-invalid={fieldState.invalid}
               />

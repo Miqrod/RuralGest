@@ -14,9 +14,10 @@ interface DatePickerProps {
   onChange?: (value: string | undefined) => void
   placeholder?: string
   disabled?: boolean
-  // Cuando se pasa, bloquea la selección y la navegación a partir de esa fecha.
-  // Usar new Date() para impedir fechas futuras.
+  // Bloquea selección y navegación a partir de esa fecha. Usar new Date() para impedir futuras.
   maxDate?: Date
+  // Bloquea selección y navegación antes de esa fecha. Garantiza coherencia temporal con el ciclo.
+  minDate?: Date
   className?: string
   'aria-invalid'?: boolean
 }
@@ -41,6 +42,7 @@ export function DatePicker({
   placeholder = 'Selecciona una fecha',
   disabled = false,
   maxDate,
+  minDate,
   className,
   'aria-invalid': ariaInvalid,
 }: DatePickerProps) {
@@ -52,6 +54,9 @@ export function DatePicker({
       ? format(selected, 'dd/MM/yyyy', { locale: es })
       : null
 
+  // startMonth: siempre desde FROM_YEAR para que el dropdown de año muestre el rango completo.
+  // minDate NO se usa aquí — la restricción real va en `disabled` con una función.
+  const startMonth = new Date(FROM_YEAR, 0)
   // endMonth: si hay maxDate la usamos; si no, permitimos navegar 2 años hacia adelante
   const endMonth = maxDate ?? new Date(new Date().getFullYear() + 2, 11)
 
@@ -88,10 +93,15 @@ export function DatePicker({
           autoFocus
           // Dropdown de mes+año: evita tener que navegar mes a mes
           captionLayout="dropdown"
-          startMonth={new Date(FROM_YEAR, 0)}
+          startMonth={startMonth}
           endMonth={endMonth}
-          // Si maxDate está definido, bloquea selección de fechas posteriores
-          disabled={maxDate ? { after: maxDate } : undefined}
+          // Función en lugar de matchers objeto: más fiable con captionLayout="dropdown".
+          // date llega a medianoche local → la comparación directa con minDate/maxDate es correcta.
+          disabled={(date: Date) => {
+            if (maxDate && date > maxDate) return true
+            if (minDate && date < minDate) return true
+            return false
+          }}
         />
       </PopoverContent>
     </Popover>

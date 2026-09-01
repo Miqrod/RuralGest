@@ -117,3 +117,93 @@ Solución: mover a backend
 
 Error: misma lógica en ambos
 Solución: backend único punto de decisión
+
+---
+
+## TIMESTAMP VS DATE EN COLUMNAS DE EVENTOS
+
+**Síntoma:** `RangeError: Invalid Date` al intentar llamar `.toISOString()` sobre una Date construida
+desde `isoStringToDate` con una cadena como `'2026-07-15T10:30:00+00:00'`.
+
+**Causa:** `eventos.fecha` está definida como `TIMESTAMP NOT NULL` en la migración, no como `DATE`.
+Supabase devuelve el valor como `'2026-07-15T10:30:00+00:00'`. La función `isoStringToDate` hacía
+`.split('-').map(Number)` directamente, produciendo el tercer elemento `'15T10:30:00+00:00'` → NaN.
+
+**Solución:** siempre usar `.slice(0, 10)` antes de parsear para aislar la parte `YYYY-MM-DD`:
+
+```ts
+export function isoStringToDate(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+```
+
+**Regla:** antes de parsear cualquier campo de fecha desde Supabase, verificar en la migración si
+la columna es `DATE` o `TIMESTAMP`. Nunca asumir que la cadena viene en formato `YYYY-MM-DD`.
+La utilidad `isoStringToDate` ya incorpora este fix — usarla siempre en lugar de `new Date(string)`.
+
+---
+
+## DATEPICKER: startMonth NO ES minDate
+
+**Síntoma:** el dropdown de año del DatePicker muestra solo el rango desde el año de `minDate`
+hasta unos pocos años después, haciendo que el selector parezca roto cuando `minDate` es reciente.
+
+**Causa:** `startMonth` en react-day-picker es el límite de **navegación**, no el mes inicial
+mostrado. Si se pasa `minDate` (ej. julio 2026) como `startMonth`, el dropdown de año solo muestra
+2026-2028 en lugar del rango completo.
+
+**Solución:** `startMonth` debe ser siempre `new Date(FROM_YEAR, 0)` (año 2000, enero). La
+restricción real de mínimo va en `disabled`, no en `startMonth`:
+
+```tsx
+const startMonth = new Date(FROM_YEAR, 0)   // SIEMPRE — nunca usar minDate aquí
+```
+
+**Regla:** `startMonth` = inicio del rango de navegación (2000). `minDate` = restricción de
+selección → va en la función `disabled`. Son conceptos distintos; no mezclarlos.
+
+---
+
+## DATEPICKER: `disabled` como función, no como array de objetos
+
+**Síntoma:** las fechas anteriores a `minDate` no quedan deshabilitadas visualmente; el usuario
+puede seleccionarlas sin restricción.
+
+**Causa:** con `captionLayout="dropdown"`, el matcher de objeto `[{ before: minDate }, { after: maxDate }]`
+no funciona de forma fiable en react-day-picker.
+
+**Solución:** usar una función matcher en lugar de array de objetos:
+
+```tsx
+disabled={(date: Date) => {
+  if (maxDate && date > maxDate) return true
+  if (minDate && date < minDate) return true
+  return false
+}}
+```
+
+**Regla:** con `captionLayout="dropdown"` usar siempre función `(date: Date) => boolean`
+para `disabled`. El array de matchers de objeto no es fiable en este modo.
+
+---
+
+## CICLO RECIÉN ABIERTO SIN EVENTOS → getLastEventoFechaForCiclo DEVUELVE null
+
+**Síntoma:** para animales con ciclo abierto pero sin eventos (ej. ciclo vacía recién creado
+tras machorra o parto), `minDate` llega como `undefined` al DatePicker y no hay restricción
+de fecha mínima.
+
+**Causa:** `getLastEventoFechaForCiclo` devuelve `null` cuando el ciclo no tiene eventos
+registrados aún (MAX sobre tabla vacía = NULL en Postgres).
+
+**Solución:** fallback a `cicloAbierto.fecha_inicio` cuando la query devuelve null:
+
+```ts
+const fechaUltimoEvento = cicloAbierto
+  ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
+  : null
+```
+
+**Regla:** cualquier query que calcule MAX/MIN sobre eventos de un ciclo puede devolver null
+para ciclos recién abiertos. Siempre proveer fallback a `fecha_inicio` del ciclo.

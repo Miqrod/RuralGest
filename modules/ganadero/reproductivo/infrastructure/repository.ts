@@ -2,7 +2,6 @@ import { createServerClient } from '../../../shared/db'
 import type { DbRow } from '../../../shared/db/helpers'
 import type { UUID } from '../../../shared/types'
 import type { CicloReproductivo } from '../domain/types'
-import type { ResultadoCiclo } from '../../shared/domain/types'
 
 function mapCicloRow(row: DbRow<'ciclo_reproductivo'>): CicloReproductivo {
   return {
@@ -33,40 +32,6 @@ export async function getCicloAbierto(animalId: UUID): Promise<CicloReproductivo
     .maybeSingle()
   if (error) throw error
   if (!data) return null
-  return mapCicloRow(data)
-}
-
-// numero_ciclo se calcula aquí: max(numero_ciclo) del animal + 1.
-// El caller no debe conocer ni pasar el número de ciclo.
-export async function insertCiclo(
-  input: Omit<CicloReproductivo, 'id' | 'created_at' | 'numero_ciclo'>,
-): Promise<CicloReproductivo> {
-  const supabase = await createServerClient()
-
-  const { data: maxData, error: maxError } = await supabase
-    .from('ciclo_reproductivo')
-    .select('numero_ciclo')
-    .eq('animal_id', input.animal_id)
-    .order('numero_ciclo', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (maxError) throw maxError
-
-  const numeroCiclo = (maxData?.numero_ciclo ?? 0) + 1
-
-  const { data, error } = await supabase
-    .from('ciclo_reproductivo')
-    .insert({
-      animal_id:    input.animal_id,
-      numero_ciclo: numeroCiclo,
-      fecha_inicio: input.fecha_inicio,
-      fecha_fin:    input.fecha_fin    ?? undefined,
-      resultado:    input.resultado   ?? undefined,
-      created_by:   input.created_by  ?? undefined,
-    })
-    .select('*')
-    .single()
-  if (error) throw error
   return mapCicloRow(data)
 }
 
@@ -118,50 +83,17 @@ export async function getPadreIdFromCiclo(cicloId: UUID): Promise<UUID | null> {
   return (confirmacion?.metadata_json as Record<string, string> | null)?.padre_id ?? null
 }
 
-// Cuenta las crías del ciclo que aún tienen vínculo materno activo.
-// Usado por el Use Case de destete para decidir si el ciclo debe cerrarse.
-//
-// Dos pasos porque el cliente de Supabase no soporta subqueries directas:
-//   1. Obtener los IDs de eventos del ciclo (normalmente solo hay un PARTO).
-//   2. Contar las crías con parto_evento_id en esos IDs y vínculo activo.
-export async function getActiveBondsCountForCiclo(cicloId: UUID): Promise<number> {
-  const supabase = await createServerClient()
-
-  const { data: eventos, error: errEv } = await supabase
-    .from('eventos')
-    .select('id')
-    .eq('ciclo_id', cicloId)
-  if (errEv) throw errEv
-
-  const eventoIds = (eventos ?? []).map(e => e.id)
-  if (eventoIds.length === 0) return 0
-
-  const { count, error: errCount } = await supabase
-    .from('animal')
-    .select('id', { count: 'exact', head: true })
-    .in('parto_evento_id', eventoIds)
-    .eq('estado_vinculo_materno', 'activo')
-    .eq('estado_vital', 'vivo')
-  if (errCount) throw errCount
-
-  return count ?? 0
-}
-
-// Solo cierra ciclos abiertos (fecha_fin IS NULL).
-// Si el ciclo no existe o ya está cerrado, .single() lanza error de Supabase.
-export async function updateCicloCierre(
-  id: UUID,
-  resultado: ResultadoCiclo,
-  fechaFin: string,
-): Promise<CicloReproductivo> {
+// Devuelve la fecha del evento más reciente del ciclo, para limitar el DatePicker en frontend.
+// Null si el ciclo todavía no tiene eventos (recién iniciado).
+export async function getLastEventoFechaForCiclo(cicloId: UUID): Promise<string | null> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
-    .from('ciclo_reproductivo')
-    .update({ resultado, fecha_fin: fechaFin })
-    .eq('id', id)
-    .is('fecha_fin', null)
-    .select('*')
-    .single()
+    .from('eventos')
+    .select('fecha')
+    .eq('ciclo_id', cicloId)
+    .order('fecha', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   if (error) throw error
-  return mapCicloRow(data)
+  return data?.fecha ?? null
 }

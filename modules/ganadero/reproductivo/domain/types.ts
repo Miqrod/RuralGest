@@ -81,10 +81,21 @@ export interface RegistrarAbortoResult {
   nuevoCicloCreado: boolean // true si la madre sigue siendo reproductora y se abrió un nuevo ciclo VACÍA
 }
 
+// Sin fecha editable: se usa la fecha del día en que se confirma la acción (OBJ-02).
+export interface RegistrarMachorraInput {
+  animal_id: UUID
+}
+
+export interface RegistrarMachorraResult {
+  eventoId:         UUID
+  cicloCerrado:     boolean  // siempre true: machorra cierra el ciclo sin excepción
+  nuevoCicloCreado: boolean  // true si la hembra sigue siendo reproductora
+}
+
 // ─── Tipos del patrón CRP ───────────────────────────────────────────────────
 
 // Códigos de evento reproductivo válidos. Coinciden con las claves de TRANSICIONES en rules.ts.
-export type CodigoEventoReproductivo = 'CUBRICION' | 'CONFIRMACION_GESTACION' | 'PARTO' | 'DESTETE' | 'ABORTO'
+export type CodigoEventoReproductivo = 'CUBRICION' | 'CONFIRMACION_GESTACION' | 'PARTO' | 'DESTETE' | 'ABORTO' | 'MACHORRA'
 
 // Slice mínimo de Animal que necesita el dominio reproductivo.
 // Evita importar el tipo Animal completo desde el módulo de animales.
@@ -109,7 +120,6 @@ export interface ReproductiveContext {
 }
 
 // Decisión que devuelve ReproductiveCycleRules tras evaluar el contexto.
-// El Use Case actúa sobre ella: llama a abrirCiclo() o reutiliza el cicloId existente.
 // El ciclo siempre existe previamente: se crea al convertirse en REPRODUCTORA o tras un desenlace.
 // evalCycleRules solo devuelve 'reutilizar' — ningún evento reproductivo crea ciclos por sí mismo.
 export type ReproductiveCycleAction = 'reutilizar'

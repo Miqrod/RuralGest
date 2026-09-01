@@ -34,9 +34,9 @@ export function evalCycleRules(ctx: ReproductiveContext): ReproductiveCycleDecis
   }
 }
 
-// Determina si debe abrirse un nuevo ciclo VACÍA tras un desenlace reproductivo
-// (Aborto, Parto, Machorra). Solo aplica cuando la madre sigue siendo reproductora.
-// Si ya no lo es, la historia reproductiva queda consultable pero sin ciclo activo.
+// Regla de dominio: tras un desenlace (Parto, Aborto, Machorra), ¿debe abrirse un nuevo ciclo VACÍA?
+// La decisión depende exclusivamente de es_reproductora en el momento del desenlace.
+// El RPC implementa esta misma lógica atómicamente; esta función la expresa y permite testearla.
 export function shouldCreateNewCycleAfterDesenlace(esReproductora: boolean): boolean {
   return esReproductora
 }

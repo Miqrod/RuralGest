@@ -51,9 +51,6 @@ export interface EventoVirtual {
 // Unión discriminada: el campo `virtual` permite al renderizador diferenciar sin castings.
 export type EventoEnHistorial = EventoReal | EventoVirtual
 
-// Alias de compatibilidad para callers existentes — ahora apunta a EventoEnHistorial.
-export type EventoDeAnimal = EventoEnHistorial
-
 // Devuelve todos los eventos del animal (reales + virtuales), del más reciente al más antiguo.
 // Los EventoVirtual 'NUEVO_CICLO' se inyectan aquí para C2, C3… y marcan el inicio de cada
 // nuevo ciclo en el log de historial. Nunca se persisten en la DB.

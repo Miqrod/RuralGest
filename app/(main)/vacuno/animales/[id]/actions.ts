@@ -9,6 +9,7 @@ import { identificarAnimal } from '@/modules/ganadero/animales/application/ident
 import { registrarParto } from '@/modules/ganadero/reproductivo/application/actions/registrarParto'
 import { registrarDestete } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
 import { registrarAborto } from '@/modules/ganadero/reproductivo/application/actions/registrarAborto'
+import { registrarMachorra } from '@/modules/ganadero/reproductivo/application/actions/registrarMachorra'
 import { cambiarTipoProductivo } from '@/modules/ganadero/animales/application/actions/cambiarTipoProductivo'
 import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteResult } from '@/modules/ganadero/reproductivo/domain/types'
 import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
@@ -150,6 +151,19 @@ export async function submitRegistrarAborto(
   } catch (err) {
     console.error('[submitRegistrarAborto]', err)
     return { error: extractMessage(err, 'Error al registrar el aborto') }
+  }
+}
+
+export async function submitRegistrarMachorra(
+  animalId: string,
+): Promise<{ error: string } | null> {
+  try {
+    await registrarMachorra({ animal_id: animalId })
+    revalidatePath(`/vacuno/animales/${animalId}`)
+    return null
+  } catch (err) {
+    console.error('[submitRegistrarMachorra]', err)
+    return { error: extractMessage(err, 'Error al registrar la machorra') }
   }
 }
 

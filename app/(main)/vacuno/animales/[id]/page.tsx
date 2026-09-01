@@ -12,9 +12,10 @@ import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEven
 import { SeccionUsoProductivo } from '@/modules/ganadero/animales/ui/ficha/SeccionUsoProductivo'
 import { SeccionHistorialReproductivo } from '@/modules/ganadero/reproductivo/ui/SeccionHistorialReproductivo'
 import { SeccionCriasDependientes } from '@/modules/ganadero/reproductivo/ui/SeccionCriasDependientes'
-import { getCicloAbierto } from '@/modules/ganadero/reproductivo/infrastructure/repository'
+import { getCicloAbierto, getLastEventoFechaForCiclo } from '@/modules/ganadero/reproductivo/infrastructure/repository'
 import { getCriasParaDestete } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
 import { tieneCiclosReproductivos } from '@/modules/ganadero/reproductivo/application/queries/tieneCiclosReproductivos'
+import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -48,6 +49,22 @@ export default async function AnimalDetailPage({ params }: Props) {
     tieneCiclosReproductivos(animal.id),
   ])
 
+  // Segunda consulta ligera: fecha del último evento del ciclo abierto.
+  // Necesaria para limitar el DatePicker en los formularios (coherencia temporal frontend).
+  // Fallback a fecha_inicio: si el ciclo no tiene eventos aún (ej. ciclo recién abierto
+  // tras machorra o parto), la fecha mínima es el inicio del ciclo, no undefined.
+  const fechaUltimoEvento = cicloAbierto
+    ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
+    : null
+
+  const acciones = getAvailableActions({
+    estadoVital:         animal.estado_vital,
+    estadoReproductivo:  animal.estado_reproductivo,
+    tieneCicloAbierto:   cicloAbierto !== null,
+    esReproductora:      animal.es_reproductora,
+    tieneCriasElegibles: criasElegibles.length > 0,
+  })
+
   return (
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
@@ -71,16 +88,19 @@ export default async function AnimalDetailPage({ params }: Props) {
           tieneCicloAbierto={cicloAbierto !== null}
           machos={machos}
           criasElegibles={criasElegibles}
+          fechaUltimoEvento={fechaUltimoEvento}
         />
         {(animal.estado_reproductivo !== null || tieneHistorial) ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-            <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <div className="flex flex-col gap-4 md:col-span-2 lg:col-span-1">
               <SeccionHistorialReproductivo
                 animalId={animal.id}
+                animalNombre={animal.nombre}
                 madreCrotal={animal.crotal}
                 fechaPrevistaParto={animal.fecha_prevista_parto}
                 estadoVital={animal.estado_vital}
                 fechaSalida={animal.fecha_salida}
+                canMachorra={acciones.has('machorra')}
               />
               <SeccionCriasDependientes
                 animalId={animal.id}

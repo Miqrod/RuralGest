@@ -374,6 +374,52 @@ La UI agrupa todos los eventos DESTETE de un mismo ciclo en una sola fila del ca
 
 Esta agrupación es presentacional y vive exclusivamente en la UI. El modelo de datos mantiene la trazabilidad individual de cada destete.
 
+## PRD013 — Inmutabilidad del `resultado` de ciclo reproductivo
+
+`ciclo_reproductivo.resultado` es un hecho histórico: una vez fijado, no puede sobreescribirse.
+Los únicos movimientos válidos son `NULL → valor`. Nunca `valor → otro valor`.
+
+**Por qué importa:**
+Si un RPC pudiera sobreescribir el resultado silenciosamente (p.ej. `resultado='aborto'` sobre un ciclo que ya tiene `resultado='parto'`), se corrompería el historial reproductivo sin error visible. El invariante protege contra bugs futuros o acceso directo a la DB.
+
+**Implementación: guardias en RPC, no trigger.**
+Alternativa descartada: trigger `BEFORE UPDATE` en `ciclo_reproductivo`.
+Razón del descarte: el proyecto concentra toda la lógica en RPCs `SECURITY DEFINER` para mantener un único punto de verdad. Los triggers dispersan lógica entre la capa de almacenamiento y la de aplicación, dificultando el razonamiento sobre el sistema (ver principio en `decisions.md §Backend vs DB`).
+Como todos los cambios a `ciclo_reproductivo` pasan por RPCs controlados, aplicar la guardia en los propios RPCs es suficiente y coherente con la arquitectura.
+Limitación aceptada: alguien con acceso SQL directo a la DB puede saltarse la guardia. Se acepta como riesgo de disciplina de equipo.
+
+**Patrón aplicado** en cada RPC que fija `resultado` (`registrar_parto`, `registrar_aborto`, `registrar_machorra`):
+```sql
+UPDATE ciclo_reproductivo
+SET resultado = '<valor>'
+WHERE id = v_ciclo_id
+  AND resultado IS NULL;   -- guardia de inmutabilidad
+
+IF NOT FOUND THEN
+  RAISE EXCEPTION 'El ciclo % ya tiene resultado fijado', v_ciclo_id;
+END IF;
+```
+
+**Segunda línea de defensa:** el SELECT que busca el ciclo activo también filtra `AND resultado IS NULL`
+(además de `fecha_fin IS NULL`), de forma que el RPC nunca llega al UPDATE con un ciclo ya cerrado.
+Esto además alinea la definición de "ciclo activo" entre SQL y TypeScript (`getCicloAbierto`).
+
+Migración: `20260830220936_robustez_aborto_machorra_resultado_null.sql`
+
+## PRD013 — Validación temporal en `registrar_destete`
+
+El RPC `registrar_destete` validaba que `p_fecha <= CURRENT_DATE` pero no que `p_fecha >= fecha_nacimiento` de la cría. Un destete anterior al nacimiento es incoherente y produciría datos inválidos en el historial.
+
+Fix: añadir `fecha_nacimiento` al SELECT de la cría y validar antes de cualquier escritura:
+```sql
+IF v_cria.fecha_nacimiento IS NOT NULL AND p_fecha < v_cria.fecha_nacimiento THEN
+  RAISE EXCEPTION 'La fecha del destete (%) no puede ser anterior a la fecha de nacimiento (%)';
+END IF;
+```
+Se guarda con `IS NOT NULL` porque `fecha_nacimiento` puede ser NULL en animales de origen externo sin fecha registrada (no debería afectar a crías internas, pero la guardia evita un RAISE innecesario en datos legacy).
+
+Migración: `20260830220931_robustez_destete_coherencia_temporal.sql`
+
 ## `EventosList`: badge de categoría + descripción específica
 
 Patrón visual unificado para el historial de eventos:

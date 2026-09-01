@@ -15,6 +15,7 @@ const BADGE_LABEL: Record<string, string> = {
   PARTO:                     'Reproductivo',
   DESTETE:                   'Reproductivo',
   ABORTO:                    'Reproductivo',
+  MACHORRA:                  'Reproductivo',
   CAMBIO_TIPO_PRODUCTIVO:    'Gestión',
 }
 
@@ -28,6 +29,7 @@ const BADGE_CLASS: Record<string, string> = {
   PARTO:                     'bg-blue-50 text-blue-600',
   DESTETE:                   'bg-blue-50 text-blue-600',
   ABORTO:                    'bg-blue-50 text-blue-600',
+  MACHORRA:                  'bg-blue-50 text-blue-600',
   CAMBIO_TIPO_PRODUCTIVO:    'bg-surface-alt text-ink-muted',
 }
 
@@ -40,6 +42,7 @@ const EVENTO_DESCRIPCION: Record<string, string> = {
   PARTO:                  'Parto',
   DESTETE:                'Destete',
   ABORTO:                 'Aborto',
+  MACHORRA:               'Machorra',
 }
 
 const container = {
@@ -126,10 +129,16 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
             {descripcion && (
               <span className="text-ink-muted capitalize">{descripcion}</span>
             )}
-            {/* Causa del destete implícito: se muestra solo desde la ficha de la cría */}
+            {/* Causa del destete implícito desde la ficha de la cría: madre vendida/muerta */}
             {evento.tipo_codigo === 'DESTETE' && evento.rol !== 'madre' && !!evento.metadata_json?.cierre_por_salida && (
               <span className="text-xs text-ink-muted">
                 ({evento.metadata_json.cierre_por_salida === 'muerte' ? 'muerte madre' : 'venta madre'})
+              </span>
+            )}
+            {/* Causa del destete implícito desde la ficha de la madre: cría vendida/muerta */}
+            {evento.tipo_codigo === 'DESTETE' && evento.rol === 'madre' && !!evento.metadata_json?.cierre_por_cria && (
+              <span className="text-xs text-ink-muted">
+                ({evento.metadata_json.cierre_por_cria === 'muerte' ? 'muerte cría' : 'venta cría'})
               </span>
             )}
             {criasLabel && (

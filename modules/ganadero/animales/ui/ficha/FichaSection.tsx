@@ -11,7 +11,7 @@ interface Props {
 
 export function FichaSection({ title, children, className, action }: Props) {
   return (
-    <section className={cn('rounded-lg border border-divider bg-white shadow-sm p-5', className)}>
+    <section className={cn('rounded-lg border border-divider bg-canvas shadow-sm p-5', className)}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide">
           {title}

@@ -1,42 +1,58 @@
 -- =============================================================================
--- SEED DE DESARROLLO — Vacuno
+-- SEED DE DESARROLLO — Vacuno (generado limpio, sin hacks de compatibilidad)
 -- Solo para entorno local. NO ejecutar en producción.
 -- Uso: supabase db reset
 --
--- Escenario realista del módulo reproductivo:
+-- Escenario:
 --
---   SEMENTALES
---     · Lucero    (Morucho)   — semental principal
---     · Titán     (Limusín)   — semental secundario
---     · Centauro  (Charolés)  — semental joven
---
---   REPRODUCTORAS
---     · Fortuna   3 ciclos: C1+C2 cerrados (crías en Recría/FINALIZADO)
---                           C3 abierto — parto 2026-07-10, 2 crías Cría/ACTIVO
---     · Esperanza 2 ciclos: C1 cerrado
---                           C2 abierto — parto 2026-06-10, 2 crías Cría/ACTIVO
---     · Carmen    2 ciclos: C1 cerrado, C2 abierto (cubierta, sin parto aún)
---     · Maravilla 1 ciclo cerrado, actualmente vacía
---     · Nube      reproductora joven sin ciclos
+--   SEMENTALES (3)
+--     · Lucero    (Morucho)  — semental principal
+--     · Titán     (Limusín)  — semental secundario
+--     · Centauro  (Charolés) — semental joven
 --
 --   MISCELÁNEOS
---     · Brutus: macho engorde
---     · La Rubia: hembra vendida
+--     · Brutus   — macho engorde
+--     · La Rubia — hembra vendida
 --
---   FIXTURES PRD011 — Regla 1: es_reproductora=false no cierra ciclo abierto
---     · Pastora   es_reproductora=false, ciclo ABIERTO (cubierta)
---                 → registrar Aborto → ciclo cierra → sin nuevo ciclo → "sin ciclo activo"
---     · Candela   es_reproductora=false, ciclo CERRADO (resultado='aborto')
---                 → carousel "sin ciclo activo" testeable sin ninguna acción
+--   EX-REPRODUCTORA
+--     · Pastora  — fue reproductora (C1 vacía), cambio documentado con
+--                  evento CAMBIO_TIPO_PRODUCTIVO + ciclo cierre_manual
 --
--- IDs fijos (para facilitar referencias cruzadas en tests y desarrollo):
---   Sementales:     aaaaaaaa-0001..0003
---   Reproductoras:  aaaaaaaa-1001..1005
---   Misceláneos:    aaaaaaaa-2001..2002
---   Fixtures PRD011: aaaaaaaa-3001 (Pastora), aaaaaaaa-3002 (Candela)
---   Crías:          aaaaaaaa-[madre][ciclo][letra] (ver comentarios inline)
---   Ciclos:         cccccccc-[madre][ciclo]
---   Eventos:        eeeeeeee-[madre][tipo][ciclo]
+--   REPRODUCTORAS (6) — cada una con escenario reproductivo distinto
+--
+--     · Fortuna   4 ciclos acumulados
+--         C1: cubrición → parto → 2 crías destetadas (FC1-A, FC1-B)
+--         C2: cubrición → aborto  (sin crías)
+--         C3: cubrición → parto → 2 crías ACTIVAS + 1 nacida muerta
+--         C4: vacía (actual, sin eventos)
+--
+--     · Esperanza 2 ciclos acumulados
+--         C1: cubrición → parto → 1 cría destetada (EC1-A)
+--         C2: cubrición → confirmación gestación  (gestante, sin parto aún)
+--
+--     · Carmen    3 ciclos acumulados
+--         C1: cubrición → machorra  (ciclo cierra, nuevo ciclo abre)
+--         C2: cubrición → parto → 1 cría destetada (CC2-A)
+--         C3: cubrición  (cubierta, sin parto aún)
+--
+--     · Maravilla 2 ciclos acumulados
+--         C1: cubrición → parto → 2 crías ACTIVAS + 1 nacida muerta
+--         C2: vacía (actual, sin eventos)
+--
+--     · Nube      1 ciclo, vacía sin eventos (reciente)
+--
+--     · Rocío     1 ciclo, cubrición reciente (cubierta)
+--
+-- IDs fijos (referencias cruzadas):
+--   Sementales:      aaaaaaaa-0001..0003
+--   Reproductoras:   aaaaaaaa-1001..1006
+--   Misceláneos:     aaaaaaaa-2001..2002
+--   Ex-reproductora: aaaaaaaa-3001
+--   Crías:           aaaaaaaa-[prefijo]-0000-0000-[N]
+--   Ciclos:          cccccccc-[madre]-[ciclo]-0000-[N]
+--   Eventos:         eeeeeeee-[animal]-[tipo]-[ciclo]-[N]
+--     Tipos: 0001=CUBRICION 0002=PARTO 0003=ABORTO 0004=MACHORRA
+--            0005=CONFIRMACION 0006=DESTETE-A 0007=DESTETE-B 0008=CAMBIO_TIPO
 -- =============================================================================
 
 -- =============================================================================
@@ -48,33 +64,73 @@ INSERT INTO animal (
   raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
   estado_vital, estado_sanitario
 ) VALUES
-  -- Lucero: morucho, semental principal
-  (
-    'aaaaaaaa-0001-0000-0000-000000000001',
-    'vacuno', 'cc000003-0000-0000-0000-000000000000',
-    'Lucero', 'ES001234560001', 'S-01',
-    'bb000001-0000-0000-0000-000000000000',
-    '2018-03-12', 'macho', false, 'compra',
-    'vivo', 'sano'
-  ),
-  -- Titán: limusín, semental secundario
-  (
-    'aaaaaaaa-0002-0000-0000-000000000002',
-    'vacuno', 'cc000003-0000-0000-0000-000000000000',
-    'Titán', 'ES001234560002', 'S-02',
-    'bb000003-0000-0000-0000-000000000000',
-    '2017-09-05', 'macho', false, 'compra',
-    'vivo', 'sano'
-  ),
-  -- Centauro: charolés, semental joven
-  (
-    'aaaaaaaa-0003-0000-0000-000000000003',
-    'vacuno', 'cc000003-0000-0000-0000-000000000000',
-    'Centauro', 'ES001234560003', 'S-03',
-    'bb000002-0000-0000-0000-000000000000',
-    '2021-05-20', 'macho', false, 'compra',
-    'vivo', 'sano'
-  )
+  ('aaaaaaaa-0001-0000-0000-000000000001',
+   'vacuno', 'cc000003-0000-0000-0000-000000000000',
+   'Lucero', 'ES001234560001', 'S-01',
+   'bb000001-0000-0000-0000-000000000000',
+   '2018-03-12', 'macho', false, 'compra',
+   'vivo', 'sano'),
+  ('aaaaaaaa-0002-0000-0000-000000000002',
+   'vacuno', 'cc000003-0000-0000-0000-000000000000',
+   'Titán', 'ES001234560002', 'S-02',
+   'bb000003-0000-0000-0000-000000000000',
+   '2017-09-05', 'macho', false, 'compra',
+   'vivo', 'sano'),
+  ('aaaaaaaa-0003-0000-0000-000000000003',
+   'vacuno', 'cc000003-0000-0000-0000-000000000000',
+   'Centauro', 'ES001234560003', 'S-03',
+   'bb000002-0000-0000-0000-000000000000',
+   '2021-05-20', 'macho', false, 'compra',
+   'vivo', 'sano')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
+-- MISCELÁNEOS
+-- =============================================================================
+
+INSERT INTO animal (
+  id, especie, tipo_productivo_id, nombre, crotal, num_hierro,
+  raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
+  estado_vital, estado_sanitario
+) VALUES
+  ('aaaaaaaa-2001-0000-0000-000000000001',
+   'vacuno', 'cc000004-0000-0000-0000-000000000000',
+   'Brutus', 'ES001234562001', 'M-01',
+   NULL,
+   '2022-08-10', 'macho', false, 'compra',
+   'vivo', 'sano')
+ON CONFLICT (id) DO NOTHING;
+
+-- La Rubia usa fecha_nacimiento_estimada (animal comprado sin documentación exacta)
+INSERT INTO animal (
+  id, especie, tipo_productivo_id, nombre, crotal,
+  fecha_nacimiento_estimada, sexo, es_reproductora, origen,
+  estado_vital, estado_sanitario
+) VALUES
+  ('aaaaaaaa-2002-0000-0000-000000000002',
+   'vacuno', 'cc000004-0000-0000-0000-000000000000',
+   'La Rubia', 'ES001234562002',
+   '2020-01-01', 'hembra', false, 'compra',
+   'vendido', 'sano')
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
+-- EX-REPRODUCTORA — Pastora
+-- Reproductora que cambió a Engorde. El ciclo C1 se cerró con cierre_manual
+-- y se registró el evento CAMBIO_TIPO_PRODUCTIVO (flow correcto, no legacy).
+-- =============================================================================
+
+INSERT INTO animal (
+  id, especie, tipo_productivo_id, nombre, crotal, num_hierro,
+  raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
+  estado_vital, estado_sanitario
+) VALUES
+  ('aaaaaaaa-3001-0000-0000-000000000001',
+   'vacuno', 'cc000004-0000-0000-0000-000000000000',
+   'Pastora', 'ES001234563001', 'H-07',
+   'bb000001-0000-0000-0000-000000000000',
+   '2020-06-10', 'hembra', false, 'compra',
+   'vivo', 'sano')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
@@ -86,51 +142,54 @@ INSERT INTO animal (
   raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
   estado_vital, estado_reproductivo, estado_sanitario, fecha_prevista_parto
 ) VALUES
-  -- Fortuna: morucha, 3 ciclos históricos + C4 abierto en vacía (crías de C3 aún con vínculo activo)
-  (
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Fortuna', 'ES001234561001', 'H-01',
-    'bb000001-0000-0000-0000-000000000000',
-    '2019-05-20', 'hembra', true, 'compra',
-    'vivo', 'vacia', 'sano', NULL
-  ),
-  -- Esperanza: limusina, 2 ciclos históricos + C3 abierto en vacía (crías de C2 aún con vínculo activo)
-  (
-    'aaaaaaaa-1002-0000-0000-000000000002',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Esperanza', 'ES001234561002', 'H-02',
-    'bb000003-0000-0000-0000-000000000000',
-    '2020-07-12', 'hembra', true, 'interno',
-    'vivo', 'vacia', 'sano', NULL
-  ),
-  -- Carmen: charolesa, 2 ciclos, actualmente cubierta (C2 abierto, sin parto aún)
-  (
-    'aaaaaaaa-1003-0000-0000-000000000003',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Carmen', 'ES001234561003', 'H-03',
-    'bb000002-0000-0000-0000-000000000000',
-    '2021-03-10', 'hembra', true, 'compra',
-    'vivo', 'cubierta', 'sano', '2027-03-25'
-  ),
-  -- Maravilla: cruzada, 1 ciclo histórico, actualmente vacía
-  (
-    'aaaaaaaa-1004-0000-0000-000000000004',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Maravilla', 'ES001234561004', 'H-04',
-    'bb000004-0000-0000-0000-000000000000',
-    '2022-01-15', 'hembra', true, 'interno',
-    'vivo', 'vacia', 'sano', NULL
-  ),
-  -- Nube: morucha joven, C1 abierto en vacía (aún sin cubrición)
-  (
-    'aaaaaaaa-1005-0000-0000-000000000005',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Nube', 'ES001234561005', 'H-05',
-    'bb000001-0000-0000-0000-000000000000',
-    '2023-04-08', 'hembra', true, 'interno',
-    'vivo', 'vacia', 'sano', NULL
-  )
+  -- Fortuna: 4 ciclos. Estado actual = vacía (C4 abierto sin eventos).
+  ('aaaaaaaa-1001-0000-0000-000000000001',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Fortuna', 'ES001234561001', 'H-01',
+   'bb000001-0000-0000-0000-000000000000',
+   '2019-05-20', 'hembra', true, 'compra',
+   'vivo', 'vacia', 'sano', NULL),
+
+  -- Esperanza: 2 ciclos. Estado actual = gestante (C2 abierto, con confirmación).
+  ('aaaaaaaa-1002-0000-0000-000000000002',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Esperanza', 'ES001234561002', 'H-02',
+   'bb000003-0000-0000-0000-000000000000',
+   '2020-07-12', 'hembra', true, 'interno',
+   'vivo', 'gestante', 'sano', '2026-10-20'),
+
+  -- Carmen: 3 ciclos. Estado actual = cubierta (C3 abierto con cubrición).
+  ('aaaaaaaa-1003-0000-0000-000000000003',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Carmen', 'ES001234561003', 'H-03',
+   'bb000002-0000-0000-0000-000000000000',
+   '2021-03-10', 'hembra', true, 'compra',
+   'vivo', 'cubierta', 'sano', '2027-03-11'),
+
+  -- Maravilla: 2 ciclos. Estado actual = vacía (C2 abierto, crías de C1 aún activas).
+  ('aaaaaaaa-1004-0000-0000-000000000004',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Maravilla', 'ES001234561004', 'H-04',
+   'bb000004-0000-0000-0000-000000000000',
+   '2022-01-15', 'hembra', true, 'interno',
+   'vivo', 'vacia', 'sano', NULL),
+
+  -- Nube: 1 ciclo, vacía sin eventos. Primera temporada reproductiva.
+  ('aaaaaaaa-1005-0000-0000-000000000005',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Nube', 'ES001234561005', 'H-05',
+   'bb000001-0000-0000-0000-000000000000',
+   '2023-04-08', 'hembra', true, 'interno',
+   'vivo', 'vacia', 'sano', NULL),
+
+  -- Rocío: nueva reproductora, 1 ciclo, cubrición reciente.
+  ('aaaaaaaa-1006-0000-0000-000000000006',
+   'vacuno', 'cc000002-0000-0000-0000-000000000000',
+   'Rocío', 'ES001234561006', 'H-06',
+   'bb000003-0000-0000-0000-000000000000',
+   '2022-09-15', 'hembra', true, 'compra',
+   'vivo', 'cubierta', 'sano', '2027-04-19')
+
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
@@ -139,41 +198,70 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO ciclo_reproductivo (id, animal_id, numero_ciclo, fecha_inicio, fecha_fin, resultado)
 VALUES
-  -- Fortuna C1: 2022-04-01 → 2023-03-15 (cerrado tras destete)
-  ('cccccccc-1001-0001-0000-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 1, '2022-04-01', '2023-03-15', 'parto'),
-  -- Fortuna C2: 2023-07-01 → 2024-09-01 (cerrado tras destete)
-  ('cccccccc-1001-0002-0000-000000000002', 'aaaaaaaa-1001-0000-0000-000000000001', 2, '2023-07-01', '2024-09-01', 'parto'),
-  -- Fortuna C3: 2025-10-01 → abierto, resultado='parto' (parto 2026-07-10, crías con vínculo activo)
-  --   fecha_fin=NULL: ciclo sigue abierto hasta que se destete la última cría
-  ('cccccccc-1001-0003-0000-000000000003', 'aaaaaaaa-1001-0000-0000-000000000001', 3, '2025-10-01', NULL, 'parto'),
-  -- Fortuna C4: 2026-07-10 → abierto en vacía (abierto por registrar_parto al tener C3 parto)
-  ('cccccccc-1001-0004-0000-000000000004', 'aaaaaaaa-1001-0000-0000-000000000001', 4, '2026-07-10', NULL, NULL),
+  -- ── Fortuna ──────────────────────────────────────────────────────────────────
+  -- C1: cerrado tras destete del último vínculo (FC1-B, 2023-06-15)
+  ('cccccccc-1001-0001-0000-000000000001',
+   'aaaaaaaa-1001-0000-0000-000000000001', 1, '2022-04-01', '2023-06-15', 'parto'),
+  -- C2: abierto en parto C1 (2023-01-10), cerrado por aborto
+  ('cccccccc-1001-0002-0000-000000000002',
+   'aaaaaaaa-1001-0000-0000-000000000001', 2, '2023-01-10', '2024-01-20', 'aborto'),
+  -- C3: abierto en aborto C2 (2024-01-20), resultado='parto', abierto (crías activas)
+  ('cccccccc-1001-0003-0000-000000000003',
+   'aaaaaaaa-1001-0000-0000-000000000001', 3, '2024-01-20', NULL, 'parto'),
+  -- C4: abierto en parto C3 (2025-05-10), vacía sin eventos
+  ('cccccccc-1001-0004-0000-000000000004',
+   'aaaaaaaa-1001-0000-0000-000000000001', 4, '2025-05-10', NULL, NULL),
 
-  -- Esperanza C1: 2022-06-01 → 2023-07-01 (cerrado)
-  ('cccccccc-1002-0001-0000-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 1, '2022-06-01', '2023-07-01', 'parto'),
-  -- Esperanza C2: 2025-09-01 → abierto, resultado='parto' (parto 2026-06-10, crías con vínculo activo)
-  --   fecha_fin=NULL: ciclo sigue abierto hasta que se destete la última cría
-  ('cccccccc-1002-0002-0000-000000000002', 'aaaaaaaa-1002-0000-0000-000000000002', 2, '2025-09-01', NULL, 'parto'),
-  -- Esperanza C3: 2026-06-10 → abierto en vacía (abierto por registrar_parto al tener C2 parto)
-  ('cccccccc-1002-0003-0000-000000000003', 'aaaaaaaa-1002-0000-0000-000000000002', 3, '2026-06-10', NULL, NULL),
+  -- ── Esperanza ────────────────────────────────────────────────────────────────
+  -- C1: cerrado tras destete (EC1-A, 2023-07-15)
+  ('cccccccc-1002-0001-0000-000000000001',
+   'aaaaaaaa-1002-0000-0000-000000000002', 1, '2022-06-01', '2023-07-15', 'parto'),
+  -- C2: abierto en parto C1 (2023-03-12), gestante (cubrición + confirmación)
+  ('cccccccc-1002-0002-0000-000000000002',
+   'aaaaaaaa-1002-0000-0000-000000000002', 2, '2023-03-12', NULL, NULL),
 
-  -- Carmen C1: 2023-06-01 → 2024-07-01 (cerrado)
-  ('cccccccc-1003-0001-0000-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 1, '2023-06-01', '2024-07-01', 'parto'),
-  -- Carmen C2: 2024-07-01 → abierto (cubierta, sin parto aún; cubrición 2026-06-15)
-  ('cccccccc-1003-0002-0000-000000000002', 'aaaaaaaa-1003-0000-0000-000000000003', 2, '2024-07-01', NULL, NULL),
+  -- ── Carmen ───────────────────────────────────────────────────────────────────
+  -- C1: cerrado por machorra — RPC abre C2 en la misma fecha
+  ('cccccccc-1003-0001-0000-000000000001',
+   'aaaaaaaa-1003-0000-0000-000000000003', 1, '2023-06-01', '2023-12-01', 'machorra'),
+  -- C2: cerrado tras destete (CC2-A, 2025-05-10)
+  ('cccccccc-1003-0002-0000-000000000002',
+   'aaaaaaaa-1003-0000-0000-000000000003', 2, '2023-12-01', '2025-05-10', 'parto'),
+  -- C3: abierto en parto C2 (2024-12-15), cubierta (cubrición 2026-06-01)
+  ('cccccccc-1003-0003-0000-000000000003',
+   'aaaaaaaa-1003-0000-0000-000000000003', 3, '2024-12-15', NULL, NULL),
 
-  -- Maravilla C1: 2024-03-01 → 2025-04-01 (cerrado, cría destetada)
-  ('cccccccc-1004-0001-0000-000000000001', 'aaaaaaaa-1004-0000-0000-000000000004', 1, '2024-03-01', '2025-04-01', 'parto'),
-  -- Maravilla C2: 2025-04-01 → abierto en vacía (abierto al cerrar C1)
-  ('cccccccc-1004-0002-0000-000000000002', 'aaaaaaaa-1004-0000-0000-000000000004', 2, '2025-04-01', NULL, NULL),
+  -- ── Maravilla ────────────────────────────────────────────────────────────────
+  -- C1: resultado='parto', abierto (crías activas pendientes de destete)
+  ('cccccccc-1004-0001-0000-000000000001',
+   'aaaaaaaa-1004-0000-0000-000000000004', 1, '2025-06-01', NULL, 'parto'),
+  -- C2: abierto en parto C1 (2026-03-10), vacía sin eventos
+  ('cccccccc-1004-0002-0000-000000000002',
+   'aaaaaaaa-1004-0000-0000-000000000004', 2, '2026-03-10', NULL, NULL),
 
-  -- Nube C1: 2023-04-08 → abierto en vacía (primer ciclo, aún sin cubrición)
-  ('cccccccc-1005-0001-0000-000000000001', 'aaaaaaaa-1005-0000-0000-000000000005', 1, '2023-04-08', NULL, NULL)
+  -- ── Nube ─────────────────────────────────────────────────────────────────────
+  -- C1: primer ciclo, vacía sin eventos
+  ('cccccccc-1005-0001-0000-000000000001',
+   'aaaaaaaa-1005-0000-0000-000000000005', 1, '2024-04-08', NULL, NULL),
+
+  -- ── Rocío ────────────────────────────────────────────────────────────────────
+  -- C1: cubrición 2026-07-10, cubierta
+  ('cccccccc-1006-0001-0000-000000000001',
+   'aaaaaaaa-1006-0000-0000-000000000006', 1, '2026-07-01', NULL, NULL),
+
+  -- ── Pastora ──────────────────────────────────────────────────────────────────
+  -- C1: cerrado con cierre_manual al cambiar tipo (2024-06-01)
+  ('cccccccc-3001-0001-0000-000000000001',
+   'aaaaaaaa-3001-0000-0000-000000000001', 1, '2023-03-01', '2024-06-01', 'cierre_manual')
 
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
 -- EVENTOS
+-- Tipos:
+--   0001 CUBRICION · 0002 PARTO · 0003 ABORTO · 0004 MACHORRA
+--   0005 CONFIRMACION_GESTACION · 0006 DESTETE-A · 0007 DESTETE-B
+--   0008 CAMBIO_TIPO_PRODUCTIVO
 -- =============================================================================
 
 INSERT INTO eventos (id, tipo_evento_id, especie, fecha, ciclo_id, metadata_json)
@@ -184,81 +272,104 @@ SELECT ev.id::uuid,
        ev.ciclo_id::uuid,
        ev.meta::jsonb
 FROM (VALUES
-  -- ── Fortuna C1 ────────────────────────────────────────────────────────────
-  -- Cubrición 2022-04-01 con Lucero
+
+  -- ── Fortuna C1 ─────────────────────────────────────────────────────────────
   ('eeeeeeee-f001-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2022-04-01',
    'cccccccc-1001-0001-0000-000000000001',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
-  -- Parto 2023-01-10: 2 vivos, 0 muertos
   ('eeeeeeee-f001-0002-0001-000000000001', 'PARTO', 'vacuno', '2023-01-10',
    'cccccccc-1001-0001-0000-000000000001',
    '{"tipo_parto":"natural","numero_nacidos":2,"numero_vivos":2,"numero_muertos":0}'),
+  -- DESTETE FC1-A (2023-06-10) — ciclo C1 aún abierto (FC1-B sigue activo)
+  ('eeeeeeee-f001-0006-0001-000000000001', 'DESTETE', 'vacuno', '2023-06-10',
+   'cccccccc-1001-0001-0000-000000000001',
+   '{}'),
+  -- DESTETE FC1-B (2023-06-15) — último vínculo, cierra ciclo C1
+  ('eeeeeeee-f001-0007-0001-000000000001', 'DESTETE', 'vacuno', '2023-06-15',
+   'cccccccc-1001-0001-0000-000000000001',
+   '{}'),
 
-  -- ── Fortuna C2 ────────────────────────────────────────────────────────────
-  -- Cubrición 2023-07-01 con Titán
+  -- ── Fortuna C2 ─────────────────────────────────────────────────────────────
   ('eeeeeeee-f001-0001-0002-000000000001', 'CUBRICION', 'vacuno', '2023-07-01',
    'cccccccc-1001-0002-0000-000000000002',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
-  -- Parto 2024-04-10: 2 vivos, 1 muerto
-  ('eeeeeeee-f001-0002-0002-000000000001', 'PARTO', 'vacuno', '2024-04-10',
+  ('eeeeeeee-f001-0003-0002-000000000001', 'ABORTO', 'vacuno', '2024-01-20',
    'cccccccc-1001-0002-0000-000000000002',
-   '{"tipo_parto":"natural","numero_nacidos":3,"numero_vivos":2,"numero_muertos":1}'),
+   '{}'),
 
-  -- ── Fortuna C3 ────────────────────────────────────────────────────────────
-  -- Cubrición 2025-10-01 con Lucero
-  ('eeeeeeee-f001-0001-0003-000000000001', 'CUBRICION', 'vacuno', '2025-10-01',
+  -- ── Fortuna C3 ─────────────────────────────────────────────────────────────
+  ('eeeeeeee-f001-0001-0003-000000000001', 'CUBRICION', 'vacuno', '2024-08-01',
    'cccccccc-1001-0003-0000-000000000003',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
-  -- Parto 2026-07-10: 2 vivos, 1 muerto
-  ('eeeeeeee-f001-0002-0003-000000000001', 'PARTO', 'vacuno', '2026-07-10',
+  ('eeeeeeee-f001-0002-0003-000000000001', 'PARTO', 'vacuno', '2025-05-10',
    'cccccccc-1001-0003-0000-000000000003',
    '{"tipo_parto":"natural","numero_nacidos":3,"numero_vivos":2,"numero_muertos":1}'),
 
-  -- ── Esperanza C1 ──────────────────────────────────────────────────────────
-  -- Cubrición 2022-06-01 con Titán
+  -- ── Esperanza C1 ───────────────────────────────────────────────────────────
   ('eeeeeeee-e002-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2022-06-01',
    'cccccccc-1002-0001-0000-000000000001',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
-  -- Parto 2023-03-12: 1 vivo, 0 muertos
   ('eeeeeeee-e002-0002-0001-000000000001', 'PARTO', 'vacuno', '2023-03-12',
    'cccccccc-1002-0001-0000-000000000001',
    '{"tipo_parto":"natural","numero_nacidos":1,"numero_vivos":1,"numero_muertos":0}'),
+  -- DESTETE EC1-A (2023-07-15) — único vínculo, cierra ciclo C1
+  ('eeeeeeee-e002-0006-0001-000000000001', 'DESTETE', 'vacuno', '2023-07-15',
+   'cccccccc-1002-0001-0000-000000000001',
+   '{}'),
 
-  -- ── Esperanza C2 ──────────────────────────────────────────────────────────
-  -- Cubrición 2025-09-01 con Titán
-  ('eeeeeeee-e002-0001-0002-000000000001', 'CUBRICION', 'vacuno', '2025-09-01',
+  -- ── Esperanza C2 ───────────────────────────────────────────────────────────
+  ('eeeeeeee-e002-0001-0002-000000000001', 'CUBRICION', 'vacuno', '2026-01-10',
    'cccccccc-1002-0002-0000-000000000002',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
-  -- Parto 2026-06-10: 2 vivos, 0 muertos
-  ('eeeeeeee-e002-0002-0002-000000000001', 'PARTO', 'vacuno', '2026-06-10',
+  -- Confirmación gestación → estado gestante, fecha_prevista_parto=2026-10-20
+  ('eeeeeeee-e002-0005-0002-000000000001', 'CONFIRMACION_GESTACION', 'vacuno', '2026-03-15',
    'cccccccc-1002-0002-0000-000000000002',
-   '{"tipo_parto":"asistido","numero_nacidos":2,"numero_vivos":2,"numero_muertos":0}'),
+   '{"semanas_gestacion":10}'),
 
-  -- ── Carmen C1 ─────────────────────────────────────────────────────────────
-  -- Cubrición 2023-06-01 con Centauro
+  -- ── Carmen C1 ──────────────────────────────────────────────────────────────
   ('eeeeeeee-c003-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2023-06-01',
    'cccccccc-1003-0001-0000-000000000001',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0003-0000-0000-000000000003"}'),
-  -- Parto 2024-03-11: 1 vivo, 0 muertos
-  ('eeeeeeee-c003-0002-0001-000000000001', 'PARTO', 'vacuno', '2024-03-11',
+  -- Machorra cierra C1 y abre C2 (machorra no genera crías)
+  ('eeeeeeee-c003-0004-0001-000000000001', 'MACHORRA', 'vacuno', '2023-12-01',
    'cccccccc-1003-0001-0000-000000000001',
-   '{"tipo_parto":"natural","numero_nacidos":1,"numero_vivos":1,"numero_muertos":0}'),
+   '{}'),
 
-  -- ── Carmen C2 ─────────────────────────────────────────────────────────────
-  -- Cubrición 2026-06-15 con Centauro (sin parto aún)
-  ('eeeeeeee-c003-0001-0002-000000000001', 'CUBRICION', 'vacuno', '2026-06-15',
+  -- ── Carmen C2 ──────────────────────────────────────────────────────────────
+  ('eeeeeeee-c003-0001-0002-000000000001', 'CUBRICION', 'vacuno', '2024-03-01',
    'cccccccc-1003-0002-0000-000000000002',
+   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
+  ('eeeeeeee-c003-0002-0002-000000000001', 'PARTO', 'vacuno', '2024-12-15',
+   'cccccccc-1003-0002-0000-000000000002',
+   '{"tipo_parto":"natural","numero_nacidos":1,"numero_vivos":1,"numero_muertos":0}'),
+  -- DESTETE CC2-A (2025-05-10) — único vínculo, cierra ciclo C2
+  ('eeeeeeee-c003-0006-0002-000000000001', 'DESTETE', 'vacuno', '2025-05-10',
+   'cccccccc-1003-0002-0000-000000000002',
+   '{}'),
+
+  -- ── Carmen C3 ──────────────────────────────────────────────────────────────
+  ('eeeeeeee-c003-0001-0003-000000000001', 'CUBRICION', 'vacuno', '2026-06-01',
+   'cccccccc-1003-0003-0000-000000000003',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0003-0000-0000-000000000003"}'),
 
-  -- ── Maravilla C1 ──────────────────────────────────────────────────────────
-  -- Cubrición 2024-03-01 con Lucero
-  ('eeeeeeee-4004-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2024-03-01',
+  -- ── Maravilla C1 ───────────────────────────────────────────────────────────
+  ('eeeeeeee-4004-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2025-06-01',
    'cccccccc-1004-0001-0000-000000000001',
    '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
-  -- Parto 2024-12-10: 1 vivo, 0 muertos
-  ('eeeeeeee-4004-0002-0001-000000000001', 'PARTO', 'vacuno', '2024-12-10',
+  ('eeeeeeee-4004-0002-0001-000000000001', 'PARTO', 'vacuno', '2026-03-10',
    'cccccccc-1004-0001-0000-000000000001',
-   '{"tipo_parto":"natural","numero_nacidos":1,"numero_vivos":1,"numero_muertos":0}')
+   '{"tipo_parto":"asistido","numero_nacidos":3,"numero_vivos":2,"numero_muertos":1}'),
+
+  -- ── Rocío C1 ───────────────────────────────────────────────────────────────
+  ('eeeeeeee-d006-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2026-07-10',
+   'cccccccc-1006-0001-0000-000000000001',
+   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
+
+  -- ── Pastora C1 ─────────────────────────────────────────────────────────────
+  -- Cambio a Engorde (vacía sin cubrición → cierre_manual documentado)
+  ('eeeeeeee-3001-0008-0001-000000000001', 'CAMBIO_TIPO_PRODUCTIVO', 'vacuno', '2024-06-01',
+   'cccccccc-3001-0001-0000-000000000001',
+   '{"tipo_anterior":"Reproductora","tipo_nuevo":"Engorde"}')
 
 ) AS ev(id, codigo, especie, fecha, ciclo_id, meta)
 ON CONFLICT (id) DO NOTHING;
@@ -270,19 +381,17 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO evento_parto (evento_id, numero_nacidos, numero_vivos, numero_muertos, tipo_parto, observaciones)
 VALUES
   ('eeeeeeee-f001-0002-0001-000000000001', 2, 2, 0, 'natural',  NULL),
-  ('eeeeeeee-f001-0002-0002-000000000001', 3, 2, 1, 'natural',  'Una cría nació muerta'),
   ('eeeeeeee-f001-0002-0003-000000000001', 3, 2, 1, 'natural',  NULL),
   ('eeeeeeee-e002-0002-0001-000000000001', 1, 1, 0, 'natural',  NULL),
-  ('eeeeeeee-e002-0002-0002-000000000001', 2, 2, 0, 'asistido', NULL),
-  ('eeeeeeee-c003-0002-0001-000000000001', 1, 1, 0, 'natural',  NULL),
-  ('eeeeeeee-4004-0002-0001-000000000001', 1, 1, 0, 'natural',  NULL)
+  ('eeeeeeee-c003-0002-0002-000000000001', 1, 1, 0, 'natural',  NULL),
+  ('eeeeeeee-4004-0002-0001-000000000001', 3, 2, 1, 'asistido', NULL)
 ON CONFLICT DO NOTHING;
 
 -- =============================================================================
--- CRÍAS — CICLOS HISTÓRICOS (Recría, vínculo FINALIZADO)
+-- CRÍAS HISTÓRICAS — Recría, vínculo FINALIZADO
+-- Ciclos origen: Fortuna C1, Esperanza C1, Carmen C2.
+-- Cada cría tiene evento DESTETE registrado en la tabla eventos (ver arriba).
 -- =============================================================================
--- Estas crías nacieron antes de PRD010. Se insertan directamente con el estado
--- correcto derivado de la evidencia disponible (tipo_productivo + estado_vital).
 
 INSERT INTO animal (
   id, especie, tipo_productivo_id, crotal,
@@ -292,111 +401,59 @@ INSERT INTO animal (
   parto_evento_id, evento_creacion_id
 ) VALUES
 
-  -- ── Fortuna C1 — parto 2023-01-10, padre: Lucero ──────────────────────────
-  -- FC1-A: hembra, Recría, identificada, vínculo finalizado (destetada)
-  (
-    'aaaaaaaa-f1a0-0000-0000-000000000001',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569101',
-    'bb000001-0000-0000-0000-000000000000',
-    'aaaaaaaa-0001-0000-0000-000000000001',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2023-01-10', 'hembra', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-f001-0002-0001-000000000001', 'eeeeeeee-f001-0002-0001-000000000001'
-  ),
-  -- FC1-B: macho, Recría, identificado, vínculo finalizado
-  (
-    'aaaaaaaa-f1b0-0000-0000-000000000002',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569102',
-    'bb000001-0000-0000-0000-000000000000',
-    'aaaaaaaa-0001-0000-0000-000000000001',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2023-01-10', 'macho', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-f001-0002-0001-000000000001', 'eeeeeeee-f001-0002-0001-000000000001'
-  ),
-
-  -- ── Fortuna C2 — parto 2024-04-10, padre: Titán ───────────────────────────
-  -- FC2-A: hembra, Recría, identificada, vínculo finalizado
-  (
-    'aaaaaaaa-f2a0-0000-0000-000000000001',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569201',
-    'bb000003-0000-0000-0000-000000000000',
-    'aaaaaaaa-0002-0000-0000-000000000002',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2024-04-10', 'hembra', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-f001-0002-0002-000000000001', 'eeeeeeee-f001-0002-0002-000000000001'
-  ),
-  -- FC2-B: macho, Recría, identificado, vínculo finalizado
-  (
-    'aaaaaaaa-f2b0-0000-0000-000000000002',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569202',
-    'bb000003-0000-0000-0000-000000000000',
-    'aaaaaaaa-0002-0000-0000-000000000002',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2024-04-10', 'macho', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-f001-0002-0002-000000000001', 'eeeeeeee-f001-0002-0002-000000000001'
-  ),
-  -- FC2-C: muerta (nacida muerta), tipo_productivo=NULL, vínculo finalizado
-  (
-    'aaaaaaaa-f2c0-0000-0000-000000000003',
-    'vacuno', NULL, NULL,
-    'bb000003-0000-0000-0000-000000000000',
-    'aaaaaaaa-0002-0000-0000-000000000002',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2024-04-10', NULL, false, 'interno',
-    'muerto', NULL, 'finalizado',
-    'eeeeeeee-f001-0002-0002-000000000001', 'eeeeeeee-f001-0002-0002-000000000001'
-  ),
+  -- ── Fortuna C1 — parto 2023-01-10, padre: Lucero ───────────────────────────
+  -- FC1-A: hembra, destetada 2023-06-10
+  ('aaaaaaaa-f1a0-0000-0000-000000000001',
+   'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569101',
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1001-0000-0000-000000000001',
+   '2023-01-10', 'hembra', false, 'interno',
+   'vivo', 'completa', 'finalizado',
+   'eeeeeeee-f001-0002-0001-000000000001',
+   'eeeeeeee-f001-0002-0001-000000000001'),
+  -- FC1-B: macho, destetado 2023-06-15 (última cría → cierra C1)
+  ('aaaaaaaa-f1b0-0000-0000-000000000002',
+   'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569102',
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1001-0000-0000-000000000001',
+   '2023-01-10', 'macho', false, 'interno',
+   'vivo', 'completa', 'finalizado',
+   'eeeeeeee-f001-0002-0001-000000000001',
+   'eeeeeeee-f001-0002-0001-000000000001'),
 
   -- ── Esperanza C1 — parto 2023-03-12, padre: Titán ─────────────────────────
-  -- EC1-A: macho, Recría, identificado, vínculo finalizado
-  (
-    'aaaaaaaa-e1a0-0000-0000-000000000001',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569301',
-    'bb000003-0000-0000-0000-000000000000',
-    'aaaaaaaa-0002-0000-0000-000000000002',
-    'aaaaaaaa-1002-0000-0000-000000000002',
-    '2023-03-12', 'macho', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-e002-0002-0001-000000000001', 'eeeeeeee-e002-0002-0001-000000000001'
-  ),
+  -- EC1-A: macho, destetado 2023-07-15 (único → cierra C1)
+  ('aaaaaaaa-e1a0-0000-0000-000000000001',
+   'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569301',
+   'bb000003-0000-0000-0000-000000000000',
+   'aaaaaaaa-0002-0000-0000-000000000002',
+   'aaaaaaaa-1002-0000-0000-000000000002',
+   '2023-03-12', 'macho', false, 'interno',
+   'vivo', 'completa', 'finalizado',
+   'eeeeeeee-e002-0002-0001-000000000001',
+   'eeeeeeee-e002-0002-0001-000000000001'),
 
-  -- ── Carmen C1 — parto 2024-03-11, padre: Centauro ─────────────────────────
-  -- CC1-A: hembra, Recría, identificada, vínculo finalizado
-  (
-    'aaaaaaaa-c1a0-0000-0000-000000000001',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569401',
-    'bb000002-0000-0000-0000-000000000000',
-    'aaaaaaaa-0003-0000-0000-000000000003',
-    'aaaaaaaa-1003-0000-0000-000000000003',
-    '2024-03-11', 'hembra', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-c003-0002-0001-000000000001', 'eeeeeeee-c003-0002-0001-000000000001'
-  ),
-
-  -- ── Maravilla C1 — parto 2024-12-10, padre: Lucero ────────────────────────
-  -- MC1-A: macho, Recría, identificado, vínculo finalizado
-  (
-    'aaaaaaaa-41a0-0000-0000-000000000001',
-    'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569501',
-    'bb000001-0000-0000-0000-000000000000',
-    'aaaaaaaa-0001-0000-0000-000000000001',
-    'aaaaaaaa-1004-0000-0000-000000000004',
-    '2024-12-10', 'macho', false, 'interno',
-    'vivo', 'completa', 'finalizado',
-    'eeeeeeee-4004-0002-0001-000000000001', 'eeeeeeee-4004-0002-0001-000000000001'
-  )
+  -- ── Carmen C2 — parto 2024-12-15, padre: Lucero ───────────────────────────
+  -- CC2-A: hembra, destetada 2025-05-10 (única → cierra C2)
+  ('aaaaaaaa-c2a0-0000-0000-000000000001',
+   'vacuno', 'cc000001-0000-0000-0000-000000000000', 'ES001234569401',
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1003-0000-0000-000000000003',
+   '2024-12-15', 'hembra', false, 'interno',
+   'vivo', 'completa', 'finalizado',
+   'eeeeeeee-c003-0002-0002-000000000001',
+   'eeeeeeee-c003-0002-0002-000000000001')
 
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- CRÍAS — CICLO ACTUAL (Cría, vínculo ACTIVO, algunas sin identificar)
+-- CRÍAS ACTUALES — Cría, vínculo ACTIVO
+-- Ciclos origen: Fortuna C3, Maravilla C1.
+-- Estos ciclos tienen resultado='parto' y fecha_fin=NULL (abiertos hasta destete).
 -- =============================================================================
--- Crías nacidas recientemente, aún lactantes. El sistema conoce su dependencia.
--- Algunas tienen identificación pendiente (crotal/hierro no asignados aún).
 
 INSERT INTO animal (
   id, especie, tipo_productivo_id, crotal,
@@ -423,43 +480,43 @@ SELECT
   a.parto_evento_id::uuid,
   a.parto_evento_id::uuid
 FROM (VALUES
-  -- ── Fortuna C3 — parto 2026-07-10, padre: Lucero ──────────────────────────
-  -- FC3-A: hembra, identificada (crotal asignado)
+  -- ── Fortuna C3 — parto 2025-05-10, padre: Lucero ───────────────────────────
+  -- FC3-A: hembra, identificada
   ('aaaaaaaa-f3a0-0000-0000-000000000001', 'ES001234569601',
    'bb000001-0000-0000-0000-000000000000',
    'aaaaaaaa-0001-0000-0000-000000000001',
    'aaaaaaaa-1001-0000-0000-000000000001',
-   '2026-07-10', 'hembra', 'completa',
+   '2025-05-10', 'hembra', 'completa',
    'eeeeeeee-f001-0002-0003-000000000001'),
-  -- FC3-B: macho, sin identificar (aún no tiene crotal)
+  -- FC3-B: macho, sin identificar aún
   ('aaaaaaaa-f3b0-0000-0000-000000000002', NULL,
    'bb000001-0000-0000-0000-000000000000',
    'aaaaaaaa-0001-0000-0000-000000000001',
    'aaaaaaaa-1001-0000-0000-000000000001',
-   '2026-07-10', 'macho', 'pendiente',
+   '2025-05-10', 'macho', 'pendiente',
    'eeeeeeee-f001-0002-0003-000000000001'),
 
-  -- ── Esperanza C2 — parto 2026-06-10, padre: Titán ─────────────────────────
-  -- EC2-A: hembra, sin identificar
-  ('aaaaaaaa-e2a0-0000-0000-000000000001', NULL,
-   'bb000003-0000-0000-0000-000000000000',
-   'aaaaaaaa-0002-0000-0000-000000000002',
-   'aaaaaaaa-1002-0000-0000-000000000002',
-   '2026-06-10', 'hembra', 'pendiente',
-   'eeeeeeee-e002-0002-0002-000000000001'),
-  -- EC2-B: macho, sin identificar
-  ('aaaaaaaa-e2b0-0000-0000-000000000002', NULL,
-   'bb000003-0000-0000-0000-000000000000',
-   'aaaaaaaa-0002-0000-0000-000000000002',
-   'aaaaaaaa-1002-0000-0000-000000000002',
-   '2026-06-10', 'macho', 'pendiente',
-   'eeeeeeee-e002-0002-0002-000000000001')
+  -- ── Maravilla C1 — parto 2026-03-10, padre: Lucero ─────────────────────────
+  -- MC1-A: macho, sin identificar aún
+  ('aaaaaaaa-41a0-0000-0000-000000000001', NULL,
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1004-0000-0000-000000000004',
+   '2026-03-10', 'macho', 'pendiente',
+   'eeeeeeee-4004-0002-0001-000000000001'),
+  -- MC1-B: hembra, sin identificar aún
+  ('aaaaaaaa-41b0-0000-0000-000000000002', NULL,
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1004-0000-0000-000000000004',
+   '2026-03-10', 'hembra', 'pendiente',
+   'eeeeeeee-4004-0002-0001-000000000001')
 
 ) AS a(id, crotal, raza_id, padre_id, madre_id, fecha_nacimiento, sexo, identificacion, parto_evento_id)
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- CRÍAS MUERTAS — CICLO ACTUAL (tipo_productivo=NULL, vínculo FINALIZADO)
+-- CRÍAS MUERTAS — nacidas muertas, vínculo FINALIZADO
 -- =============================================================================
 
 INSERT INTO animal (
@@ -470,196 +527,94 @@ INSERT INTO animal (
   parto_evento_id, evento_creacion_id
 ) VALUES
   -- Fortuna C3: 1 nacida muerta (padre: Lucero)
-  (
-    'aaaaaaaa-f3c0-0000-0000-000000000003',
-    'vacuno', NULL, NULL,
-    'bb000001-0000-0000-0000-000000000000',
-    'aaaaaaaa-0001-0000-0000-000000000001',
-    'aaaaaaaa-1001-0000-0000-000000000001',
-    '2026-07-10', NULL, false, 'interno',
-    'muerto', 'finalizado',
-    'eeeeeeee-f001-0002-0003-000000000001', 'eeeeeeee-f001-0002-0003-000000000001'
-  )
+  ('aaaaaaaa-f3c0-0000-0000-000000000003',
+   'vacuno', NULL, NULL,
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1001-0000-0000-000000000001',
+   '2025-05-10', NULL, false, 'interno',
+   'muerto', 'finalizado',
+   'eeeeeeee-f001-0002-0003-000000000001',
+   'eeeeeeee-f001-0002-0003-000000000001'),
+  -- Maravilla C1: 1 nacida muerta (padre: Lucero)
+  ('aaaaaaaa-41c0-0000-0000-000000000003',
+   'vacuno', NULL, NULL,
+   'bb000001-0000-0000-0000-000000000000',
+   'aaaaaaaa-0001-0000-0000-000000000001',
+   'aaaaaaaa-1004-0000-0000-000000000004',
+   '2026-03-10', NULL, false, 'interno',
+   'muerto', 'finalizado',
+   'eeeeeeee-4004-0002-0001-000000000001',
+   'eeeeeeee-4004-0002-0001-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- ASOCIACIONES EVENTO ↔ ANIMAL
+-- ASOCIACIONES EVENTO ↔ ANIMAL (evento_animales)
 -- =============================================================================
 
 INSERT INTO evento_animales (evento_id, animal_id, rol)
 VALUES
-  -- ── Fortuna C1 ────────────────────────────────────────────────────────────
+  -- ── Fortuna C1 ─────────────────────────────────────────────────────────────
   ('eeeeeeee-f001-0001-0001-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
   ('eeeeeeee-f001-0002-0001-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
   ('eeeeeeee-f001-0002-0001-000000000001', 'aaaaaaaa-f1a0-0000-0000-000000000001', 'cria'),
   ('eeeeeeee-f001-0002-0001-000000000001', 'aaaaaaaa-f1b0-0000-0000-000000000002', 'cria'),
+  -- DESTETE FC1-A: cría + madre
+  ('eeeeeeee-f001-0006-0001-000000000001', 'aaaaaaaa-f1a0-0000-0000-000000000001', 'cria'),
+  ('eeeeeeee-f001-0006-0001-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
+  -- DESTETE FC1-B: cría + madre
+  ('eeeeeeee-f001-0007-0001-000000000001', 'aaaaaaaa-f1b0-0000-0000-000000000002', 'cria'),
+  ('eeeeeeee-f001-0007-0001-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
 
-  -- ── Fortuna C2 ────────────────────────────────────────────────────────────
+  -- ── Fortuna C2 ─────────────────────────────────────────────────────────────
   ('eeeeeeee-f001-0001-0002-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
-  ('eeeeeeee-f001-0002-0002-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
-  ('eeeeeeee-f001-0002-0002-000000000001', 'aaaaaaaa-f2a0-0000-0000-000000000001', 'cria'),
-  ('eeeeeeee-f001-0002-0002-000000000001', 'aaaaaaaa-f2b0-0000-0000-000000000002', 'cria'),
-  ('eeeeeeee-f001-0002-0002-000000000001', 'aaaaaaaa-f2c0-0000-0000-000000000003', 'cria'),
+  ('eeeeeeee-f001-0003-0002-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
 
-  -- ── Fortuna C3 ────────────────────────────────────────────────────────────
+  -- ── Fortuna C3 ─────────────────────────────────────────────────────────────
   ('eeeeeeee-f001-0001-0003-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
   ('eeeeeeee-f001-0002-0003-000000000001', 'aaaaaaaa-1001-0000-0000-000000000001', 'madre'),
   ('eeeeeeee-f001-0002-0003-000000000001', 'aaaaaaaa-f3a0-0000-0000-000000000001', 'cria'),
   ('eeeeeeee-f001-0002-0003-000000000001', 'aaaaaaaa-f3b0-0000-0000-000000000002', 'cria'),
   ('eeeeeeee-f001-0002-0003-000000000001', 'aaaaaaaa-f3c0-0000-0000-000000000003', 'cria'),
 
-  -- ── Esperanza C1 ──────────────────────────────────────────────────────────
+  -- ── Esperanza C1 ───────────────────────────────────────────────────────────
   ('eeeeeeee-e002-0001-0001-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
   ('eeeeeeee-e002-0002-0001-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
   ('eeeeeeee-e002-0002-0001-000000000001', 'aaaaaaaa-e1a0-0000-0000-000000000001', 'cria'),
+  -- DESTETE EC1-A: cría + madre
+  ('eeeeeeee-e002-0006-0001-000000000001', 'aaaaaaaa-e1a0-0000-0000-000000000001', 'cria'),
+  ('eeeeeeee-e002-0006-0001-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
 
-  -- ── Esperanza C2 ──────────────────────────────────────────────────────────
+  -- ── Esperanza C2 ───────────────────────────────────────────────────────────
   ('eeeeeeee-e002-0001-0002-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
-  ('eeeeeeee-e002-0002-0002-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
-  ('eeeeeeee-e002-0002-0002-000000000001', 'aaaaaaaa-e2a0-0000-0000-000000000001', 'cria'),
-  ('eeeeeeee-e002-0002-0002-000000000001', 'aaaaaaaa-e2b0-0000-0000-000000000002', 'cria'),
+  ('eeeeeeee-e002-0005-0002-000000000001', 'aaaaaaaa-1002-0000-0000-000000000002', 'madre'),
 
-  -- ── Carmen C1 ─────────────────────────────────────────────────────────────
+  -- ── Carmen C1 ──────────────────────────────────────────────────────────────
   ('eeeeeeee-c003-0001-0001-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
-  ('eeeeeeee-c003-0002-0001-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
-  ('eeeeeeee-c003-0002-0001-000000000001', 'aaaaaaaa-c1a0-0000-0000-000000000001', 'cria'),
+  ('eeeeeeee-c003-0004-0001-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
 
-  -- ── Carmen C2 ─────────────────────────────────────────────────────────────
+  -- ── Carmen C2 ──────────────────────────────────────────────────────────────
   ('eeeeeeee-c003-0001-0002-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
+  ('eeeeeeee-c003-0002-0002-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
+  ('eeeeeeee-c003-0002-0002-000000000001', 'aaaaaaaa-c2a0-0000-0000-000000000001', 'cria'),
+  -- DESTETE CC2-A: cría + madre
+  ('eeeeeeee-c003-0006-0002-000000000001', 'aaaaaaaa-c2a0-0000-0000-000000000001', 'cria'),
+  ('eeeeeeee-c003-0006-0002-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
 
-  -- ── Maravilla C1 ──────────────────────────────────────────────────────────
+  -- ── Carmen C3 ──────────────────────────────────────────────────────────────
+  ('eeeeeeee-c003-0001-0003-000000000001', 'aaaaaaaa-1003-0000-0000-000000000003', 'madre'),
+
+  -- ── Maravilla C1 ───────────────────────────────────────────────────────────
   ('eeeeeeee-4004-0001-0001-000000000001', 'aaaaaaaa-1004-0000-0000-000000000004', 'madre'),
   ('eeeeeeee-4004-0002-0001-000000000001', 'aaaaaaaa-1004-0000-0000-000000000004', 'madre'),
-  ('eeeeeeee-4004-0002-0001-000000000001', 'aaaaaaaa-41a0-0000-0000-000000000001', 'cria')
+  ('eeeeeeee-4004-0002-0001-000000000001', 'aaaaaaaa-41a0-0000-0000-000000000001', 'cria'),
+  ('eeeeeeee-4004-0002-0001-000000000001', 'aaaaaaaa-41b0-0000-0000-000000000002', 'cria'),
+  ('eeeeeeee-4004-0002-0001-000000000001', 'aaaaaaaa-41c0-0000-0000-000000000003', 'cria'),
 
-ON CONFLICT DO NOTHING;
+  -- ── Rocío C1 ───────────────────────────────────────────────────────────────
+  ('eeeeeeee-d006-0001-0001-000000000001', 'aaaaaaaa-1006-0000-0000-000000000006', 'madre'),
 
--- =============================================================================
--- MISCELÁNEOS
--- =============================================================================
+  -- ── Pastora C1 ─────────────────────────────────────────────────────────────
+  ('eeeeeeee-3001-0008-0001-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 'madre')
 
-INSERT INTO animal (
-  id, especie, tipo_productivo_id, nombre, crotal, num_hierro,
-  raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
-  estado_vital, estado_sanitario
-) VALUES
-  -- Brutus: macho en engorde, compra
-  (
-    'aaaaaaaa-2001-0000-0000-000000000001',
-    'vacuno', 'cc000004-0000-0000-0000-000000000000',
-    'Brutus', 'ES001234562001', 'M-01',
-    NULL,
-    '2022-08-10', 'macho', false, 'compra',
-    'vivo', 'sano'
-  )
-ON CONFLICT (id) DO NOTHING;
-
--- La Rubia: hembra vendida (fecha_nacimiento_estimada para evitar constraint)
-INSERT INTO animal (
-  id, especie, tipo_productivo_id, nombre, crotal,
-  fecha_nacimiento_estimada, sexo, es_reproductora, origen,
-  estado_vital, estado_sanitario
-) VALUES
-  (
-    'aaaaaaaa-2002-0000-0000-000000000002',
-    'vacuno', 'cc000004-0000-0000-0000-000000000000',
-    'La Rubia', 'ES001234562002',
-    '2020-01-01', 'hembra', false, 'compra',
-    'vendido', 'sano'
-  )
-ON CONFLICT (id) DO NOTHING;
-
--- =============================================================================
--- FIXTURES PRD011 — Regla 1: es_reproductora=false no cierra un ciclo abierto
--- =============================================================================
---
--- Pastora: es_reproductora=false con ciclo ABIERTO en estado cubierta.
---   Objetivo: registrar un Aborto sobre ella y verificar que:
---     1) el ciclo se cierra con resultado='aborto'
---     2) NO se crea un nuevo ciclo (porque es_reproductora=false)
---     3) estado_reproductivo queda NULL
---     4) el carrusel muestra "sin ciclo reproductivo activo"
---   Simula el caso real: animal que dejó de ser reproductora durante un ciclo
---   abierto. El cambio de tipo_productivo no existe todavía en UX (PRD futuro),
---   por lo que se inserta directamente con el estado de llegada.
---
--- Candela: es_reproductora=false con ciclo CERRADO (resultado='aborto').
---   Objetivo: testear el carrusel "sin ciclo activo" sin necesidad de realizar
---   ninguna acción. Representa el estado final en el que quedaría Pastora
---   después de registrar el Aborto. Permite validar el carousel de historial
---   reproductivo desde el primer `db reset`.
--- =============================================================================
-
-INSERT INTO animal (
-  id, especie, tipo_productivo_id, nombre, crotal, num_hierro,
-  raza_id, fecha_nacimiento, sexo, es_reproductora, origen,
-  estado_vital, estado_reproductivo, estado_sanitario
-) VALUES
-  -- Pastora: fue reproductora, ahora es_reproductora=false, ciclo ABIERTO (cubierta).
-  -- Representa el caso "retirada de reproducción con ciclo en curso":
-  -- es_reproductora=false no cierra el ciclo — el ciclo continúa hasta su desenlace.
-  (
-    'aaaaaaaa-3001-0000-0000-000000000001',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Pastora', 'ES001234563001', 'H-06',
-    'bb000001-0000-0000-0000-000000000000',
-    '2020-06-10', 'hembra', false, 'compra',
-    'vivo', 'cubierta', 'sano'
-  ),
-  -- Candela: fue reproductora, ahora es_reproductora=false, sin ciclo activo
-  (
-    'aaaaaaaa-3002-0000-0000-000000000002',
-    'vacuno', 'cc000002-0000-0000-0000-000000000000',
-    'Candela', 'ES001234563002', 'H-07',
-    'bb000002-0000-0000-0000-000000000000',
-    '2019-09-22', 'hembra', false, 'compra',
-    'vivo', NULL, 'sano'
-  )
-ON CONFLICT (id) DO NOTHING;
-
--- Ciclos de Pastora y Candela
-INSERT INTO ciclo_reproductivo (id, animal_id, numero_ciclo, fecha_inicio, fecha_fin, resultado)
-VALUES
-  -- Pastora C1: abierto (cubierta, sin aborto aún — es el ciclo sobre el que se probará PRD011)
-  ('cccccccc-3001-0001-0000-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 1, '2026-01-15', NULL, NULL),
-  -- Candela C1: cerrado por aborto — estado final ya persistido para probar el carrusel
-  ('cccccccc-3002-0001-0000-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 1, '2025-06-01', '2025-10-15', 'aborto')
-ON CONFLICT (id) DO NOTHING;
-
--- Eventos de Pastora y Candela
-INSERT INTO eventos (id, tipo_evento_id, especie, fecha, ciclo_id, metadata_json)
-SELECT ev.id::uuid,
-       (SELECT id FROM tipo_evento WHERE codigo = ev.codigo),
-       ev.especie::especie_enum,
-       ev.fecha::date,
-       ev.ciclo_id::uuid,
-       ev.meta::jsonb
-FROM (VALUES
-  -- ── Pastora C1 ────────────────────────────────────────────────────────────
-  -- Cubrición 2026-01-15 con Lucero (ciclo abierto, sin aborto aún)
-  ('eeeeeeee-3001-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2026-01-15',
-   'cccccccc-3001-0001-0000-000000000001',
-   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0001-0000-0000-000000000001"}'),
-
-  -- ── Candela C1 ────────────────────────────────────────────────────────────
-  -- Cubrición 2025-06-01 con Titán
-  ('eeeeeeee-3002-0001-0001-000000000001', 'CUBRICION', 'vacuno', '2025-06-01',
-   'cccccccc-3002-0001-0000-000000000001',
-   '{"tipo_cubricion":"natural","macho_id":"aaaaaaaa-0002-0000-0000-000000000002"}'),
-  -- Aborto 2025-10-15 (ciclo ya cerrado — estado final para probar carrusel)
-  ('eeeeeeee-3002-0003-0001-000000000001', 'ABORTO', 'vacuno', '2025-10-15',
-   'cccccccc-3002-0001-0000-000000000001',
-   '{}')
-
-) AS ev(id, codigo, especie, fecha, ciclo_id, meta)
-ON CONFLICT (id) DO NOTHING;
-
--- Asociaciones evento ↔ animal para Pastora y Candela
-INSERT INTO evento_animales (evento_id, animal_id, rol)
-VALUES
-  -- Pastora C1
-  ('eeeeeeee-3001-0001-0001-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 'madre'),
-  -- Candela C1
-  ('eeeeeeee-3002-0001-0001-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 'madre'),
-  ('eeeeeeee-3002-0003-0001-000000000001', 'aaaaaaaa-3002-0000-0000-000000000002', 'madre')
 ON CONFLICT DO NOTHING;

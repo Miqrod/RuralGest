@@ -41,6 +41,10 @@ const TRANSICIONES: Record<Exclude<CodigoEventoReproductivo, 'DESTETE'>, { desde
   // tras el parto: el nuevo ciclo arranca en 'vacia'.
   PARTO:                  { desde: ['cubierta', 'gestante'], hasta: 'vacia'    },
   ABORTO:                 { desde: ['cubierta', 'gestante'], hasta: 'vacia'    },
+  // Machorra: la oportunidad reproductiva termina sin resultado. Solo válido desde
+  // VACÍA o CUBIERTA — si la gestación ya fue confirmada (GESTANTE) el veterinario
+  // debe registrar un ABORTO en su lugar.
+  MACHORRA:               { desde: ['vacia', 'cubierta'],    hasta: 'vacia'    },
 }
 
 export function validarTransicionReproductiva(

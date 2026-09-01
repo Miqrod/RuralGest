@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { submitRegistrarAborto } from '@/app/(main)/vacuno/animales/[id]/actions'
-import { formatFecha } from '@/lib/format'
+import { formatFecha, isoStringToDate } from '@/lib/format'
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -31,16 +31,17 @@ type FormValues = z.infer<typeof schema>
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  animalId:  string
-  crotal?:   string | null
-  nombre?:   string | null
-  onSuccess: () => void
-  onCancel:  () => void
+  animalId:          string
+  crotal?:           string | null
+  nombre?:           string | null
+  fechaUltimoEvento?: string | null
+  onSuccess:         () => void
+  onCancel:          () => void
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormAborto({ animalId, crotal, nombre, onSuccess, onCancel }: Props) {
+export function FormAborto({ animalId, crotal, nombre, fechaUltimoEvento, onSuccess, onCancel }: Props) {
   const [serverError,   setServerError]   = useState<string | null>(null)
   const [isSubmitting,  setIsSubmitting]  = useState(false)
   const [pendingValues, setPendingValues] = useState<FormValues | null>(null)
@@ -99,6 +100,7 @@ export function FormAborto({ animalId, crotal, nombre, onSuccess, onCancel }: Pr
                 value={field.value || undefined}
                 onChange={(v) => field.onChange(v ?? '')}
                 maxDate={new Date()}
+                minDate={fechaUltimoEvento ? isoStringToDate(fechaUltimoEvento) : undefined}
                 placeholder="dd/mm/aaaa"
                 aria-invalid={fieldState.invalid}
               />

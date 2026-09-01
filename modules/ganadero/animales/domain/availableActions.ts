@@ -3,7 +3,7 @@ import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/
 // Proyección contextual del dominio: traduce el estado observable de un animal
 // en el conjunto de acciones que la UI debe ofrecer al usuario.
 //
-// Esta función es la única fuente de verdad sobre qué botones aparecen en SeccionAcciones.
+// Esta función es la única fuente de verdad sobre qué acciones están disponibles.
 // Reglas de disponibilidad:
 //
 //   salida           → siempre disponible para animales vivos
@@ -12,8 +12,10 @@ import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/
 //   parto            → ciclo abierto + animal en cubierta o gestante
 //   destete          → tiene crías elegibles con vínculo activo (independiente de es_reproductora)
 //   aborto           → ciclo abierto + animal en cubierta o gestante (PRD011)
+//   machorra         → reproductora + ciclo abierto + animal en vacía o cubierta (PRD012)
+//                      Presentación: carrusel del ciclo activo, NO SeccionAcciones.
 
-export type AccionDisponible = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto'
+export type AccionDisponible = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto' | 'machorra'
 
 export interface AvailableActionsInput {
   estadoVital:         EstadoVital
@@ -42,6 +44,12 @@ export function getAvailableActions(input: AvailableActionsInput): Set<AccionDis
   }
   if (tieneCicloAbierto && (estadoReproductivo === 'cubierta' || estadoReproductivo === 'gestante')) {
     acciones.add('aborto')
+  }
+  // Machorra: solo reproductoras, solo desde vacía/cubierta. GESTANTE queda bloqueado
+  // (la gestación ya fue confirmada → el flujo correcto es registrar_aborto).
+  // La acción se presenta en el carrusel del ciclo activo, no en SeccionAcciones.
+  if (esReproductora && tieneCicloAbierto && (estadoReproductivo === 'vacia' || estadoReproductivo === 'cubierta')) {
+    acciones.add('machorra')
   }
   if (tieneCriasElegibles) {
     acciones.add('destete')
