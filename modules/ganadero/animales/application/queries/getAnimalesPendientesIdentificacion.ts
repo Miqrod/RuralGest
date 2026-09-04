@@ -45,7 +45,7 @@ export async function getAnimalesPendientesIdentificacion(
       sexo: a.sexo as 'macho' | 'hembra' | null,
       fecha_nacimiento: a.fecha_nacimiento,
       madre_id: a.madre_id ?? null,
-      madre_crotal: (a.madre as { crotal: string | null } | null)?.crotal ?? null,
+      madre_crotal: (a.madre as unknown as { crotal: string | null } | null)?.crotal ?? null,
       raza_nombre: (a.raza as { nombre: string } | null)?.nombre ?? null,
     })),
   }

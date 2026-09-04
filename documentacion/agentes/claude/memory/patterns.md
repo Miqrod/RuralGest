@@ -333,6 +333,38 @@ export function mapCompraInputToRpcArgs(input: RegistrarCompraAnimalInput) {
 export type CompraRpcArgs = { p_especie: string; p_crotal: string | null; ... }
 ```
 
+## RPC lote para operaciones multi-entidad atómicas
+
+Cuando una acción del usuario afecta a N entidades del mismo tipo (ej: destetar varias crías a la vez), la atomicidad debe garantizarse en Postgres, no en el caller.
+
+**Patrón:**
+```sql
+-- RPC lote: una transacción para todo el array
+CREATE OR REPLACE FUNCTION registrar_x_lote(p_ids UUID[], ...) RETURNS JSONB AS $$
+DECLARE v_id UUID;
+BEGIN
+  FOREACH v_id IN ARRAY p_ids LOOP
+    -- validar y procesar cada entidad
+  END LOOP;
+  -- efectos secundarios post-bucle (ej: cierre de ciclo)
+  RETURN jsonb_build_object('procesados', p_ids);
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+```ts
+// Application layer: pre-validación rápida sin DB (fail-fast), luego una sola llamada
+for (const id of input.ids) {
+  const blockers = getDomainBlockers(await getEntityById(id))
+  if (blockers.length) throw new Error(...)
+}
+const { data, error } = await supabase.rpc('registrar_x_lote', { p_ids: input.ids })
+```
+
+**Reglas:**
+- Los efectos secundarios que dependen del estado post-loop (ej: comprobar si quedan vínculos activos) se evalúan DESPUÉS del `FOREACH`, no dentro.
+- Los tipos de dominio para `Input` y `Result` del lote son independientes de los de la unidad individual (`RegistrarXInput` vs `RegistrarXLoteInput`).
+- Mantener la función individual para operaciones de una sola entidad; el lote es una adición, no un reemplazo.
+
 Los campos opcionales del RPC usan `undefined` (no `null`) según la convención del tipo generado.
 
 ## Accordion con Framer Motion (patrón actual)

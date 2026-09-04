@@ -69,6 +69,19 @@ export interface RegistrarDesteteResult {
   cicloCerrado:  boolean
 }
 
+// Destete atómico de múltiples crías en una única transacción Postgres.
+// Si cualquier cría no es elegible, toda la operación hace rollback.
+export interface RegistrarDesteteLoteInput {
+  cria_ids:       UUID[]   // mínimo 1 elemento
+  fecha:          ISODate
+  observaciones?: string
+}
+
+export interface RegistrarDesteteLoteResult {
+  destetes:     { criaId: UUID; eventoId: UUID }[]
+  cicloCerrado: boolean
+}
+
 export interface RegistrarAbortoInput {
   animal_id:      UUID     // la madre cuya gestación se ha perdido
   fecha_aborto:   ISODate

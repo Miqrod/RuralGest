@@ -463,7 +463,7 @@ El log de eventos mezcla `EventoReal` (persistidos en DB) y `EventoVirtual` (iny
 
 **Los `EventoVirtual` son ayudas visuales exclusivamente de presentación.** Se generan en `listarEventosDeAnimal` y nunca se persisten. No existe ningún `tipo_evento` 'INICIO_CICLO' ni 'NUEVO_CICLO' en la tabla `tipo_evento` de la DB.
 
-**Discriminated union:** `EventoEnHistorial = EventoReal | EventoVirtual`. El campo `virtual: boolean` permite al renderizador diferenciar sin castings. `EventoDeAnimal = EventoReal` es el alias de compatibilidad mientras todos los callers existentes migran al tipo union (T162).
+**Discriminated union:** `EventoEnHistorial = EventoReal | EventoVirtual`. El campo `virtual: boolean` permite al renderizador diferenciar sin castings. El tipo canónico es `EventoEnHistorial` — el alias `EventoDeAnimal` fue eliminado en PRD013.
 
 **Tipos actuales de EventoVirtual:**
 - `'NUEVO_CICLO'` — señala el inicio de un ciclo reproductivo tras un desenlace (Parto, Aborto, Machorra). Solo se inyecta para `numero_ciclo >= 2` (el primer ciclo no tiene un "nuevo ciclo" previo que señalizar).
@@ -473,3 +473,41 @@ El log de eventos mezcla `EventoReal` (persistidos en DB) y `EventoVirtual` (iny
 - Se resuelve en batch en `listarEventosDeAnimal` (una sola query `ciclo_reproductivo` para todos los `ciclo_id` del animal).
 - Los eventos no-reproductivos tienen `ciclo_numero = null`.
 - El label "C1", "C2"... es exclusivamente de presentación.
+
+## PRD013 — getCicloAbiertoParaFicha: consulta de ciclo en una sola ida
+
+Antes de PRD013, `page.tsx` hacía dos queries seriales y también importaba directamente desde `infrastructure/`:
+```ts
+// ❌ Antipatrón pre-PRD013
+import { getCicloAbierto } from '.../infrastructure/repository'  // UI importando infra
+const ciclo = await getCicloAbierto(animalId)
+const fecha = await getLastEventoFechaForCiclo(ciclo?.id)
+```
+
+**Decisión:** crear `getCicloAbiertoParaFicha` en `application/queries/` que combina ambas queries en una sola y la expone como consulta de aplicación:
+
+```ts
+// ✅ Una sola query, una sola capa
+const cicloConFecha = await getCicloAbiertoParaFicha(animalId)
+// devuelve: { ciclo, lastEventoFecha } | null
+```
+
+**Reglas derivadas:**
+- `page.tsx` nunca importa desde `infrastructure/` directamente — siempre a través de `application/`.
+- Cuando un Server Component necesita ≥2 datos relacionados del mismo ciclo, deben viajan juntos en una sola query de aplicación.
+
+## PRD013-fix — Destete múltiple: atomicidad vía RPC lote
+
+**Problema:** el destete de N crías se implementaba como un `for` loop en el cliente que llamaba N veces al RPC `registrar_destete`. Si la cría K fallaba, las crías 1…K-1 ya habían quedado destetadas sin rollback posible.
+
+**Decisión:** nuevo RPC `registrar_destete_lote(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` que procesa todas las crías en una única transacción Postgres. Si cualquier cría falla, ninguna queda aplicada.
+
+**Invariante crítico — ciclo_id histórico:**
+El evento DESTETE de cada cría se asocia al `ciclo_id` del ciclo en que nació (el de su parto), NO al ciclo reproductivo que pueda tener abierto la madre en ese momento.
+Resolución: `parto_evento_id → eventos.ciclo_id` (el ciclo histórico del parto).
+Esta regla preserve la trazabilidad animal → evento → ciclo sin corrupción temporal.
+
+**Timing de cierre de ciclo:**
+La comprobación de si el ciclo queda sin vínculos activos se hace DESPUÉS de procesar todas las crías del lote. El cierre a mitad del bucle produciría counts incorrectos.
+
+**Regla:** cualquier operación que afecte a N entidades de la misma familia en una sola acción del usuario debe ser un RPC lote, nunca N llamadas seriales desde la capa de aplicación.

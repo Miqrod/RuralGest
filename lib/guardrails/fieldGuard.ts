@@ -12,7 +12,7 @@ const FIELD_CONFIG = {
 }
 
 export function assertEditable(entity: keyof typeof FIELD_CONFIG, field: string) {
-  const type = FIELD_CONFIG[entity][field]
+  const type = (FIELD_CONFIG[entity] as Record<string, FieldType | undefined>)[field]
 
   if (type === 'DERIVED' || type === 'SYSTEM') {
     throw new Error(`Campo ${field} no es editable`)

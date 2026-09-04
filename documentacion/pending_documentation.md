@@ -19,6 +19,11 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 | PRD008 | ⏳ | Corrección del flujo de Confirmación de Gestación sin Cubrición previa |
 | PRD009 | ⏳ | Parto, creación de crías, identificación, genealogía derivada, historial reproductivo y consolidación del nacimiento |
 | PRD010 | ⏳ | Finalización del ciclo reproductivo, dependencia funcional madre-cría y flujo de Destete |
+| PRD011 | ⏳ | Flujo de Aborto, RPC registrar_aborto como patrón de referencia |
+| PRD012 | ⏳ | Machorra, invariante resultado='parto' AND fecha_fin IS NULL, validación temporal en DatePicker |
+| PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal |
+| PRD013 | ⏳ | Consolidación dominio reproductivo, inmutabilidad de resultado, arquitectura UI→Query→Repository |
+| PRD013-fix | ⏳ | Destete múltiple atómico, invariante ciclo_id histórico en DESTETE |
 
 ## PRD008 - Corrección del flujo "Confirmación de Gestación sin Cubrición previa"
 
@@ -444,17 +449,11 @@ Se inicia el Dashboard operacional mediante un primer widget:
 
 ### Decisiones arquitectónicas
 
-#### ReproductiveEngine — evaluación pendiente en PRD013
+#### ReproductiveEngine — CANCELADO POR AHORA (evaluado en PRD013)
 
-El patrón actual `Context → Rules → Projection` se mantiene por convención documentada mientras no existe una abstracción compartida.
+Tras la consolidación del dominio reproductivo en PRD013, no se ha identificado una responsabilidad compartida de suficiente complejidad que justifique una capa adicional. Los Use Cases actuales presentan una orquestación simple y auditable, mientras que las garantías críticas se resuelven en las operaciones transaccionales correspondientes.
 
-PRD013 evaluará si implementar `ReproductiveEngine` es conveniente o no. Las preguntas que debe responder esa evaluación:
-
-- ¿El modelo porcino comparte suficientes invariantes con el vacuno para beneficiarse del mismo engine, o tendrá reglas propias que lo harían incompatible?
-- ¿La duplicación actual entre use cases genera un problema de mantenimiento real, o sigue siendo manejable por convención?
-- ¿La indirección que introduce el engine compensa en legibilidad y seguridad, o oscurece comportamiento crítico de dominio?
-
-Hasta que PRD013 responda estas preguntas, no se introduce ni se descarta la abstracción.
+El Engine podrá reconsiderarse únicamente ante una necesidad concreta: múltiples consumidores del mismo pipeline reproductivo, lógica de proyección sustancialmente reutilizada, o nuevos módulos que requieran coordinar el dominio reproductivo de forma transversal. No existe actualmente un problema que el Engine resuelva.
 
 ---
 
@@ -758,19 +757,13 @@ documentacion/flujos/reproductivos/machorra.md  (existe, actualizar con detalle 
 
 > Pendiente de incorporar a documentación permanente de patrones.
 
-### `getLastEventoFechaForCiclo`
+### `getLastEventoFechaForCiclo` → sustituida por `getCicloAbiertoParaFicha` (PRD013)
 
-Nueva función en `repository.ts` que devuelve `MAX(fecha)` de `eventos` para un `ciclo_id`. Devuelve `null` si el ciclo no tiene eventos aún (ciclo recién abierto).
+`getLastEventoFechaForCiclo` existe en `reproductivo/infrastructure/repository.ts` pero ya no se usa en `page.tsx`. Fue reemplazada por `getCicloAbiertoParaFicha` (ver sección PRD013), que combina la lectura del ciclo y del último evento en una sola query (join en Supabase), eliminando la consulta serial y la violación de arquitectura de importar infrastructure desde page.tsx.
 
-Uso en `page.tsx`:
+La función sigue disponible en repository.ts para posibles futuros usos puntuales, pero no debe reintroducirse como patrón en page.tsx.
 
-```ts
-const fechaUltimoEvento = cicloAbierto
-  ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
-  : null
-```
-
-El fallback a `fecha_inicio` es necesario: ciclos recién abiertos no tienen eventos y sin fallback el DatePicker no tendría restricción mínima.
+El fallback a `fecha_inicio` cuando el ciclo no tiene eventos aún sigue siendo necesario y está incorporado dentro de `getCicloAbiertoParaFicha`.
 
 ### `isoStringToDate` — columnas TIMESTAMP vs DATE
 
@@ -1105,3 +1098,89 @@ Cuando el modelo reproductivo esté consolidado, trasladar principalmente a:
 - `documentacion/flujos/reproductivo/cambio_tipo_productivo.md` — flujo completo con matriz de estados
 - `documentacion/flujos/reproductivo/salida_animal.md` — consecuencias reproductivas de venta/muerte, destete implícito
 - `documentacion/arquitectura/` — patrón de compatibilidad hacia atrás en eventos del carrusel, `EntradaCiclo` union type
+
+---
+
+## PRD013 — Consolidación del dominio reproductivo
+
+> Implementado en septiembre 2026. Pendiente de incorporar a documentación permanente.
+
+### 1. Corrección de arquitectura: `page.tsx` no puede importar de `infrastructure/`
+
+`page.tsx` importaba directamente `getCicloAbierto` y `getLastEventoFechaForCiclo` desde `reproductivo/infrastructure/repository`. Esto viola el contrato UI → Query → Repository.
+
+**Solución:** nueva query de application layer `getCicloAbiertoParaFicha(animalId)` en `reproductivo/application/queries/getCicloAbiertoParaFicha.ts`.
+
+Esta query combina en una sola round-trip (join interno Supabase) la lectura del ciclo abierto y la fecha del último evento:
+
+```typescript
+export interface CicloAbiertoParaFicha {
+  id: UUID
+  numero_ciclo: number
+  fecha_inicio: ISODate
+  fechaUltimoEvento: ISODate  // fallback a fecha_inicio si el ciclo no tiene eventos aún
+}
+```
+
+**Beneficio adicional:** elimina la consulta serial que existía en `page.tsx` (primero getCicloAbierto, luego getLastEventoFechaForCiclo). Ambas se resuelven en paralelo con el resto del `Promise.all`.
+
+**Regla de arquitectura reforzada:** la capa `animales` (application) no debe importar de `reproductivo` (infrastructure). Si necesita datos reproductivos, debe usar una query propia en `reproductivo/application/queries/`.
+
+### 2. Inmutabilidad de `resultado` en RPCs reproductivos
+
+Los RPCs `registrar_parto`, `registrar_aborto` y `registrar_machorra` añaden un guard `AND resultado IS NULL` en la cláusula UPDATE del ciclo (y en el SELECT FOR UPDATE previo). Si el ciclo ya tiene un resultado fijado, el UPDATE devuelve 0 filas y se lanza `RAISE EXCEPTION 'El ciclo % ya tiene resultado fijado'`.
+
+**Razón:** el `resultado` de un ciclo es un hecho histórico inmutable. Una vez que un ciclo tiene parto, aborto o machorra, no puede sobrescribirse aunque el ciclo siga con `fecha_fin IS NULL`. Esto protege contra doble ejecución y condiciones de carrera.
+
+Complementariamente, `registrar_destete` usa `AND resultado IS NOT NULL` para el cierre de ciclo: solo cierra ciclos que ya tienen un resultado reproductivo fijado por `registrar_parto`. Evita cerrar accidentalmente ciclos en curso.
+
+### 3. Eliminación de alias de compatibilidad `EventoDeAnimal`
+
+El alias `export type EventoDeAnimal = EventoEnHistorial` fue eliminado de `listarEventosDeAnimal.ts`. El tipo canónico es `EventoEnHistorial`. Cualquier referencia futura a eventos del historial debe usar `EventoEnHistorial`.
+
+### 4. Decisión: ReproductiveEngine CANCELADO
+
+Ver sección "ReproductiveEngine — CANCELADO POR AHORA" en PRD009 (decisiones arquitectónicas).
+
+### Documentación permanente prevista
+
+- `documentacion/arquitectura/` — regla de no-importación cross-domain, patrón getCicloAbiertoParaFicha
+- `documentacion/modelo/modelo_reproductivo.md` — inmutabilidad de resultado en ciclos, guards AND resultado IS NULL / IS NOT NULL
+
+---
+
+## PRD013-fix — Destete múltiple atómico
+
+> Implementado en septiembre 2026. Pendiente de incorporar a documentación permanente.
+
+### Problema resuelto
+
+El flujo anterior llamaba a `registrar_destete` una vez por cría desde el cliente (for loop en `FormDestete.tsx`). Si fallaba la N-ésima cría, las anteriores ya estaban committed y el sistema quedaba en estado parcial inconsistente.
+
+### Solución: `registrar_destete_lote`
+
+Nuevo RPC `registrar_destete_lote(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` que procesa el destete de múltiples crías en una **única transacción Postgres**. Si cualquier cría no es elegible, `RAISE EXCEPTION` y Postgres hace rollback automático de toda la operación.
+
+### Invariante crítico de dominio: ciclo_id histórico
+
+El `ciclo_id` de cada evento DESTETE es el **histórico de la cría** — obtenido via `cria.parto_evento_id → eventos.ciclo_id` — y **nunca** el ciclo reproductivo abierto actual de la madre, aunque éste exista en paralelo.
+
+Esto significa que el destete NO pertenece al ciclo reproductivo activo de la madre. Pertenece al ciclo del parto que originó a cada cría. Ambos ciclos pueden coexistir con `fecha_fin IS NULL` simultáneamente: es correcto y esperado.
+
+### Cierre de ciclo al final del lote
+
+La evaluación de cierre de ciclo (¿quedan vínculos activos?) se hace **después de procesar todas las crías** del lote, no tras cada una individualmente. Esto garantiza que si se destetan 2 crías del mismo ciclo, la cuenta de activos sea correcta antes de decidir si cerrar.
+
+Solo cierra ciclos con `AND resultado IS NOT NULL AND fecha_fin IS NULL`: el ciclo de parto debe tener ya su resultado fijado por `registrar_parto` antes de que el destete pueda cerrarlo.
+
+### Arquitectura resultante
+
+| Capa | Antes | Después |
+|---|---|---|
+| `FormDestete.tsx` | `for` loop, N llamadas al Server Action | Una sola llamada con array de IDs |
+| `registrarDesteteLote` (action) | — | Pre-valida cada cría en TS, una sola llamada `supabase.rpc` |
+| `registrar_destete_lote` (RPC) | — | FOREACH interno, transacción única |
+
+### Documentación permanente prevista
+
+- `documentacion/flujos/reproductivos/destete.md` — añadir sección de destete en lote, invariante del ciclo_id histórico, cierre al final del lote

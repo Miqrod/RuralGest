@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { submitRegistrarDestete } from '@/app/(main)/vacuno/animales/[id]/actions'
+import { submitRegistrarDesteteLote } from '@/app/(main)/vacuno/animales/[id]/actions'
 import { formatFecha } from '@/lib/format'
 import type { CriaParaDesteteItem } from '../application/queries/getCriasParaDestete'
 
@@ -85,29 +85,25 @@ export function FormDestete({
     if (!pendingValues) return
     setIsSubmitting(true)
 
-    // Destete secuencial: cada cría es una transacción atómica independiente en el RPC.
-    // cicloCerrado viene del último resultado: si la última cría activa fue destetada,
-    // el RPC cerrará el ciclo y devolverá cicloCerrado=true.
-    let cicloCerrado = false
-    for (const criaId of pendingValues.criaIds) {
-      const res = await submitRegistrarDestete(
-        criaId,
-        madreId,
-        pendingValues.fecha,
-        pendingValues.observaciones || undefined,
-      )
-      if ('error' in res) {
-        setServerError(res.error)
-        setIsSubmitting(false)
-        setPendingValues(null)
-        return
-      }
-      cicloCerrado = res.result.cicloCerrado
+    // Una única llamada al Server Action: el RPC registrar_destete_lote garantiza
+    // atomicidad total. Si alguna cría no es elegible, ninguna queda aplicada.
+    const res = await submitRegistrarDesteteLote(
+      pendingValues.criaIds,
+      madreId,
+      pendingValues.fecha,
+      pendingValues.observaciones || undefined,
+    )
+
+    if ('error' in res) {
+      setServerError(res.error)
+      setIsSubmitting(false)
+      setPendingValues(null)
+      return
     }
 
     setIsSubmitting(false)
     setPendingValues(null)
-    onSuccess(pendingValues.criaIds.length, cicloCerrado)
+    onSuccess(pendingValues.criaIds.length, res.result.cicloCerrado)
   }
 
   const madreLabel = madreNombre && madreCrotal

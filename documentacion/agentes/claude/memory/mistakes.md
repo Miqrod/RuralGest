@@ -197,13 +197,31 @@ de fecha mínima.
 **Causa:** `getLastEventoFechaForCiclo` devuelve `null` cuando el ciclo no tiene eventos
 registrados aún (MAX sobre tabla vacía = NULL en Postgres).
 
-**Solución:** fallback a `cicloAbierto.fecha_inicio` cuando la query devuelve null:
-
-```ts
-const fechaUltimoEvento = cicloAbierto
-  ? (await getLastEventoFechaForCiclo(cicloAbierto.id)) ?? cicloAbierto.fecha_inicio
-  : null
-```
+**Solución aplicada en PRD013:** `getCicloAbiertoParaFicha` combina ciclo + last evento en una
+sola query SQL con `COALESCE(MAX(e.fecha), c.fecha_inicio)`, eliminando el problema de raíz.
+El fallback ya no es responsabilidad del caller sino de la query.
 
 **Regla:** cualquier query que calcule MAX/MIN sobre eventos de un ciclo puede devolver null
-para ciclos recién abiertos. Siempre proveer fallback a `fecha_inicio` del ciclo.
+para ciclos recién abiertos. Manejar con `COALESCE(MAX(...), fecha_inicio)` en SQL,
+o con fallback explícito en TypeScript si la query no se puede modificar.
+
+---
+
+## FOR LOOP EN CLIENTE PARA OPERACIONES MULTI-ENTIDAD
+
+**Síntoma:** una operación de usuario que afecta a N entidades se implementa como un `for` loop
+que llama N veces al RPC/action de la unidad individual. Si la iteración K falla, las K-1 previas
+ya han quedado persistidas sin rollback.
+
+**Causa:** operar a nivel de "unidad individual" cuando la acción del usuario es semánticamente
+atómica sobre un grupo.
+
+**Solución:** RPC lote en Postgres que envuelve todas las N operaciones en una única transacción.
+El caller pasa el array completo; si alguna falla, Postgres hace rollback de todo.
+
+**Ejemplo concreto (PRD013-fix):**
+- ❌ `for (const criaId of criaIds) await supabase.rpc('registrar_destete', { p_cria_id })`
+- ✅ `await supabase.rpc('registrar_destete_lote', { p_cria_ids: criaIds })`
+
+**Regla:** cuando el usuario realiza una acción sobre N elementos del mismo tipo en una misma
+pantalla, la atomicidad debe garantizarse en la capa de base de datos, no en la de aplicación.

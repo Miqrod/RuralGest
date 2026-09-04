@@ -75,7 +75,8 @@ La ruta `/vacuno/animales/entrada` va directamente al formulario de compra sin p
 Decisión consciente: con un solo motivo implementado (COMPRA), añadir un selector sería
 una pantalla vacía sin valor real para el usuario.
 
-Cuando exista un segundo motivo (nacimiento, adopción…), habrá que resolver el punto de
+Nota: nacimiento ya está resuelto por el flujo de PARTO (crea crías atómicamente).
+Cuando exista un segundo motivo real (adopción, compra de recría…), habrá que resolver el punto de
 elección. Las dos opciones posibles:
 
   A) Pantalla intermedia en `/vacuno/animales/entrada` que muestra los motivos disponibles
@@ -87,7 +88,7 @@ Cuándo: al implementar el segundo motivo de entrada.
 
 ## BASE TYPE PARA INPUTS DE ENTRADA DE ANIMAL
 
-Idea a recuperar cuando se implemente el segundo motivo de entrada (nacimiento u otro):
+Idea a recuperar cuando se implemente el segundo motivo de entrada (nacimiento descartado — ya cubierto por PARTO; pensar en adopción u otro):
 usar un `BaseEntradaAnimalInput` no exportado con los campos comunes, y extenderlo
 en un tipo específico por operación (`RegistrarCompraAnimalInput`, `RegistrarNacimientoAnimalInput`…).
 Así cada use case recibe exactamente su tipo sin ifs ni switches, y no se repiten campos.
@@ -169,29 +170,12 @@ del mismo pipeline reproductivo, lógica de proyección sustancialmente reutiliz
 que requieran coordinar el dominio reproductivo de forma transversal. No existe actualmente un
 problema que el Engine resuelva. Cuando exista, volveremos a evaluar la abstracción con evidencia.
 
-## INFERENCIA DE PADRE Y RAZA EN ALTA DE CRÍAS (PARTO)
+## ~~INFERENCIA DE PADRE Y RAZA EN ALTA DE CRÍAS (PARTO)~~ ✅ OBSOLETO
 
-Al registrar un parto, el Use Case puede inferir automáticamente datos de la cría
-recorriendo la cadena ya persistida en cubrición:
-
-  ciclo_reproductivo
-    → evento CUBRICION (último del ciclo, por fecha)
-    → metadata_json.macho_id → animal padre → raza_id
-
-Esto permite pre-rellenar en el formulario de parto/alta de crías:
-  - **Padre**: macho_id de la cubrición vigente del ciclo
-  - **Raza de la cría**:
-      - Si raza_madre == raza_padre → misma raza
-      - Si son distintas → null (usuario decide) o marcar como "cruzada" (a decidir)
-
-La inferencia es una sugerencia al usuario, no un valor impuesto.
-El usuario puede corregirla si la información fuera incorrecta.
-
-Requisito previo: que el macho_id se haya informado en la cubrición
-(cubriciones sin macho_id no permiten esta inferencia).
-
-Cuando: al implementar el flujo de PARTO y alta de crías (PRD009 o posterior).
-Datos ya disponibles: `eventos.metadata_json` contiene `macho_id` desde PRD007.
+El padre se selecciona explícitamente en cubrición o confirmación de gestación, y está disponible
+desde `getPadreIdFromCiclo()` en el momento del parto. La raza se determina a partir del padre
+en ese mismo instante. No hay nada que "inferir": el dato ya existe y el usuario lo introdujo
+conscientemente antes. No se necesita lógica adicional.
 
 ## TRAZABILIDAD GENÉTICA — DONANTE / REGISTRO GENÉTICO
 

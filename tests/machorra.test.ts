@@ -32,6 +32,7 @@ const cicloBase = {
   fecha_fin:    null,
   resultado:    null,
   created_at:   '2026-01-01T00:00:00Z',
+  created_by:   null,
 }
 
 function ctx(
@@ -42,13 +43,14 @@ function ctx(
   return {
     animal: {
       id:                  'animal-uuid-001',
-      estado_vital:        'vivo',
+      especie:             'vacuno' as const,
       estado_reproductivo: estadoReproductivo,
       es_reproductora:     estadoReproductivo !== null,
       ...overrides,
     },
-    cicloAbierto: estadoReproductivo !== null ? { ...cicloBase } : null,
+    cicloAbierto:    estadoReproductivo !== null ? { ...cicloBase } : null,
     eventoSolicitado,
+    fechaEvento:     '2026-09-01' as const,
   }
 }
 
@@ -207,12 +209,13 @@ describe('T184 — Concurrencia y doble ejecución', () => {
     const ctxSinCicloNiRepro: ReproductiveContext = {
       animal: {
         id:                  'animal-uuid-001',
-        estado_vital:        'vivo',
+        especie:             'vacuno' as const,
         estado_reproductivo: null,
         es_reproductora:     false,
       },
       cicloAbierto:     null,
       eventoSolicitado: 'MACHORRA',
+      fechaEvento:      '2026-09-01' as const,
     }
     const result = checkEligibility(ctxSinCicloNiRepro)
     expect(result.eligible).toBe(false)

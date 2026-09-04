@@ -1,42 +1,45 @@
 import { getAnimalById } from '../../../animales/infrastructure/repository'
-import { canWean, getWeaningBlockers } from '../../domain/rules/ReproductiveEligibilityRules'
+import { getWeaningBlockers } from '../../domain/rules/ReproductiveEligibilityRules'
 import { createServerClient } from '../../../../shared/db'
-import type { RegistrarDesteteInput, RegistrarDesteteResult } from '../../domain/types'
+import type { RegistrarDesteteLoteInput, RegistrarDesteteLoteResult } from '../../domain/types'
 
-// Registra el destete de una cría siguiendo el pipeline CRP:
+// Registra el destete de una o varias crías en una única transacción atómica.
 //
-//   Contexto  → carga la cría desde la DB
-//   Reglas    → canWean / getWeaningBlockers (validación TypeScript antes del RPC)
-//   RPC       → registrar_destete realiza la transacción atómica en Postgres
+// Pipeline:
+//   Contexto  → carga cada cría desde la DB
+//   Reglas    → getWeaningBlockers por cría (fail-fast antes de tocar la DB)
+//   RPC       → registrar_destete_lote ejecuta todo en una transacción Postgres
 //
-// La evaluación de cierre de ciclo ocurre dentro del RPC, no aquí.
-// El caller recibe cicloCerrado=true cuando el ciclo quedó cerrado (última cría).
-export async function registrarDestete(
-  input: RegistrarDesteteInput,
-): Promise<RegistrarDesteteResult> {
-  // 1. Cargar la cría para aplicar reglas de dominio antes de ir a la DB
-  const cria = await getAnimalById(input.cria_id)
-  if (!cria) throw new Error(`Cría no encontrada: ${input.cria_id}`)
+// Si cualquier cría no es elegible (pre-validación TS) o falla en el RPC,
+// ninguna queda aplicada. El cicloCerrado del resultado refleja si el ciclo
+// histórico de la(s) cría(s) quedó cerrado tras el destete.
+export async function registrarDesteteLote(
+  input: RegistrarDesteteLoteInput,
+): Promise<RegistrarDesteteLoteResult> {
+  // 1. Cargar todas las crías y aplicar reglas de elegibilidad antes de la DB
+  for (const criaId of input.cria_ids) {
+    const cria = await getAnimalById(criaId)
+    if (!cria) throw new Error(`Cría no encontrada: ${criaId}`)
 
-  // 2. Reglas de elegibilidad (pre-validación en TypeScript)
-  const blockers = getWeaningBlockers({
-    tipo_productivo_nombre: cria.tipo_productivo_nombre,
-    estado_vital:           cria.estado_vital,
-    estado_vinculo_materno: cria.estado_vinculo_materno,
-    madre_id:               cria.madre_id,
-  })
-  if (blockers.length > 0) {
-    throw new Error(`Destete no permitido: ${blockers.join('; ')}`)
+    const blockers = getWeaningBlockers({
+      tipo_productivo_nombre: cria.tipo_productivo_nombre,
+      estado_vital:           cria.estado_vital,
+      estado_vinculo_materno: cria.estado_vinculo_materno,
+      madre_id:               cria.madre_id,
+    })
+    if (blockers.length > 0) {
+      throw new Error(`Destete no permitido para ${criaId}: ${blockers.join('; ')}`)
+    }
   }
 
-  // 3. Persistir: el RPC gestiona todo en una transacción atómica
+  // 2. Persistir: el RPC gestiona todo en una única transacción atómica
   const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('registrar_destete', {
-    p_cria_id:       input.cria_id,
+  const { data, error } = await supabase.rpc('registrar_destete_lote', {
+    p_cria_ids:      input.cria_ids,
     p_fecha:         input.fecha,
     p_observaciones: input.observaciones ?? undefined,
   })
   if (error) throw error
 
-  return data as unknown as RegistrarDesteteResult
+  return data as unknown as RegistrarDesteteLoteResult
 }
