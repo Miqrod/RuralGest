@@ -17,6 +17,7 @@ const BADGE_LABEL: Record<string, string> = {
   ABORTO:                    'Reproductivo',
   MACHORRA:                  'Reproductivo',
   CAMBIO_TIPO_PRODUCTIVO:    'Gestión',
+  CAMBIO_UBICACION:          'Ubicación',
 }
 
 // Color del badge por categoría (todos los reproductivos comparten el azul).
@@ -31,6 +32,16 @@ const BADGE_CLASS: Record<string, string> = {
   ABORTO:                    'bg-blue-50 text-blue-600',
   MACHORRA:                  'bg-blue-50 text-blue-600',
   CAMBIO_TIPO_PRODUCTIVO:    'bg-surface-alt text-ink-muted',
+  CAMBIO_UBICACION:          'bg-surface-alt text-ink-muted',
+}
+
+// Coletilla para CAMBIO_UBICACION automáticos: indica qué evento del ciclo de vida
+// originó el movimiento. Se lee de metadata_json.contexto del evento.
+const CONTEXTO_UBICACION_LABEL: Record<string, string> = {
+  parto:  'nacimiento',  // desde la ficha de la cría, el contexto es su nacimiento, no el parto de la madre
+  compra: 'compra',
+  venta:  'venta',
+  muerte: 'muerte',
 }
 
 // Descripción específica del evento (complementa al badge de categoría).
@@ -93,7 +104,11 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
           ? 'Nacimiento'
           : evento.tipo_codigo === 'CAMBIO_TIPO_PRODUCTIVO'
             ? `Cambio productivo: ${String(evento.metadata_json?.tipo_nuevo ?? '—')}`
-            : EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
+            : evento.tipo_codigo === 'CAMBIO_UBICACION'
+              ? evento.ubicacion_origen_nombre && evento.ubicacion_destino_nombre
+                ? `${evento.ubicacion_origen_nombre} → ${evento.ubicacion_destino_nombre}`
+                : evento.ubicacion_destino_nombre ?? null
+              : EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
 
         // Etiqueta de ciclo solo para eventos con badge Reproductivo.
         // CAMBIO_TIPO_PRODUCTIVO tiene badge Gestión y puede tener ciclo_numero;
@@ -128,6 +143,12 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
             )}
             {descripcion && (
               <span className="text-ink-muted capitalize">{descripcion}</span>
+            )}
+            {/* Contexto del CAMBIO_UBICACION automático: parto, compra, venta o muerte */}
+            {evento.tipo_codigo === 'CAMBIO_UBICACION' && !!evento.metadata_json?.contexto && (
+              <span className="text-xs text-ink-muted">
+                ({CONTEXTO_UBICACION_LABEL[String(evento.metadata_json.contexto)] ?? String(evento.metadata_json.contexto)})
+              </span>
             )}
             {/* Causa del destete implícito desde la ficha de la cría: madre vendida/muerta */}
             {evento.tipo_codigo === 'DESTETE' && evento.rol !== 'madre' && !!evento.metadata_json?.cierre_por_salida && (

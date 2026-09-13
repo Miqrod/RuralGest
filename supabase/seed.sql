@@ -618,3 +618,84 @@ VALUES
   ('eeeeeeee-3001-0008-0001-000000000001', 'aaaaaaaa-3001-0000-0000-000000000001', 'madre')
 
 ON CONFLICT DO NOTHING;
+
+
+-- =============================================================================
+-- UBICACIONES INICIALES — PRD014 tarea 263
+--
+-- Las instalaciones ya existen (insertadas en la migración 20260909131223).
+-- Se usa registrar_reubicacion_animales para generar los eventos CAMBIO_UBICACION
+-- y actualizar la proyección ubicacion_actual_id.
+--
+-- Distribución por criterio ganadero (machos separados de hembras):
+--   Valdelera   → sementales: Lucero, Titán, Centauro
+--   El rincón   → reproductoras: Fortuna, Esperanza, Carmen, Maravilla, Nube, Rocío
+--   Vallejito   → mixto: Brutus (engorde), Pastora (ex-reproductora)
+-- =============================================================================
+
+SELECT registrar_reubicacion_animales(
+  ARRAY[
+    'aaaaaaaa-0001-0000-0000-000000000001'::UUID,  -- Lucero
+    'aaaaaaaa-0002-0000-0000-000000000002'::UUID,  -- Titán
+    'aaaaaaaa-0003-0000-0000-000000000003'::UUID   -- Centauro
+  ],
+  'cccccccc-0001-0000-0000-000000000001'::UUID,    -- Valdelera
+  '2026-09-01'::DATE
+);
+
+SELECT registrar_reubicacion_animales(
+  ARRAY[
+    'aaaaaaaa-1001-0000-0000-000000000001'::UUID,  -- Fortuna
+    'aaaaaaaa-1002-0000-0000-000000000002'::UUID,  -- Esperanza
+    'aaaaaaaa-1003-0000-0000-000000000003'::UUID,  -- Carmen
+    'aaaaaaaa-1004-0000-0000-000000000004'::UUID,  -- Maravilla
+    'aaaaaaaa-1005-0000-0000-000000000005'::UUID,  -- Nube
+    'aaaaaaaa-1006-0000-0000-000000000006'::UUID   -- Rocío
+  ],
+  'cccccccc-0002-0000-0000-000000000002'::UUID,    -- El rincón
+  '2026-09-01'::DATE
+);
+
+SELECT registrar_reubicacion_animales(
+  ARRAY[
+    'aaaaaaaa-2001-0000-0000-000000000001'::UUID,  -- Brutus
+    'aaaaaaaa-3001-0000-0000-000000000001'::UUID   -- Pastora
+  ],
+  'cccccccc-0003-0000-0000-000000000003'::UUID,    -- Vallejito
+  '2026-09-01'::DATE
+);
+
+-- Crías históricas (destetadas) — ubicadas según sexo, criterio ganadero
+-- FC1-A (hembra, Fortuna C1) → El rincón, con reproductoras
+SELECT registrar_reubicacion_animales(
+  ARRAY['aaaaaaaa-f1a0-0000-0000-000000000001'::UUID],
+  'cccccccc-0002-0000-0000-000000000002'::UUID,
+  '2026-09-01'::DATE
+);
+-- FC1-B (macho, Fortuna C1) → Valdelera, con sementales/machos
+SELECT registrar_reubicacion_animales(
+  ARRAY['aaaaaaaa-f1b0-0000-0000-000000000002'::UUID],
+  'cccccccc-0001-0000-0000-000000000001'::UUID,
+  '2026-09-01'::DATE
+);
+-- EC1-A (macho, Esperanza C1) → Vallejito, engorde/misceláneos
+SELECT registrar_reubicacion_animales(
+  ARRAY['aaaaaaaa-e1a0-0000-0000-000000000001'::UUID],
+  'cccccccc-0003-0000-0000-000000000003'::UUID,
+  '2026-09-01'::DATE
+);
+
+-- Crías actuales (vínculo activo) → El rincón, junto a sus madres Fortuna y Maravilla
+SELECT registrar_reubicacion_animales(
+  ARRAY[
+    'aaaaaaaa-f3a0-0000-0000-000000000001'::UUID,  -- FC3-A (hembra, Fortuna C3)
+    'aaaaaaaa-41a0-0000-0000-000000000001'::UUID,  -- MC1-A (macho, Maravilla C1)
+    'aaaaaaaa-41b0-0000-0000-000000000002'::UUID   -- MC1-B (hembra, Maravilla C1)
+  ],
+  'cccccccc-0002-0000-0000-000000000002'::UUID,    -- El rincón
+  '2026-09-01'::DATE
+);
+
+-- Sin ubicación asignada (escenario QA "pendientes de ubicar"):
+--   CC2-A (aaaaaaaa-c2a0-0000-0000-000000000001) — hembra destetada, Carmen C2
+--   FC3-B (aaaaaaaa-f3b0-0000-0000-000000000002) — macho sin crotal, Fortuna C3

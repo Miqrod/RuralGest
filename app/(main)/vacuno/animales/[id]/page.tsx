@@ -16,6 +16,9 @@ import { getCicloAbiertoParaFicha } from '@/modules/ganadero/reproductivo/applic
 import { getCriasParaDestete } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
 import { tieneCiclosReproductivos } from '@/modules/ganadero/reproductivo/application/queries/tieneCiclosReproductivos'
 import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
+import { listarDestinosReubicacion } from '@/modules/ganadero/instalaciones/application/queries/listarDestinosReubicacion'
+import { getHistorialUbicacionesAnimal } from '@/modules/ganadero/instalaciones/application/queries/getHistorialUbicacionesAnimal'
+import { AnimatedPageContent } from './AnimatedPageContent'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -27,7 +30,7 @@ export default async function AnimalDetailPage({ params }: Props) {
 
   if (!animal) notFound()
 
-  const [machos, cicloAbierto, criasElegibles, tiposDisponibles, tieneHistorial] = await Promise.all([
+  const [machos, cicloAbierto, criasElegibles, tiposDisponibles, tieneHistorial, destinos] = await Promise.all([
     animal.es_reproductora ? getMachosDisponibles(animal.especie) : Promise.resolve([]),
     // Fetch del ciclo siempre que el animal tenga módulo reproductivo activo (estado != null).
     // Un animal con es_reproductora=false puede tener ciclo abierto si fue retirada de
@@ -48,6 +51,8 @@ export default async function AnimalDetailPage({ params }: Props) {
     // Necesario para mostrar el carrusel incluso cuando estado_reproductivo=null
     // (animal que dejó de ser reproductora pero tiene historial de ciclos).
     tieneCiclosReproductivos(animal.id),
+    // Destinos disponibles para reubicación desde la ficha individual.
+    animal.estado_vital === 'vivo' ? listarDestinosReubicacion() : Promise.resolve([]),
   ])
 
   const fechaUltimoEvento = cicloAbierto?.fechaUltimoEvento ?? null
@@ -60,6 +65,13 @@ export default async function AnimalDetailPage({ params }: Props) {
     tieneCriasElegibles: criasElegibles.length > 0,
   })
 
+  // Server action inline — fetch lazy del historial de ubicaciones del animal.
+  // Se pasa al cliente como prop y solo se ejecuta cuando el usuario abre el drawer.
+  async function fetchHistorialUbicacion() {
+    'use server'
+    return getHistorialUbicacionesAnimal(id)
+  }
+
   return (
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
@@ -71,8 +83,8 @@ export default async function AnimalDetailPage({ params }: Props) {
           ← Volver a animales
         </Link>
       </div>
-      <div className="flex flex-col gap-4">
-        <AnimalHeader animal={animal} />
+      <AnimatedPageContent>
+        <AnimalHeader animal={animal} fetchHistorial={fetchHistorialUbicacion} />
         <SeccionAcciones
           animalId={animal.id}
           crotal={animal.crotal}
@@ -84,6 +96,10 @@ export default async function AnimalDetailPage({ params }: Props) {
           machos={machos}
           criasElegibles={criasElegibles}
           fechaUltimoEvento={fechaUltimoEvento}
+          ubicacionActualId={animal.ubicacion_actual_id}
+          ubicacionActualNombre={animal.ubicacion_actual_nombre}
+          fechaUltimoMovimiento={animal.fecha_ultimo_cambio_ubicacion}
+          destinos={destinos}
         />
         {(animal.estado_reproductivo !== null || tieneHistorial) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
@@ -118,7 +134,7 @@ export default async function AnimalDetailPage({ params }: Props) {
           </div>
         )}
         <SeccionEventos animalId={animal.id} />
-      </div>
+      </AnimatedPageContent>
     </PageContainer>
   )
 }

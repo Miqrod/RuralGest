@@ -206,6 +206,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "animal_ubicacion_actual_id_fkey"
+            columns: ["ubicacion_actual_id"]
+            isOneToOne: false
+            referencedRelation: "instalacion"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_animal_evento_creacion"
             columns: ["evento_creacion_id"]
             isOneToOne: false
@@ -454,6 +461,8 @@ export type Database = {
           motivo_id: string | null
           movimiento_id: string | null
           tipo_evento_id: string
+          ubicacion_destino_id: string | null
+          ubicacion_origen_id: string | null
         }
         Insert: {
           ciclo_id?: string | null
@@ -467,6 +476,8 @@ export type Database = {
           motivo_id?: string | null
           movimiento_id?: string | null
           tipo_evento_id: string
+          ubicacion_destino_id?: string | null
+          ubicacion_origen_id?: string | null
         }
         Update: {
           ciclo_id?: string | null
@@ -480,6 +491,8 @@ export type Database = {
           motivo_id?: string | null
           movimiento_id?: string | null
           tipo_evento_id?: string
+          ubicacion_destino_id?: string | null
+          ubicacion_origen_id?: string | null
         }
         Relationships: [
           {
@@ -515,6 +528,20 @@ export type Database = {
             columns: ["tipo_evento_id"]
             isOneToOne: false
             referencedRelation: "tipo_evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_ubicacion_destino_id_fkey"
+            columns: ["ubicacion_destino_id"]
+            isOneToOne: false
+            referencedRelation: "instalacion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_ubicacion_origen_id_fkey"
+            columns: ["ubicacion_origen_id"]
+            isOneToOne: false
+            referencedRelation: "instalacion"
             referencedColumns: ["id"]
           },
         ]
@@ -628,6 +655,45 @@ export type Database = {
           },
         ]
       }
+      instalacion: {
+        Row: {
+          activo: boolean
+          admite_animales: boolean
+          admite_stock: boolean
+          coordenadas: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string
+          observaciones: string | null
+          tipo: Database["public"]["Enums"]["tipo_instalacion_enum"]
+        }
+        Insert: {
+          activo?: boolean
+          admite_animales?: boolean
+          admite_stock?: boolean
+          coordenadas?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre: string
+          observaciones?: string | null
+          tipo: Database["public"]["Enums"]["tipo_instalacion_enum"]
+        }
+        Update: {
+          activo?: boolean
+          admite_animales?: boolean
+          admite_stock?: boolean
+          coordenadas?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          observaciones?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_instalacion_enum"]
+        }
+        Relationships: []
+      }
       lote: {
         Row: {
           alimentacion: string | null
@@ -689,6 +755,13 @@ export type Database = {
             columns: ["lote_origen_id"]
             isOneToOne: false
             referencedRelation: "lote"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_ubicacion_actual_id_fkey"
+            columns: ["ubicacion_actual_id"]
+            isOneToOne: false
+            referencedRelation: "instalacion"
             referencedColumns: ["id"]
           },
         ]
@@ -1082,6 +1155,7 @@ export type Database = {
           p_raza_id?: string
           p_sexo: Database["public"]["Enums"]["sexo_enum"]
           p_tipo_productivo_id: string
+          p_ubicacion_id?: string
         }
         Returns: string
       }
@@ -1137,6 +1211,14 @@ export type Database = {
         }
         Returns: Json
       }
+      registrar_reubicacion_animales: {
+        Args: {
+          p_animal_ids: string[]
+          p_fecha: string
+          p_ubicacion_destino_id: string
+        }
+        Returns: Json
+      }
       registrar_salida_animal: {
         Args: { p_animal_id: string; p_fecha: string; p_motivo: string }
         Returns: string
@@ -1156,9 +1238,16 @@ export type Database = {
       movimiento_estado_enum: "activo" | "cancelado"
       origen_animal_enum: "interno" | "compra"
       resultado_ciclo_enum: "parto" | "aborto" | "machorra" | "cierre_manual"
-      rol_evento_animal_enum: "madre" | "cria"
+      rol_evento_animal_enum: "madre" | "cria" | "self"
       sexo_enum: "macho" | "hembra"
       tipo_base_movimiento_enum: "ENTRADA" | "SALIDA" | "MIXTO"
+      tipo_instalacion_enum:
+        | "corral"
+        | "nave"
+        | "prado"
+        | "cercado"
+        | "almacen"
+        | "otro"
       tipo_lote_enum: "camada" | "post_destete" | "engorde"
       tipo_parto_enum: "natural" | "asistido"
       tipo_tecnico_evento_enum: "STOCK" | "BIOLOGICO" | "OPERATIVO" | "SISTEMA"
@@ -1307,9 +1396,17 @@ export const Constants = {
       movimiento_estado_enum: ["activo", "cancelado"],
       origen_animal_enum: ["interno", "compra"],
       resultado_ciclo_enum: ["parto", "aborto", "machorra", "cierre_manual"],
-      rol_evento_animal_enum: ["madre", "cria"],
+      rol_evento_animal_enum: ["madre", "cria", "self"],
       sexo_enum: ["macho", "hembra"],
       tipo_base_movimiento_enum: ["ENTRADA", "SALIDA", "MIXTO"],
+      tipo_instalacion_enum: [
+        "corral",
+        "nave",
+        "prado",
+        "cercado",
+        "almacen",
+        "otro",
+      ],
       tipo_lote_enum: ["camada", "post_destete", "engorde"],
       tipo_parto_enum: ["natural", "asistido"],
       tipo_tecnico_evento_enum: ["STOCK", "BIOLOGICO", "OPERATIVO", "SISTEMA"],

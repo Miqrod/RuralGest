@@ -1,7 +1,15 @@
 'use client'
 
-import { flexRender, type ColumnDef } from '@tanstack/react-table'
+import { flexRender, type ColumnDef, type RowData } from '@tanstack/react-table'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown } from 'lucide-react'
+
+// Extensión del tipo meta de columna para soporte de alineación
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    align?: 'left' | 'center' | 'right'
+  }
+}
 
 import { useDataTable } from '@/hooks/useDataTable'
 import { cn } from '@/lib/utils'
@@ -39,6 +47,7 @@ interface DataTableProps<TData> {
   searchColumn?: string
   searchPlaceholder?: string
   pageSize?: number
+  getRowClassName?: (row: TData) => string | undefined
 }
 
 export function DataTable<TData>({
@@ -47,6 +56,7 @@ export function DataTable<TData>({
   searchColumn,
   searchPlaceholder = 'Buscar...',
   pageSize = 10,
+  getRowClassName,
 }: DataTableProps<TData>) {
   const table = useDataTable({ data, columns, pageSize })
 
@@ -77,7 +87,11 @@ export function DataTable<TData>({
                   return (
                     <TableHead
                       key={header.id}
-                      className="px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider"
+                      className={cn(
+                        'px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider',
+                        header.column.columnDef.meta?.align === 'center' && 'text-center',
+                        header.column.columnDef.meta?.align === 'right' && 'text-right',
+                      )}
                     >
                       {header.isPlaceholder ? null : (
                         <button
@@ -85,6 +99,8 @@ export function DataTable<TData>({
                           className={cn(
                             'flex items-center gap-1 dark:text-ink dark:hover:text-ink-muted',
                             canSort && 'cursor-pointer select-none hover:text-ink transition-colors',
+                            header.column.columnDef.meta?.align === 'center' && 'w-full justify-center',
+                            header.column.columnDef.meta?.align === 'right' && 'w-full justify-end',
                           )}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -111,7 +127,7 @@ export function DataTable<TData>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="border-divider/30 hover:bg-surface-alt/50 transition-colors"
+                  className={cn('border-divider/30 hover:bg-surface-alt/50 transition-colors', getRowClassName?.(row.original))}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (

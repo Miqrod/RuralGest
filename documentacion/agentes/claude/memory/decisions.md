@@ -1,5 +1,30 @@
 # Decisions
 
+## Un único archivo de tipos generados por Supabase (PRD014)
+
+**Contexto:** el proyecto tenía dos archivos con tipos generados por `supabase gen types`:
+- `types/supabase.ts` — salida natural del CLI, usado por `lib/supabase/`
+- `modules/shared/db/database.types.ts` — copia completa, usado por `modules/shared/db/helpers.ts`
+
+Mantener dos copias es un antipatrón: basta con no sincronizarlas una vez para que `DbRow<T>`
+deje de conocer tablas nuevas, con errores TypeScript difíciles de diagnosticar.
+
+**Decisión:** `database.types.ts` es un re-export de una línea:
+```ts
+export type { Json, Database } from '@/types/supabase'
+```
+
+**Por qué funciona:** el alias `@/` está configurado en `tsconfig.json` como `"./*"` (raíz del
+proyecto) y es válido en cualquier archivo, incluyendo `modules/shared/db/helpers.ts`.
+
+**Consecuencias:**
+- `supabase gen types typescript --local 2>/dev/null > types/supabase.ts` es el único comando necesario tras cada reset
+- `database.types.ts` nunca necesita tocarse manualmente
+- `helpers.ts`, `lib/supabase/client.ts` y `server.ts` no cambian sus rutas de import
+- Fuente de verdad única: `types/supabase.ts`
+
+---
+
 ## es_reproductora y ciclo abierto son dimensiones independientes (PRD011)
 
 `es_reproductora` responde a: ¿puede participar en NUEVOS ciclos reproductivos?
@@ -495,6 +520,32 @@ const cicloConFecha = await getCicloAbiertoParaFicha(animalId)
 **Reglas derivadas:**
 - `page.tsx` nunca importa desde `infrastructure/` directamente — siempre a través de `application/`.
 - Cuando un Server Component necesita ≥2 datos relacionados del mismo ciclo, deben viajan juntos en una sola query de aplicación.
+
+## PRD014 — `admite_animales` y `admite_stock` como flags independientes
+
+Una instalación tiene dos dimensiones de uso ortogonales:
+- `admite_animales` — válida como destino de `CAMBIO_UBICACION`. Solo las instalaciones con `activo=true AND admite_animales=true` aparecen en el selector de reubicación.
+- `admite_stock` — puede almacenar stock físico (paja, pienso, medicamentos).
+
+Son independientes porque cualquier combinación es real: un cercado puede admitir animales sin stock (`Valdelera`), un pajar puede admitir stock sin animales (`Pajar "La nave"`), y un corral puede admitir ambos temporalmente.
+
+Un enum de "tipo de uso" o una sola bandera habría colapsado combinaciones válidas y forzado lógica condicional ad hoc. Dos booleanos expresan el modelo directamente.
+
+## PRD014 — `ubicacion_actual_id` como snapshot denormalizado en `animal`
+
+La ubicación actual podría derivarse en tiempo de consulta (`SELECT ... FROM eventos WHERE tipo='CAMBIO_UBICACION' AND animal_id=X ORDER BY fecha DESC LIMIT 1`), pero el proyecto sigue el patrón snapshot para proyecciones leídas en listados y fichas. El RPC `registrar_reubicacion_animales` mantiene `ubicacion_actual_id` sincronizado como último paso de la transacción, igual que `estado_vital` o `estado_reproductivo`.
+
+Consecuencia: cualquier RPC que mueva un animal (reubicación manual, parto, compra, salida) debe actualizar `ubicacion_actual_id` como parte de su transacción. Olvidarlo produce un snapshot desincronizado sin error visible.
+
+## PRD014 — RPCs de ciclo de vida generan `CAMBIO_UBICACION` automáticamente
+
+Los RPCs `registrar_parto`, `registrar_compra_animal` y `registrar_salida_animal` producen un evento `CAMBIO_UBICACION` como efecto derivado cuando corresponde:
+
+- `registrar_compra_animal`: si se pasa `p_ubicacion_id`, ubica al animal en esa instalación en el momento de la compra.
+- `registrar_parto`: ubica a las crías vivas en la misma instalación que la madre.
+- `registrar_salida_animal`: genera `CAMBIO_UBICACION` con `destino=NULL` para registrar que el animal abandonó su ubicación.
+
+Esta cadena no es visible en la UI — el usuario no registra una reubicación explícita. Un desarrollador que añada un nuevo RPC de ciclo de vida debe incluir el `CAMBIO_UBICACION` correspondiente si el evento implica un movimiento físico.
 
 ## PRD013-fix — Destete múltiple: atomicidad vía RPC lote
 

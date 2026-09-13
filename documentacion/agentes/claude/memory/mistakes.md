@@ -103,8 +103,11 @@ CREATE OR REPLACE FUNCTION nombre_funcion(
 ```
 
 **Regla:** cuando una migración modifique la firma de un RPC existente (añadir, eliminar o
-reordenar parámetros), siempre incluir el DROP de la firma antigua en la misma migración.
+reordenar parámetros), siempre incluir el DROP de la firma antigua **en la misma migración**,
+antes del CREATE OR REPLACE. No en una migración separada posterior.
 Visto en PRD008: `registrar_confirmacion_gestacion` v1 → v2.
+Repetido en PRD014: `registrar_compra_animal` al añadir `p_ubicacion_id` — el DROP se hizo
+en migración separada `20260907200957`, lo que requirió un reset adicional.
 
 ---
 
@@ -204,6 +207,42 @@ El fallback ya no es responsabilidad del caller sino de la query.
 **Regla:** cualquier query que calcule MAX/MIN sobre eventos de un ciclo puede devolver null
 para ciclos recién abiertos. Manejar con `COALESCE(MAX(...), fecha_inicio)` en SQL,
 o con fallback explícito en TypeScript si la query no se puede modificar.
+
+---
+
+## DOS COPIAS DE LOS TIPOS GENERADOS POR SUPABASE
+
+**Síntoma:** `DbRow<'nueva_tabla'>` falla en TypeScript aunque la tabla existe en la DB, porque
+`modules/shared/db/database.types.ts` está desactualizado respecto a `types/supabase.ts`.
+
+**Causa:** el proyecto tiene dos archivos con tipos generados:
+- `types/supabase.ts` — generado por `supabase gen types typescript --local`, usado por `lib/supabase/`
+- `modules/shared/db/database.types.ts` — copia mantenida a mano, usada por `modules/shared/db/helpers.ts`
+
+Cuando se añaden nuevas migraciones y se regeneran tipos en `types/supabase.ts`, `database.types.ts`
+queda desactualizado. El resultado: los helpers (`DbRow<T>`, `DbEnum<T>`) no conocen las nuevas tablas.
+
+**Error concreto cometido:** en lugar de sincronizar `database.types.ts`, se intentó definir el tipo
+de fila manualmente en el mapper para evitar el problema. Eso introduce type drift silencioso.
+
+**Solución correcta:** `modules/shared/db/database.types.ts` es un re-export de una línea:
+```ts
+export type { Json, Database } from '@/types/supabase'
+```
+Con esto, `supabase gen types` solo actualiza `types/supabase.ts` y `database.types.ts` nunca
+necesita tocarse. El alias `@/` funciona en cualquier archivo del proyecto (confirmado en tsconfig).
+
+**Solución incorrecta (a evitar):** mantener `database.types.ts` como copia completa de `types/supabase.ts`.
+Abre la puerta a que ambos archivos diverjan cada vez que se regeneran tipos.
+
+**Solución incorrecta (a evitar):** definir tipos de fila manualmente en `infrastructure/mapper.ts`
+en lugar de usar `DbRow<T>`. Introduce type drift silencioso — los cambios de esquema no dan error TS.
+
+**Regla:** tras `supabase db reset --local`, solo un comando para tipos:
+```bash
+supabase gen types typescript --local 2>/dev/null > types/supabase.ts
+```
+`database.types.ts` re-exporta y nunca cambia. Verificar con `npx tsc --noEmit`.
 
 ---
 

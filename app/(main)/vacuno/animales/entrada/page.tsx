@@ -2,15 +2,20 @@ import Link from 'next/link'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { listarRazas } from '@/modules/ganadero/animales/application/queries/listarRazas'
 import { listarTiposProductivos } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
+import { listarInstalaciones } from '@/modules/ganadero/instalaciones/application/queries/listarInstalaciones'
 import { FormEntradaCompra } from '@/modules/ganadero/animales/ui/entrada/FormEntradaCompra'
 
 // Los catálogos se resuelven aquí (Server Component) y se pasan al formulario cliente.
 // El formulario no hace fetch propio: recibe los datos ya listos.
 export default async function EntradaAnimalPage() {
-  const [razas, tiposProductivos] = await Promise.all([
+  const [razas, tiposProductivos, todasInstalaciones] = await Promise.all([
     listarRazas('vacuno'),
     listarTiposProductivos('vacuno'),
+    listarInstalaciones(),
   ])
+
+  // Solo instalaciones activas que admiten animales — el selector no debe ofrecer destinos inválidos
+  const instalaciones = todasInstalaciones.filter((i) => i.activo && i.admite_animales)
 
   return (
     <PageContainer>
@@ -24,7 +29,7 @@ export default async function EntradaAnimalPage() {
         </Link>
       </div>
 
-      <FormEntradaCompra razas={razas} tiposProductivos={tiposProductivos} />
+      <FormEntradaCompra razas={razas} tiposProductivos={tiposProductivos} instalaciones={instalaciones} />
     </PageContainer>
   )
 }

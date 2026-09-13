@@ -30,6 +30,7 @@ export function mapCompraInputToRpcArgs(input: RegistrarCompraAnimalInput) {
     p_fecha_nacimiento:          input.fecha_nacimiento          ?? undefined,
     p_fecha_nacimiento_estimada: input.fecha_nacimiento_estimada ?? undefined,
     p_lote_id:                   input.lote_id                   ?? undefined,
+    p_ubicacion_id:              input.ubicacion_id              ?? undefined,
   }
 }
 

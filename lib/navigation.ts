@@ -1,29 +1,34 @@
 import {
+  ArrowRightLeft,
   Banknote,
   BarChart3,
   Beef,
   BookOpen,
+  Building2,
   Calendar,
   ClipboardList,
   FileBarChart2,
   FileText,
   Home,
   Layers,
+  List,
   PiggyBank,
   PlusCircle,
   Receipt,
   Settings,
   TrendingUp,
+  Users,
   Warehouse,
 } from 'lucide-react'
 
 import type { NavItem, WorldConfig, WorldId } from '@/types/navigation'
 
 export const WORLDS: Record<WorldId, WorldConfig> = {
-  default: { id: 'default', color: '#166534' },
-  vacuno: { id: 'vacuno', color: '#800000' },
-  porcino: { id: 'porcino', color: '#ff7700' },
-  financiero: { id: 'financiero', color: '#3377aa' },
+  default:       { id: 'default',       color: '#166534' },
+  vacuno:        { id: 'vacuno',        color: '#800000' },
+  porcino:       { id: 'porcino',       color: '#ff7700' },
+  financiero:    { id: 'financiero',    color: '#3377aa' },
+  configuracion: { id: 'configuracion', color: '#9CA3AF' },
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -62,9 +67,41 @@ export const NAV_ITEMS: NavItem[] = [
       { href: '/finanzas/informes', label: 'Informes', icon: FileBarChart2, world: 'financiero' },
     ],
   },
-  { href: '/instalaciones', label: 'Instalaciones', icon: Warehouse, world: 'default' },
+  {
+    label: 'Instalaciones',
+    icon: Warehouse,
+    world: 'default',
+    children: [
+      {
+        href: '/instalaciones',
+        label: 'Instalaciones',
+        icon: List,
+        world: 'default',
+        // Activo en lista (/instalaciones) y detalle (/instalaciones/[id]),
+        // pero NO en ítems hermanos como /instalaciones/reubicaciones.
+        isActive: (p: string) =>
+          p === '/instalaciones' ||
+          (p.startsWith('/instalaciones/') && !p.startsWith('/instalaciones/reubicar-animales')),
+      },
+      { href: '/instalaciones/reubicar-animales', label: 'Reubicar animales', icon: ArrowRightLeft, world: 'default' },
+    ],
+  },
   { href: '/docs', label: 'Documentación', icon: BookOpen, world: 'default' },
-  { href: '/configuracion', label: 'Configuración', icon: Settings, world: 'default' },
+  {
+    label: 'Configuración',
+    icon: Settings,
+    world: 'configuracion',
+    children: [
+      // GESTIÓN DE LA EXPLOTACIÓN
+      // "Datos de la explotación" pendiente → hidden hasta que exista la página
+      // "Datos de la explotación" pendiente (hidden) — cuando se active, mover sectionLabel de "Instalaciones" a este ítem
+      { href: '/configuracion/explotacion', label: 'Datos de la explotación', icon: Building2, world: 'configuracion', hidden: true },
+      // sectionLabel aquí porque es el primer ítem visible de la sección
+      { href: '/configuracion/instalaciones', label: 'Instalaciones', icon: Warehouse, world: 'configuracion', sectionLabel: 'GESTIÓN DE LA EXPLOTACIÓN' },
+      // ACCESO Y SEGURIDAD — pendiente, hidden hasta que exista la página
+      { href: '/configuracion/usuarios', label: 'Usuarios y permisos', icon: Users, world: 'configuracion', sectionLabel: 'ACCESO Y SEGURIDAD', hidden: true },
+    ],
+  },
 ]
 
 export function getWorldForPath(pathname: string): WorldId {

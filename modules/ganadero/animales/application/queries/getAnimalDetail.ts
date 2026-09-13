@@ -3,7 +3,8 @@ import type {
   Especie, Sexo, OrigenAnimal,
   EstadoVital, EstadoReproductivo, EstadoSanitario, EstadoIdentificacion, EstadoVinculoMaterno,
 } from '../../../shared/domain/types'
-import { getAnimalById, getAnimalCrotal } from '../../infrastructure/repository'
+import { getAnimalById, getAnimalCrotal, getUltimaFechaCambioUbicacion } from '../../infrastructure/repository'
+import { getInstalacionNombre } from '../../../instalaciones/infrastructure/repository'
 
 // Proyección de detalle para la ficha individual del animal.
 // Separada de AnimalListItem: cada vista define los campos que necesita.
@@ -31,6 +32,9 @@ export interface AnimalDetail {
   padre_id: UUID | null
   padre_crotal: string | null
   lote_id: UUID | null
+  ubicacion_actual_id: UUID | null
+  ubicacion_actual_nombre: string | null
+  fecha_ultimo_cambio_ubicacion: string | null
   fecha_entrada: ISODate | null
   fecha_salida: ISODate | null
   created_at: ISOTimestamp
@@ -41,9 +45,11 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
   if (!animal) return null
 
   // Resolvemos los crotales de madre y padre en paralelo para no encadenar esperas.
-  const [madre_crotal, padre_crotal] = await Promise.all([
-    animal.madre_id ? getAnimalCrotal(animal.madre_id) : Promise.resolve(null),
-    animal.padre_id ? getAnimalCrotal(animal.padre_id) : Promise.resolve(null),
+  const [madre_crotal, padre_crotal, ubicacion_actual_nombre, fecha_ultimo_cambio_ubicacion] = await Promise.all([
+    animal.madre_id            ? getAnimalCrotal(animal.madre_id)                          : Promise.resolve(null),
+    animal.padre_id            ? getAnimalCrotal(animal.padre_id)                          : Promise.resolve(null),
+    animal.ubicacion_actual_id ? getInstalacionNombre(animal.ubicacion_actual_id)          : Promise.resolve(null),
+    animal.ubicacion_actual_id ? getUltimaFechaCambioUbicacion(animal.id)                 : Promise.resolve(null),
   ])
 
   return {
@@ -70,7 +76,10 @@ export async function getAnimalDetail(id: UUID): Promise<AnimalDetail | null> {
     padre_id:                  animal.padre_id,
     padre_crotal,
     lote_id:                   animal.lote_id,
-    fecha_entrada:             animal.fecha_entrada,
+    ubicacion_actual_id:            animal.ubicacion_actual_id,
+    ubicacion_actual_nombre,
+    fecha_ultimo_cambio_ubicacion,
+    fecha_entrada:                  animal.fecha_entrada,
     fecha_salida:              animal.fecha_salida,
     created_at:                animal.created_at,
   }

@@ -35,6 +35,37 @@ export async function getAnimalCrotal(id: UUID): Promise<string | null> {
   return data?.crotal ?? null
 }
 
+// Devuelve la fecha (YYYY-MM-DD) del último evento CAMBIO_UBICACION del animal,
+// o null si nunca ha sido reubicado. Se usa en la ficha individual para mostrar
+// "desde FECHA" en el bloque informativo y limitar el DatePicker de reubicación.
+export async function getUltimaFechaCambioUbicacion(animalId: UUID): Promise<string | null> {
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('evento_animales')
+    .select(`
+      eventos!evento_animales_evento_id_fkey (
+        fecha,
+        created_at,
+        tipo_evento!eventos_tipo_evento_id_fkey ( codigo )
+      )
+    `)
+    .eq('animal_id', animalId)
+
+  if (!data) return null
+
+  const cambios = (data as unknown as Array<{
+    eventos: { fecha: string; created_at: string; tipo_evento: { codigo: string } | null } | null
+  }>)
+    .filter(row => row.eventos?.tipo_evento?.codigo === 'CAMBIO_UBICACION')
+    .map(row => ({ fecha: row.eventos!.fecha, created_at: row.eventos!.created_at }))
+    .sort((a, b) => {
+      const byFecha = b.fecha.slice(0, 10).localeCompare(a.fecha.slice(0, 10))
+      return byFecha !== 0 ? byFecha : b.created_at.localeCompare(a.created_at)
+    })
+
+  return cambios[0]?.fecha.slice(0, 10) ?? null
+}
+
 export async function listAnimalesByLote(_loteId: UUID): Promise<Animal[]> {
   throw new Error('not implemented')
 }

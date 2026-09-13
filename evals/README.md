@@ -55,8 +55,9 @@ Si algún eval falla, el commit se cancela hasta que se corrija el problema.
 | `transacciones.eval.ts` | `financiero/transacciones` | Coherencia origen↔referencia (prevision→venta_id, factura→factura_id) + importe no negativo |
 | `eventos-ganadero.eval.ts` | `ganadero/eventos` | Inmutabilidad de eventos + tipo activo + motivo requerido cuando corresponde |
 | `lotes.eval.ts` | `ganadero/lotes` | Stock no negativo + solo lotes activos participan en movimientos |
+| `instalaciones.eval.ts` | `ganadero/instalaciones` | Mappers de lectura (historial, listado, animal en instalación) y escritura (crear, actualizar, reubicación RPC) |
 
-**Resumen de cobertura**: 130 tests activos, todos pasan.
+**Resumen de cobertura**: 184 tests activos, todos pasan.
 
 ---
 

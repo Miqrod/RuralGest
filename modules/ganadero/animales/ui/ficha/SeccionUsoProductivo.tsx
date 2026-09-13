@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { FichaSection } from './FichaSection'
 import { DrawerCambioTipoProductivo } from './DrawerCambioTipoProductivo'
 import type { AnimalDetail } from '@/modules/ganadero/animales/application/queries/getAnimalDetail'
@@ -28,14 +29,16 @@ export function SeccionUsoProductivo({ animal, tiposDisponibles }: Props) {
         title="Uso productivo"
         action={
           puedeEditar ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setDrawerOpen(true)}
-              className="text-ink-muted hover:text-ink transition-colors"
               aria-label="Cambiar tipo productivo"
+              className="cursor-pointer bg-surface-alt border border-divider/60 shadow-sm text-ink-muted hover:bg-surface-base hover:shadow"
             >
               <Pencil className="size-3.5" />
-            </button>
+            </Button>
           ) : undefined
         }
       >

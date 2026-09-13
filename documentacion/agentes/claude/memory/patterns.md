@@ -557,6 +557,72 @@ import { AnimatePresence, motion } from 'framer-motion'
 - `key={valor}` fuerza a React a desmontar/montar cuando cambia, activando enter/exit.
 - El componente contenedor debe ser Client Component (`'use client'`).
 
+## Leaflet en Client Components: `dynamic({ ssr: false })` obligatorio
+
+Aunque el componente sea Client Component (`'use client'`), Leaflet accede a `window` durante la importación del módulo, lo que falla en SSR. El `dynamic` con `ssr: false` es necesario para que el bundle de Leaflet nunca se evalúe en el servidor:
+
+```tsx
+const SelectorCoordenadas = dynamic(
+  () => import('@/modules/.../SelectorCoordenadas'),
+  { ssr: false, loading: () => <div>Cargando mapa…</div> }
+)
+```
+
+El `dynamic` puede usarse directamente en el Client Component que lo importa — no es exclusivo de Server Components.
+
+## `TooltipTrigger render={...}` para botones de icono con acción
+
+`TooltipTrigger` de Base UI renderiza su propio `<button>` por defecto. Si se envuelve otro `<button>` dentro, se produce anidamiento inválido en HTML → error de hidratación.
+
+Solución: usar el prop `render` para que Base UI fusione sus event handlers sobre el elemento ya renderizado en lugar de añadir uno nuevo:
+
+```tsx
+<TooltipTrigger
+  render={
+    <button
+      type="button"
+      onClick={handleAction}
+      className="..."
+    />
+  }
+>
+  <IconComponent className="size-3.5" />
+</TooltipTrigger>
+```
+
+Aplicar siempre que un botón de icono necesite tooltip Y lance una acción al hacer click. No usar `InfoPopover` para botones accionables: `InfoPopover` abre al hacer click, lo que entra en conflicto con la acción propia del botón.
+
+## Lazy server action como prop para datos raramente consultados
+
+Para datos que el usuario consulta con poca frecuencia (historial de ubicación, estadísticas secundarias), evitar cargarlos en el render inicial de la página. Patrón:
+
+```tsx
+// Server Component (page.tsx)
+async function fetchHistorial() {
+  'use server'
+  return getHistorialUbicacionesAnimal(id)  // se ejecuta solo cuando el cliente la llama
+}
+
+<AnimalHeader fetchHistorial={fetchHistorial} />
+```
+
+```tsx
+// Client Component
+const [data, setData] = useState<Item[] | null>(null)
+
+async function handleOpen() {
+  setOpen(true)
+  if (data === null) {          // carga solo en la primera apertura
+    const result = await fetchHistorial()
+    setData(result)
+  }
+}
+```
+
+- `useState(null)` actúa como centinela: `null` = no cargado, `[]` = cargado y vacío.
+- La prop es opcional (`fetchHistorial?`) para que el componente funcione en contextos donde no se necesita el historial.
+- No usar para datos críticos del render inicial — esos siempre van en el `Promise.all` de la página.
+
 ## Hover selectivo sobre cabecera de panel
 
 Cuando el hover de un panel (cambio de fondo) debe activarse solo al pasar por la cabecera

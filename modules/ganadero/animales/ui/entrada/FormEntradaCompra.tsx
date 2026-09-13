@@ -23,6 +23,9 @@ import { crotalZodField, normalizeCrotal } from '@/modules/ganadero/animales/dom
 import { submitEntradaCompra } from '@/app/(main)/vacuno/animales/entrada/actions'
 import type { RazaOption } from '@/modules/ganadero/animales/application/queries/listarRazas'
 import type { TipoProductivoOption } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
+import type { InstalacionListItem } from '@/modules/ganadero/instalaciones/domain/types'
+
+type InstalacionOption = Pick<InstalacionListItem, 'id' | 'nombre'>
 
 // ── Schema de validación ─────────────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ const schema = z
     fecha_nac_tipo:     z.enum(['real', 'estimada']),
     fecha_nac:          z.string().min(1, 'La fecha de nacimiento es obligatoria.'),
     fecha_compra:       z.string().min(1, 'La fecha de compra es obligatoria.'),
+    ubicacion_id:       z.string().optional(),
   })
   .superRefine((data, ctx) => {
     // fecha_nac siempre requerida — la DB exige al menos una de las dos fechas de nacimiento
@@ -57,11 +61,12 @@ type FormValues = z.infer<typeof schema>
 interface Props {
   razas:             RazaOption[]
   tiposProductivos:  TipoProductivoOption[]
+  instalaciones:     InstalacionOption[]
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
+export function FormEntradaCompra({ razas, tiposProductivos, instalaciones }: Props) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -78,6 +83,7 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
       fecha_nac_tipo:     'real',
       fecha_nac:          '',
       fecha_compra:       '',
+      ubicacion_id:       '',
     },
   })
 
@@ -98,6 +104,7 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
       fecha_nacimiento:          values.fecha_nac_tipo === 'real'     ? values.fecha_nac : undefined,
       fecha_nacimiento_estimada: values.fecha_nac_tipo === 'estimada' ? values.fecha_nac : undefined,
       fecha_compra:               values.fecha_compra,
+      ubicacion_id:               values.ubicacion_id || undefined,
     })
 
     if ('error' in result) {
@@ -271,6 +278,38 @@ export function FormEntradaCompra({ razas, tiposProductivos }: Props) {
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )} />
+
+          <Field>
+            <FieldLabel>Instalación de destino</FieldLabel>
+            {instalaciones.length > 0 ? (
+              <Controller name="ubicacion_id" control={form.control} render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(value: string | null) =>
+                        value
+                          ? instalaciones.find((i) => i.id === value)?.nombre ?? value
+                          : 'Sin asignar'
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin asignar</SelectItem>
+                    {instalaciones.map((i) => (
+                      <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )} />
+            ) : (
+              <p className="text-sm text-ink-muted py-2.5">
+                No hay instalaciones activas disponibles
+              </p>
+            )}
+          </Field>
         </div>
 
       </div>

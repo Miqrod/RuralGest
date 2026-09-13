@@ -11,7 +11,7 @@ interface Props {
 
 export function WidgetPendientesIdentificacion({ animales, total }: Props) {
   return (
-    <div className="bg-canvas rounded-2xl p-8 shadow-sm border border-divider">
+    <div className="bg-canvas rounded-2xl p-6 shadow-sm border border-divider">
 
       {/* Cabecera */}
       <div className="flex items-center justify-between mb-6">

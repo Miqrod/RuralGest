@@ -34,6 +34,9 @@ export interface EventoReal {
   crias_destetadas: { id: UUID; crotal: string | null; nombre: string | null; sexo: string | null }[]
   // Datos extra del evento; cada tipo usa sus propias claves (ej. tipo_nuevo en CAMBIO_TIPO_PRODUCTIVO)
   metadata_json: Record<string, unknown> | null
+  // Solo en CAMBIO_UBICACION: nombre de las instalaciones origen y destino
+  ubicacion_origen_nombre: string | null
+  ubicacion_destino_nombre: string | null
 }
 
 // Evento virtual — hito de presentación, nunca persistido.
@@ -68,7 +71,9 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
         ciclo_id,
         metadata_json,
         tipo_evento!eventos_tipo_evento_id_fkey ( codigo, tipo_negocio ),
-        motivos_movimiento!eventos_motivo_id_fkey ( nombre )
+        motivos_movimiento!eventos_motivo_id_fkey ( nombre ),
+        instalacion_origen:instalacion!eventos_ubicacion_origen_id_fkey ( nombre ),
+        instalacion_destino:instalacion!eventos_ubicacion_destino_id_fkey ( nombre )
       )
     `)
     .eq('animal_id', animalId)
@@ -150,8 +155,10 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
       motivo:           (ev.motivos_movimiento as { nombre: string } | null)?.nombre ?? null,
       rol:              row.rol ?? null,
       ciclo_numero:     cicloId ? (cicloNumero[cicloId] ?? null) : null,
-      crias_destetadas: criasPorDestete[ev.id] ?? [],
-      metadata_json:    (ev.metadata_json as Record<string, unknown> | null) ?? null,
+      crias_destetadas:        criasPorDestete[ev.id] ?? [],
+      metadata_json:           (ev.metadata_json as Record<string, unknown> | null) ?? null,
+      ubicacion_origen_nombre: ((ev as Record<string, unknown>).instalacion_origen as { nombre: string } | null)?.nombre ?? null,
+      ubicacion_destino_nombre: ((ev as Record<string, unknown>).instalacion_destino as { nombre: string } | null)?.nombre ?? null,
     }
   })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -14,36 +14,41 @@ import type { NavItem, WorldId } from '@/types/navigation'
 
 // Clases estáticas por mundo — Tailwind las detecta en build time
 const WORLD_ACTIVE: Record<WorldId, string> = {
-  default:    'text-nav-default    border-nav-default',
-  vacuno:     'text-nav-vacuno     border-nav-vacuno',
-  porcino:    'text-nav-porcino    border-nav-porcino',
-  financiero: 'text-nav-financiero border-nav-financiero',
+  default:       'text-nav-default       border-nav-default',
+  vacuno:        'text-nav-vacuno        border-nav-vacuno',
+  porcino:       'text-nav-porcino       border-nav-porcino',
+  financiero:    'text-nav-financiero    border-nav-financiero',
+  configuracion: 'text-nav-configuracion border-nav-configuracion',
 }
 const WORLD_HOVER: Record<WorldId, string> = {
-  default:    'hover:text-nav-default    hover:border-nav-default',
-  vacuno:     'hover:text-nav-vacuno     hover:border-nav-vacuno',
-  porcino:    'hover:text-nav-porcino    hover:border-nav-porcino',
-  financiero: 'hover:text-nav-financiero hover:border-nav-financiero',
+  default:       'hover:text-nav-default       hover:border-nav-default',
+  vacuno:        'hover:text-nav-vacuno        hover:border-nav-vacuno',
+  porcino:       'hover:text-nav-porcino       hover:border-nav-porcino',
+  financiero:    'hover:text-nav-financiero    hover:border-nav-financiero',
+  configuracion: 'hover:text-nav-configuracion hover:border-nav-configuracion',
 }
 // Text-only variants for sub-items (no border needed)
 const WORLD_TEXT: Record<WorldId, string> = {
-  default:    'text-nav-default',
-  vacuno:     'text-nav-vacuno',
-  porcino:    'text-nav-porcino',
-  financiero: 'text-nav-financiero',
+  default:       'text-nav-default',
+  vacuno:        'text-nav-vacuno',
+  porcino:       'text-nav-porcino',
+  financiero:    'text-nav-financiero',
+  configuracion: 'text-nav-configuracion',
 }
 const WORLD_HOVER_TEXT: Record<WorldId, string> = {
-  default:    'hover:text-nav-default',
-  vacuno:     'hover:text-nav-vacuno',
-  porcino:    'hover:text-nav-porcino',
-  financiero: 'hover:text-nav-financiero',
+  default:       'hover:text-nav-default',
+  vacuno:        'hover:text-nav-vacuno',
+  porcino:       'hover:text-nav-porcino',
+  financiero:    'hover:text-nav-financiero',
+  configuracion: 'hover:text-nav-configuracion',
 }
 // Group-hover variant for the sub-item arrow (driven by named group on the parent link)
 const WORLD_ARROW_HOVER: Record<WorldId, string> = {
-  default:    'group-hover/subitem:text-nav-default',
-  vacuno:     'group-hover/subitem:text-nav-vacuno',
-  porcino:    'group-hover/subitem:text-nav-porcino',
-  financiero: 'group-hover/subitem:text-nav-financiero',
+  default:       'group-hover/subitem:text-nav-default',
+  vacuno:        'group-hover/subitem:text-nav-vacuno',
+  porcino:       'group-hover/subitem:text-nav-porcino',
+  financiero:    'group-hover/subitem:text-nav-financiero',
+  configuracion: 'group-hover/subitem:text-nav-configuracion',
 }
 
 // ── Logo ────────────────────────────────────────────────────────────────────
@@ -93,7 +98,9 @@ function NavRow({
   const { toggle } = useSidebar()
   const hasChildren = !!item.children?.length
   const isActive = item.href
-    ? item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+    ? item.isActive
+      ? item.isActive(pathname)
+      : item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
     : false
   const isChildActive = hasChildren && item.children!.some((c) => c.href && pathname.startsWith(c.href))
   const [open, setOpen] = useState(isChildActive)
@@ -178,8 +185,15 @@ function NavRow({
           )}
         >
           <div className="bg-stone-100/50 dark:bg-stone-800/50 py-1">
-            {item.children!.map((child) => (
-              <NavRow key={child.href ?? child.label} item={child} pathname={pathname} collapsed={false} depth={depth + 1} />
+            {item.children!.filter((c) => !c.hidden).map((child) => (
+              <Fragment key={child.href ?? child.label}>
+                {child.sectionLabel && (
+                  <p className="px-4 pt-3 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-ink-muted/60 select-none">
+                    {child.sectionLabel}
+                  </p>
+                )}
+                <NavRow item={child} pathname={pathname} collapsed={false} depth={depth + 1} />
+              </Fragment>
             ))}
           </div>
         </div>

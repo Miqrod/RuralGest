@@ -7,7 +7,7 @@ interface Props {
 
 export function KPIBannerVacuno({ censo }: Props) {
   return (
-    <div className="bg-world-gradient rounded-2xl p-8 text-white relative overflow-hidden shadow-md">
+    <div className="bg-world-gradient rounded-2xl p-6 text-white relative overflow-hidden shadow-md">
       <div className="relative z-10 flex flex-col md:flex-row justify-between items-end gap-6">
 
         {/* Total — link al listado de animales; -m-3 p-3 cancela el padding en reposo */}

@@ -24,6 +24,7 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 | PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal |
 | PRD013 | ⏳ | Consolidación dominio reproductivo, inmutabilidad de resultado, arquitectura UI→Query→Repository |
 | PRD013-fix | ⏳ | Destete múltiple atómico, invariante ciclo_id histórico en DESTETE |
+| PRD014 | 📝 | Concepto de Instalación, `CAMBIO_UBICACION` como tipo de evento, ubicación como dimensión del animal, integración de ubicación en el ciclo de vida (parto, compra, salida) |
 
 ## PRD008 - Corrección del flujo "Confirmación de Gestación sin Cubrición previa"
 
@@ -1184,3 +1185,130 @@ Solo cierra ciclos con `AND resultado IS NOT NULL AND fecha_fin IS NULL`: el cic
 ### Documentación permanente prevista
 
 - `documentacion/flujos/reproductivos/destete.md` — añadir sección de destete en lote, invariante del ciclo_id histórico, cierre al final del lote
+
+---
+
+## PRD014 — Instalaciones y Reubicación de Animales
+
+> Implementado en septiembre 2026. Pendiente de incorporar a documentación permanente.
+
+### 1. Concepto de Instalación
+
+Una instalación es un espacio físico de la explotación que puede contener animales, stock, o ambos.
+
+Se modelan dos flags independientes:
+
+- `admite_animales`: la instalación puede albergar animales vivos.
+- `admite_stock`: la instalación puede almacenar insumos u otros recursos materiales.
+
+Los flags son independientes porque existe stock almacenado en espacios que no admiten animales y viceversa. No son mutuamente excluyentes.
+
+Las instalaciones tienen coordenadas geográficas opcionales (`lat`, `lng`) para su representación en mapa. Un mapa Leaflet muestra la distribución espacial de todas las instalaciones.
+
+**Regla Leaflet:** el componente de mapa debe importarse siempre con `dynamic({ ssr: false })` porque Leaflet accede a `window` en la inicialización y no es compatible con SSR.
+
+### 2. Ubicación como dimensión del animal
+
+La ubicación es una dimensión del ciclo de vida del animal, no un atributo estático.
+
+Se implementa mediante dos mecanismos complementarios:
+
+**Snapshot denormalizado:** `animal.ubicacion_actual_id` refleja la instalación actual del animal para consultas rápidas. Es derivado, no fuente de verdad.
+
+**Fuente de verdad:** los eventos `CAMBIO_UBICACION` en la tabla `eventos`. El historial de ubicaciones de un animal se reconstruye a partir de estos eventos.
+
+Esta separación sigue el mismo patrón que `estado_reproductivo` (snapshot) vs `eventos` reproductivos (fuente de verdad).
+
+### 3. `CAMBIO_UBICACION` como tipo de evento
+
+Cada reubicación de un animal genera un evento `CAMBIO_UBICACION` con:
+
+- `ubicacion_origen_id` / `ubicacion_destino_id`: instalación de origen y destino.
+- `metadata_json.contexto`: indica el origen del movimiento cuando fue generado automáticamente por un RPC de ciclo de vida.
+
+El evento aparece en el historial del animal con badge "Ubicación" y muestra `origen → destino`.
+
+Cuando el origen es `NULL` (primera ubicación asignada), se muestra únicamente el destino.
+
+### 4. Integración de ubicación en el ciclo de vida
+
+Los RPCs de ciclo de vida generan eventos `CAMBIO_UBICACION` automáticamente cuando el animal tiene una ubicación nueva derivada del evento:
+
+| Evento del ciclo de vida | Contexto en metadata_json |
+|---|---|
+| Parto (para cada cría) | `"parto"` |
+| Compra (ENTRADA) | `"compra"` |
+| Venta/Muerte (SALIDA) | `"venta"` / `"muerte"` |
+
+El campo `metadata_json.contexto` permite al historial mostrar la causa del movimiento junto al evento de ubicación.
+
+**Etiqueta en el historial:** el valor `"parto"` se presenta como `"nacimiento"` en la ficha de la cría, porque desde su perspectiva el evento fue su nacimiento, no un parto de otra animal.
+
+```typescript
+const CONTEXTO_UBICACION_LABEL: Record<string, string> = {
+  parto:  'nacimiento',  // desde la ficha de la cría
+  compra: 'compra',
+  venta:  'venta',
+  muerte: 'muerte',
+}
+```
+
+### 5. RPC `registrar_reubicacion_animales`
+
+Reubica uno o varios animales de forma atómica en una única transacción:
+
+```sql
+registrar_reubicacion_animales(
+  p_animal_ids UUID[],
+  p_destino_id UUID,
+  p_fecha DATE
+)
+```
+
+Para cada animal:
+1. Lee `ubicacion_actual_id` como origen (puede ser `NULL` si no tenía ubicación).
+2. Crea un evento `CAMBIO_UBICACION` en `eventos`.
+3. Actualiza `animal.ubicacion_actual_id`.
+
+Los animales sin ubicación previa son válidos: el origen queda `NULL` y el evento registra únicamente el destino.
+
+### 6. Flujo de reubicación (UI)
+
+El componente `ReubicacionFlow` implementa un flujo de dos pasos:
+
+**Paso 1:** selección de animales (tabla con filtros).
+
+**Paso 2:** selección de fecha y destino. Distingue entre:
+- `animalesEfectivos`: animales que no están ya en esa instalación → se moverán.
+- `animalesNoOp`: animales ya en esa instalación → se omiten con aviso.
+
+El componente funciona en dos modos:
+- `modo="global"`: pantalla completa (`/instalaciones/reubicar-animales`), contenedor ancho.
+- `modo="instalacion"`: drawer lateral desde la ficha de una instalación, contenedor estrecho (≈472px).
+
+### 7. Container queries en Tailwind v4 + Turbopack
+
+El paso 2 usa un layout de dos columnas (fecha | destino) en contenedores anchos y una columna en contenedores estrechos.
+
+**Problema:** en Tailwind v4 con Turbopack, las clases que empiezan por `@` (como `@container`, `@sm:`) no son detectadas correctamente por el escáner de contenido. El CSS no se genera aunque la clase exista en el código.
+
+**Solución en dos partes:**
+
+1. Establecer el contexto de container con propiedad CSS arbitraria (no clase `@container`):
+   ```html
+   <div class="[container-type:inline-size]">
+   ```
+
+2. Forzar la generación del CSS de las variantes de container query en `styles/globals.css`:
+   ```css
+   @source inline("... @sm:grid-cols-2 ...");
+   ```
+
+Este patrón debe aplicarse a cualquier clase que empiece por `@` usada en el proyecto. Es la solución estándar y perdurable, no un hack.
+
+### Documentación permanente prevista
+
+- `documentacion/base_conocimiento/dominios/ganadero.md` — añadir ubicación como dimensión del animal, snapshot vs fuente de verdad
+- `documentacion/base_conocimiento/modelo/eventos.md` — añadir `CAMBIO_UBICACION` con su esquema de metadata
+- `documentacion/base_conocimiento/implementacion/technology-stack.md` — patrón Leaflet con `dynamic({ ssr: false })`, container queries en Tailwind v4 + Turbopack
+- `documentacion/flujos/instalaciones/reubicacion.md` (nuevo) — flujo completo de reubicación, modos global/instalación, animalesEfectivos vs animalesNoOp

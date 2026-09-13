@@ -11,7 +11,7 @@
 @source "components/**/*.{tsx,ts}";
 @source "modules/**/*.{tsx,ts}";
 /* Salvaguarda: clases de padding de campos de formulario siempre generadas */
-@source inline("px-3.5 py-2.5 pr-2.5 pl-3.5 py-3 shadow-sm");
+@source inline("px-3.5 py-2.5 pr-2.5 pl-3.5 py-3 p-6 h-90 @[400px]:grid-cols-2 @sm:grid-cols-2 shadow-sm");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -71,6 +71,7 @@
     --color-nav-vacuno:     var(--nav-world-vacuno);
     --color-nav-porcino:    var(--nav-world-porcino);
     --color-nav-financiero: var(--nav-world-financiero);
+    --color-nav-configuracion: var(--nav-world-configuracion);
     /* Brand: text-brand / bg-brand / border-brand */
     --color-brand: var(--brand);
     --color-brand-on: var(--brand-on);
@@ -212,10 +213,12 @@
   --nav-world-vacuno:     #800000;
   --nav-world-porcino:    #ff7700;
   --nav-world-financiero: #3377aa;
+  --nav-world-configuracion: #9CA3AF;
 }
-[data-world='vacuno']     { --world-accent: #800000; --world-accent-soft: #F2E6E6; --world-banner-gradient: linear-gradient(135deg, #3d0a0a 0%, #800000 55%, #9a1c1c 100%); }
-[data-world='porcino']    { --world-accent: #ff7700; --world-accent-soft: #FFF1E6; --world-banner-gradient: linear-gradient(135deg, #7a3800 0%, #cc6000 55%, #ff7700 100%); }
-[data-world='financiero'] { --world-accent: #3377aa; --world-accent-soft: #EBF1F7; --world-banner-gradient: linear-gradient(135deg, #1a3d5c 0%, #3377aa 55%, #4a8ec4 100%); }
+[data-world='vacuno']        { --world-accent: #800000; --world-accent-soft: #F2E6E6; --world-banner-gradient: linear-gradient(135deg, #3d0a0a 0%, #800000 55%, #9a1c1c 100%); }
+[data-world='porcino']       { --world-accent: #ff7700; --world-accent-soft: #FFF1E6; --world-banner-gradient: linear-gradient(135deg, #7a3800 0%, #cc6000 55%, #ff7700 100%); }
+[data-world='financiero']    { --world-accent: #3377aa; --world-accent-soft: #EBF1F7; --world-banner-gradient: linear-gradient(135deg, #1a3d5c 0%, #3377aa 55%, #4a8ec4 100%); }
+[data-world='configuracion'] { --world-accent: #9CA3AF; --world-accent-soft: #F5F5F7; --world-banner-gradient: linear-gradient(135deg, #374151 0%, #9CA3AF 55%, #D1D5DB 100%); }
 
 /* Dark mode world accents — compound selector (sin espacio): ambos en <html> */
 .dark {
@@ -227,10 +230,12 @@
   --nav-world-vacuno:     #f87171;
   --nav-world-porcino:    #fb923c;
   --nav-world-financiero: #60a5fa;
+  --nav-world-configuracion: #9CA3AF;
 }
 .dark[data-world='vacuno']        { --world-accent: #f87171; --world-accent-soft: #2e1a1a; --world-banner-gradient: linear-gradient(135deg, #2e1a1a 0%, #7f1d1d 55%, #991b1b 100%); }
 .dark[data-world='porcino']       { --world-accent: #fb923c; --world-accent-soft: #2e1e10; --world-banner-gradient: linear-gradient(135deg, #431407 0%, #9a3412 55%, #c2410c 100%); }
 .dark[data-world='financiero']    { --world-accent: #60a5fa; --world-accent-soft: #101e2e; --world-banner-gradient: linear-gradient(135deg, #0c1a2e 0%, #1e3a5f 55%, #1d4ed8 100%); }
+.dark[data-world='configuracion'] { --world-accent: #9CA3AF; --world-accent-soft: #1F2937; --world-banner-gradient: linear-gradient(135deg, #111827 0%, #374151 55%, #4B5563 100%); }
 
 @layer utilities {
   .bg-world-gradient {

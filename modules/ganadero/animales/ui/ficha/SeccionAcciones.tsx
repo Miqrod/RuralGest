@@ -14,12 +14,15 @@ import { FormConfirmacionGestacion } from '@/modules/ganadero/reproductivo/ui/Fo
 import { FormParto } from '@/modules/ganadero/reproductivo/ui/FormParto'
 import { FormDestete } from '@/modules/ganadero/reproductivo/ui/FormDestete'
 import { FormAborto } from '@/modules/ganadero/reproductivo/ui/FormAborto'
+import { ReubicacionFlow } from '@/modules/ganadero/instalaciones/ui/reubicacion/ReubicacionFlow'
+import { submitRegistrarReubicacion } from '@/app/(main)/instalaciones/actions'
 import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
 import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
 import type { MachoOption } from '@/modules/ganadero/animales/application/queries/getMachosDisponibles'
 import type { CriaParaDesteteItem } from '@/modules/ganadero/reproductivo/application/queries/getCriasParaDestete'
+import type { InstalacionDestino, AnimalParaReubicar } from '@/modules/ganadero/instalaciones/domain/types'
 
-type AccionActiva = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto' | null
+type AccionActiva = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto' | 'reubicar' | null
 
 function buildPartoToastMessage(vivos: number, muertos: number): string {
   const a = (n: number, singular: string, plural: string) =>
@@ -35,20 +38,25 @@ function buildPartoToastMessage(vivos: number, muertos: number): string {
 }
 
 interface Props {
-  animalId:            string
-  crotal?:             string | null
-  nombre?:             string | null
-  estadoVital:         EstadoVital
-  esReproductora:      boolean
-  estadoReproductivo:  EstadoReproductivo | null
-  tieneCicloAbierto:   boolean
-  machos:              MachoOption[]
-  criasElegibles:      CriaParaDesteteItem[]
+  animalId:               string
+  crotal?:                string | null
+  nombre?:                string | null
+  estadoVital:            EstadoVital
+  esReproductora:         boolean
+  estadoReproductivo:     EstadoReproductivo | null
+  tieneCicloAbierto:      boolean
+  machos:                 MachoOption[]
+  criasElegibles:         CriaParaDesteteItem[]
   // Fecha del último evento del ciclo abierto (YYYY-MM-DD). Limita el DatePicker hacia atrás.
-  fechaUltimoEvento?:  string | null
+  fechaUltimoEvento?:     string | null
+  // Datos de ubicación para la acción de reubicación individual
+  ubicacionActualId?:       string | null
+  ubicacionActualNombre?:   string | null
+  fechaUltimoMovimiento?:   string | null
+  destinos:                 InstalacionDestino[]
 }
 
-export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esReproductora, estadoReproductivo, tieneCicloAbierto, machos, criasElegibles, fechaUltimoEvento }: Props) {
+export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esReproductora, estadoReproductivo, tieneCicloAbierto, machos, criasElegibles, fechaUltimoEvento, ubicacionActualId, ubicacionActualNombre, fechaUltimoMovimiento, destinos }: Props) {
   const router = useRouter()
   const [panelOpen,     setPanelOpen]     = useState(false)
   const [accionActiva,  setAccionActiva]  = useState<AccionActiva>(null)
@@ -130,7 +138,28 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
     router.refresh()
   }
 
+  function handleReubicarSuccess() {
+    setAccionActiva(null)
+    setPanelOpen(false)
+    toast.success('Reubicación registrada correctamente')
+    router.refresh()
+  }
+
   if (estadoVital !== 'vivo') return null
+
+  // Proyección del animal para ReubicacionFlow en modo individual.
+  // fecha_ultimo_cambio_ubicacion no está disponible en la ficha (requeriría una query extra);
+  // el DatePicker quedará sin fecha mínima, pero el backend valida la coherencia temporal.
+  const animalParaReubicar: AnimalParaReubicar = {
+    id:                            animalId,
+    crotal:                        crotal ?? null,
+    nombre:                        nombre ?? null,
+    sexo:                          null,
+    tipo_productivo_nombre:        null,
+    fecha_ultimo_cambio_ubicacion: fechaUltimoMovimiento ?? null,
+    ubicacion_actual_id:           ubicacionActualId ?? null,
+    ubicacion_actual_nombre:       ubicacionActualNombre ?? null,
+  }
 
   const acciones = getAvailableActions({
     estadoVital,
@@ -237,6 +266,16 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     onClick={handleAbortoClick}
                   >
                     Registrar aborto
+                  </Button>
+                )}
+                {destinos.length > 0 && (
+                  <Button
+                    type="button"
+                    variant={accionActiva === 'reubicar' ? 'outline' : 'default'}
+                    className="h-auto py-2 px-5"
+                    onClick={() => setAccionActiva(accionActiva !== 'reubicar' ? 'reubicar' : null)}
+                  >
+                    Reubicar animal
                   </Button>
                 )}
               </div>
@@ -376,6 +415,29 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                         fechaUltimoEvento={fechaUltimoEvento}
                         onSuccess={handleAbortoSuccess}
                         onCancel={() => setAccionActiva(null)}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {accionActiva === 'reubicar' && (
+                  <motion.div
+                    key="form-reubicar"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="bg-canvas rounded-lg border border-divider p-5 mt-1">
+                      <ReubicacionFlow
+                        modo="individual"
+                        animales={[animalParaReubicar]}
+                        destinos={destinos}
+                        onSuccess={handleReubicarSuccess}
+                        onCancel={() => setAccionActiva(null)}
+                        submitReubicacion={submitRegistrarReubicacion}
+                        classNamePaso2=""
                       />
                     </div>
                   </motion.div>

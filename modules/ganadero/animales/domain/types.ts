@@ -70,6 +70,7 @@ export interface RegistrarCompraAnimalInput {
   fecha_compra: ISODate
   // Asignación inicial (opcional)
   lote_id?: UUID
+  ubicacion_id?: UUID
 }
 
 // Salida por venta: sin datos financieros (precio, comprador) — se añadirán en fase financiera.

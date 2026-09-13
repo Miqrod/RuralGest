@@ -16,3 +16,4 @@ export type TipoBaseMovimiento = 'ENTRADA' | 'SALIDA' | 'MIXTO'
 export type EstadoIdentificacion = 'pendiente' | 'completa'
 // NULL = sin información suficiente (histórico); distinto de madre_id que es genealogía permanente
 export type EstadoVinculoMaterno = 'activo' | 'finalizado'
+export type TipoInstalacion = 'corral' | 'nave' | 'prado' | 'cercado' | 'almacen' | 'otro'
