@@ -34,6 +34,7 @@ const columns: ColumnDef<InstalacionListItem, unknown>[] = [
   {
     accessorKey: 'nombre',
     header: 'Instalación',
+    meta: { sticky: true },
     cell: ({ row, getValue }) => (
       <Link
         href={`/instalaciones/${row.original.id}`}
@@ -101,24 +102,27 @@ interface Props {
 
 export function InstalacionesListado({ data }: Props) {
   return (
-    <div>
+    <div className="@container">
       {/* Mapa — altura en style para evitar dependencia del JIT de Tailwind */}
       <div style={{ height: '360px', marginBottom: '2rem' }} className="rounded-xl overflow-hidden border border-divider shadow-sm">
         <MapaInstalaciones instalaciones={data} />
       </div>
 
-      {/* Tabla con animación de entrada */}
+      {/* Tabla con animación de entrada.
+          Ancho relativo al contenedor (no a la pantalla) para adaptarse
+          al sidebar colapsable: 100% < 960px, 10/12 hasta 1200px, 8/12 a partir de ahí. */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="sm:w-8/12 sm:mx-auto 2xl:w-full"
+        className="w-full @[47.5rem]:w-10/12 @[47.5rem]:mx-auto @[75rem]:w-8/12"
       >
         <DataTable
           columns={columns}
           data={data}
           pageSize={10}
-          getRowClassName={(row) => !row.activo ? 'bg-alert-soft/50 hover:bg-alert-soft/70' : undefined}
+          getRowClassName={(row) => !row.activo ? 'bg-alert-row hover:bg-alert-row-hover' : undefined}
+          getRowStickyClassName={(row) => !row.activo ? 'bg-alert-row group-hover:bg-alert-row-hover' : undefined}
         />
       </motion.div>
     </div>

@@ -623,6 +623,145 @@ async function handleOpen() {
 - La prop es opcional (`fetchHistorial?`) para que el componente funcione en contextos donde no se necesita el historial.
 - No usar para datos críticos del render inicial — esos siempre van en el `Promise.all` de la página.
 
+## DataTable con columnas sticky y scroll horizontal
+
+Cuando un DataTable tiene más columnas de las que caben en el contenedor, aplicar este patrón completo.
+
+### Columnas sticky izquierda
+
+Marcar con `meta: { sticky: true }`. El `size` en px solo es necesario cuando hay varias columnas sticky consecutivas (la primera necesita `size` para que la siguiente pueda calcular su `left`). Una sola columna sticky siempre tiene `left: 0` y no necesita `size`:
+
+```tsx
+// Dos sticky consecutivas: la primera NECESITA size para el offset de la segunda
+{ accessorKey: 'crotal', header: 'Crotal', size: 160, meta: { sticky: true }, ... },
+{ accessorKey: 'nombre', header: 'Nombre',             meta: { sticky: true }, ... },
+
+// Una sola sticky: sin size (auto-sizing)
+{ accessorKey: 'nombre', header: 'Nombre', meta: { sticky: true }, ... },
+```
+
+### Columnas sticky derecha
+
+Para columnas de acciones o cualquier columna que deba permanecer anclada al borde derecho:
+
+```tsx
+{ id: 'acciones', header: 'Acciones', meta: { sticky: 'right' as const }, ... }
+```
+
+- `sticky: 'right'` → `position: sticky; right: N` (acumulado desde la derecha si hay varias).
+- Sin `size` explícito si es la única sticky-right (siempre `right: 0`).
+- El separador visual (gradiente izquierdo) aparece en la primera sticky-right con `after:right-full` — mismo mecanismo que el separador izquierdo pero reflejado.
+
+### Separadores visuales con fade
+
+Ambos separadores están **siempre en el DOM** con `opacity-0` y solo pasan a `opacity-100` cuando hay contenido oculto en ese lado → fade-in/fade-out al scrollear:
+
+```tsx
+// El DataTable detecta el estado de scroll inicial y actualiza en cada evento:
+const checkScroll = () => {
+  setIsScrolled(scrollEl.scrollLeft > 0)
+  // hasRightScroll: hay contenido a la derecha aún oculto bajo la columna sticky-right
+  setHasRightScroll(scrollEl.scrollLeft < scrollEl.scrollWidth - scrollEl.clientWidth - 1)
+}
+checkScroll()  // llamar en mount para detectar el estado antes del primer scroll
+scrollEl.addEventListener('scroll', checkScroll, { passive: true })
+
+// Separador derecho (última sticky-left):
+"after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-full
+ after:w-4 after:bg-gradient-to-r after:from-black/[.07] after:to-transparent
+ after:pointer-events-none after:transition-opacity after:duration-200"
++ (isScrolled ? 'after:opacity-100' : 'after:opacity-0')
+
+// Separador izquierdo (primera sticky-right):
+"after:content-[''] after:absolute after:top-0 after:bottom-0 after:right-full
+ after:w-4 after:bg-gradient-to-r after:from-transparent after:to-black/[.07]
+ after:pointer-events-none after:transition-opacity after:duration-200"
++ (hasRightScroll ? 'after:opacity-100' : 'after:opacity-0')
+```
+
+`box-shadow` no sirve aquí porque su `blur-radius` irradia en todas las direcciones. `::after` con `top-0/bottom-0` limita el gradiente a la altura exacta de la celda.
+
+Ambos separadores usan `::after` (no `::before`) porque en Tailwind v4 + Turbopack `after:left-full` y `after:right-full` se escanean y generan correctamente; `before:right-full` puede no generarse.
+
+### Por qué `relative z-0` en columnas no-sticky
+
+En HTML tables las celdas se pintan en orden DOM (las últimas encima). Sin z-index explícito, las celdas no-sticky pueden tapar las sticky. `relative z-0` fuerza a las no-sticky a participar en el sistema de z-index → `z-20 > z-0`.
+
+### Fondo de celdas sticky con filas de color especial
+
+Las celdas sticky necesitan fondo **sólido** y **opaco**. El `DataTable` expone `getRowStickyClassName`:
+
+```tsx
+// Prop en DataTable — el caller controla rest Y hover de las sticky
+getRowStickyClassName?: (row: TData) => string | undefined
+// Cuando retorna undefined, se usa el default: 'bg-canvas group-hover:bg-surface-alt'
+```
+
+**Importante**: el string devuelto debe incluir el estado hover (`group-hover:*`) porque el DataTable no añade `group-hover:bg-surface-alt` cuando el prop está presente. Si se omite el hover, las celdas sticky no cambian al pasar el ratón.
+
+**El color debe ser sólido**: nunca usar opacidad (`bg-alert-soft/50`) en celdas sticky porque la transparencia se mezcla con el contenido que pasa por debajo al hacer scroll-X, produciendo un color diferente al de las celdas no-sticky de la misma fila.
+
+**Patrón para tablas con filas de estado especial** — definir tokens sólidos en `globals.css` con `color-mix()` sobre `bg-canvas`. Al usar `var()`, los tokens se adaptan automáticamente al dark mode sin redefinirlos en `.dark`:
+
+```css
+/* globals.css — dentro de :root */
+--status-alert-row:       color-mix(in srgb, var(--status-alert-soft) 50%, var(--canvas));
+--status-alert-row-hover: color-mix(in srgb, var(--status-alert-soft) 70%, var(--canvas));
+
+/* globals.css — dentro de @theme inline */
+--color-alert-row:       var(--status-alert-row);
+--color-alert-row-hover: var(--status-alert-row-hover);
+```
+
+```tsx
+// En el componente de tabla:
+getRowClassName={(row) =>
+  !row.activo ? 'bg-alert-row hover:bg-alert-row-hover' : undefined
+}
+getRowStickyClassName={(row) =>
+  !row.activo ? 'bg-alert-row group-hover:bg-alert-row-hover' : undefined
+}
+```
+
+Esto garantiza que sticky y no-sticky muestren el mismo color en todos los estados (reposo y hover), en light y dark mode.
+
+**Hover estándar de fila**: el mismo problema existe para las filas normales (activas). El `<TableRow>` usa `hover:bg-surface-alt/50` (semitransparente) y la celda sticky por defecto usaba `group-hover:bg-surface-alt` (sólido al 100%) — colores distintos. La solución es el mismo patrón `color-mix()`:
+
+```css
+/* globals.css — dentro de :root */
+--status-surface-row-hover: color-mix(in srgb, var(--surface-alt) 50%, var(--canvas));
+
+/* globals.css — dentro de @theme inline */
+--color-surface-row-hover: var(--status-surface-row-hover);
+```
+
+En `DataTable.tsx`, tanto `<TableRow>` como el `stickyRowBg` por defecto usan `bg-surface-row-hover` / `group-hover:bg-surface-row-hover`.
+
+## Ancho de DataTable adaptable al contenedor (`@container`)
+
+Cuando el layout tiene un sidebar colapsable/desplegable, el ancho disponible del contenido cambia sin que cambie el viewport. Los breakpoints de Tailwind (`sm:`, `lg:`…) no detectan esto — 1100px con sidebar visible no son los mismos 1100px que sin él.
+
+Usar `@container` en el wrapper del componente y breakpoints de contenedor (`@[N]:`):
+
+```tsx
+// InstalacionesListado.tsx
+<div className="@container">
+  {/* ... */}
+  <motion.div
+    className="w-full @[47.5rem]:w-10/12 @[47.5rem]:mx-auto @[75rem]:w-8/12"
+  >
+    <DataTable ... />
+  </motion.div>
+</div>
+```
+
+- `@[47.5rem]` ≈ 760px de contenedor → centra la tabla a 10/12
+- `@[75rem]` ≈ 1200px de contenedor → reduce a 8/12
+
+`@container` no requiere convertir a nada nuevo: si el componente ya existe, se añade la clase al wrapper y se sustituyen los breakpoints de viewport por los de contenedor. Los valores arbitrarios `@[Nrem]:` permiten precisión sin definir breakpoints personalizados en la configuración.
+
+Usar esta técnica cuando el DataTable esté en una página con sidebar; usar breakpoints normales solo para componentes que nunca convivan con un panel lateral cambiante.
+
 ## Hover selectivo sobre cabecera de panel
 
 Cuando el hover de un panel (cambio de fondo) debe activarse solo al pasar por la cabecera
@@ -642,3 +781,129 @@ const [headerHovered, setHeaderHovered] = useState(false)
 ```
 
 `group-hover` afecta a todo el grupo sin distinción. El estado JS permite precisión quirúrgica.
+
+## Tabla custom con columnas sticky: usar `<table>` real, no divs flex
+
+Los divs flex no garantizan alineación de columnas entre filas: cada celda se dimensiona por su contenido, generando columnas que se "desplazan" entre filas ("serpiente"). Para cualquier tabla custom que necesite columnas sticky y alineación vertical, usar un `<table>` HTML real.
+
+Por qué funciona:
+- El algoritmo de tabla calcula un **ancho único por columna** considerando todo el contenido del `<tbody>`.
+- `position: sticky` funciona nativamente en `<th>` y `<td>` sin requerir min-widths ni trucos de negación de márgenes.
+- El overflow-x del contenedor desborda automáticamente cuando el contenido supera el ancho disponible.
+
+```tsx
+<div className="rounded-lg border border-divider overflow-hidden">
+  <div ref={scrollRef} className="overflow-auto max-h-[60vh]">
+    <table className="w-full border-collapse">
+      <thead>
+        <tr className="bg-surface-alt border-b border-divider/50">
+          {/* Esquina: sticky top-0 + sticky left-0 → z-30 (mayor que z-20 de otros <th>) */}
+          <th className="sticky top-0 left-0 z-30 bg-surface-alt px-4 py-4 text-left">...</th>
+          {/* Resto de cabeceras: solo sticky top-0 → z-20 */}
+          <th className="sticky top-0 z-20 bg-surface-alt px-4 py-4 text-left">...</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-divider/30">
+        {rows.map((row) => (
+          <tr key={row.id} className="hover:bg-surface-row-hover transition-colors cursor-pointer group">
+            {/* Celda sticky-left */}
+            <td className="sticky left-0 z-10 bg-canvas group-hover:bg-surface-row-hover transition-colors px-4 py-3">
+              ...
+            </td>
+            {/* Celdas normales */}
+            <td className="px-4 py-3 text-xs text-ink-muted whitespace-nowrap">...</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+**Regla**: si hay una tabla custom con más de 3-4 columnas o con datos de longitud variable, usar `<table>` desde el principio. Los divs flex solo son válidos para listas de elementos homogéneos sin estructura tabular.
+
+## Selección de fila en `<table>` sin `<label>` wrapper
+
+`<label>` no puede envolver un `<tr>` (HTML inválido). Para permitir clic en cualquier parte de la fila y seleccionar la entidad, usar:
+
+```tsx
+<tr
+  onClick={() => toggleItem(a.id)}
+  className="cursor-pointer select-none group"
+>
+  {/* Celda con checkbox: stopPropagation en el <input>, NO en el <td>.
+      Así el clic en el td (fuera del input) burbujea hasta el <tr> y selecciona la fila.
+      El clic directo en el input para allí y solo dispara onChange — evita doble toggle. */}
+  <td>
+    <input
+      type="checkbox"
+      checked={seleccionados.has(a.id)}
+      onChange={() => toggleItem(a.id)}
+      onClick={(e) => e.stopPropagation()}
+      className="..."
+    />
+  </td>
+  {/* Resto de celdas: sin onClick especial — burbujean hasta el <tr> */}
+  <td>...</td>
+</tr>
+```
+
+El error habitual es poner `stopPropagation` en el `<td>` en lugar del `<input>`: eso bloquea la selección al hacer clic en toda la celda Animal en lugar de solo en el checkbox.
+
+## Scroll tracking para gradiente sticky en tablas custom (fuera de DataTable)
+
+Cuando se implementa una tabla custom (no DataTable) con columnas sticky que necesitan el gradiente separador:
+
+```tsx
+// Estado y ref — dentro del componente
+const scrollRef = useRef<HTMLDivElement>(null)
+const [isScrolled, setIsScrolled] = useState(false)
+
+useEffect(() => {
+  const el = scrollRef.current
+  if (!el) return
+  const check = () => setIsScrolled(el.scrollLeft > 0)
+  check()  // estado inicial antes del primer scroll del usuario
+  el.addEventListener('scroll', check, { passive: true })
+  return () => el.removeEventListener('scroll', check)
+}, [])
+```
+
+```tsx
+// En la celda sticky-left (cabecera y filas):
+<th className={cn(
+  'sticky left-0 z-30 bg-surface-alt ...',
+  "after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-full after:w-4",
+  'after:bg-gradient-to-r after:from-black/[.07] after:to-transparent after:pointer-events-none',
+  'after:transition-opacity after:duration-200',
+  isScrolled ? 'after:opacity-100' : 'after:opacity-0',
+)}>
+```
+
+La llamada `check()` en el `useEffect` es necesaria para el estado inicial: sin ella, si la tabla ya desborda al montar (scroll > 0 por otro motivo), el gradiente no aparecería hasta el primer evento de scroll del usuario.
+
+## Grid 2-col estable: nodo de columna siempre en el DOM
+
+En un `grid grid-cols-2`, si una columna tiene contenido condicional y se renderiza con `{condicion && <div>...</div>}`, al fallar la condición la columna desaparece del DOM y la columna hermana salta a la primera posición. Esto crea un reflow visual jarring.
+
+**Patrón correcto**: siempre renderizar el `<div>` de la columna y condicionar el contenido dentro:
+
+```tsx
+{/* ❌ El div desaparece del grid cuando la condición falla */}
+{condicion && (
+  <div className="flex flex-col gap-2">
+    <DatePicker ... />
+  </div>
+)}
+
+{/* ✅ El div siempre ocupa su slot en el grid */}
+<div className="flex flex-col gap-2">
+  {condicion && (
+    <>
+      <DatePicker ... />
+    </>
+  )}
+</div>
+```
+
+Para el campo Fecha en ReubicacionFlow paso 2: la condición que oculta el DatePicker se simplificó a solo `!destinoEsUbicacionActualIndividual` (el único caso donde mostrar una fecha realmente no tiene sentido). En modo multi-selección el DatePicker siempre se muestra aunque `animalesEfectivos.length === 0` — el botón de confirmar desactivado ya comunica que no se puede proceder.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useRef, useEffect } from 'react'
 import { parse } from 'date-fns'
 import { AlertTriangle, ChevronDown, ChevronLeft, ChevronUp, Info } from 'lucide-react'
 
@@ -139,6 +139,18 @@ export function ReubicacionFlow({
 
   // Panel expandible de animales seleccionados en paso 2
   const [resumenExpandido, setResumenExpandido] = useState(false)
+
+  // Sombreado del separador sticky-left en paso 1: activo cuando hay scroll horizontal
+  const paso1ScrollRef = useRef<HTMLDivElement>(null)
+  const [paso1Scrolled, setPaso1Scrolled] = useState(false)
+  useEffect(() => {
+    const el = paso1ScrollRef.current
+    if (!el) return
+    const check = () => setPaso1Scrolled(el.scrollLeft > 0)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    return () => el.removeEventListener('scroll', check)
+  }, [])
 
   // ── Derivados del paso 2 ──────────────────────────────────────────────────
 
@@ -422,88 +434,132 @@ export function ReubicacionFlow({
           </div>
         )}
 
-        {/* Tabla de selección — scroll interno para que el footer quede siempre visible */}
+        {/* Tabla de selección — <table> real: alineación de columnas garantizada por el
+            algoritmo de tabla, sticky funciona nativamente en <th>/<td>.
+            overflow-auto: scroll vertical (filas largas) + horizontal (columnas anchas). */}
         <div className="rounded-lg border border-divider overflow-hidden">
-          <div className="overflow-y-auto max-h-[60vh]">
-
-            {/* Cabecera sticky dentro del scroll container */}
-            <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-4 bg-surface-alt border-b border-divider/50">
-              <input
-                type="checkbox"
-                checked={todosSeleccionados}
-                ref={(el) => {
-                  if (el) el.indeterminate = algunoSeleccionado && !todosSeleccionados
-                }}
-                onChange={() => toggleTodos(animalesFiltrados)}
-                className="h-4 w-4 rounded border-divider cursor-pointer shrink-0 [accent-color:var(--color-world)]"
-              />
-              <SortBtn col="crotal"          label="Animal"           sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
-              <SortBtn col="tipo_productivo" label="Tipo productivo"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
-              {modo !== 'pending' && (
-                <SortBtn col="sexo"          label="Sexo"             sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="flex-1 min-w-0 justify-center" />
-              )}
-              {modo === 'global' && (
-                <SortBtn col="ubicacion" label="Ubicación actual" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
-              )}
-              {modo !== 'pending' && (
-                <SortBtn col="fecha"         label="Fecha último cambio" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="flex-1 min-w-0 justify-end text-right" />
-              )}
-            </div>
-
-            {animalesFiltrados.length === 0 ? (
-              <p className="px-4 py-8 text-sm text-ink-muted text-center">
-                No se encontraron animales.
-              </p>
-            ) : (
-              <div className="divide-y divide-divider/30">
-                {animalesFiltrados.map((a) => (
-                  <label
-                    key={a.id}
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-alt/50 transition-colors select-none"
+          <div ref={paso1ScrollRef} className="overflow-auto max-h-[60vh]">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-surface-alt border-b border-divider/50">
+                  {/* Cabecera sticky-top + sticky-left (esquina): z-30 > z-20 de otras <th> sticky-top */}
+                  <th
+                    scope="col"
+                    className={cn(
+                      'sticky top-0 left-0 z-30 bg-surface-alt',
+                      'px-4 py-4 text-left',
+                      // Gradiente derecho: separador visual cuando hay contenido oculto a la izquierda
+                      "after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-full after:w-4",
+                      'after:bg-gradient-to-r after:from-black/[.07] after:to-transparent after:pointer-events-none',
+                      'after:transition-opacity after:duration-200',
+                      paso1Scrolled ? 'after:opacity-100' : 'after:opacity-0',
+                    )}
                   >
-                    <input
-                      type="checkbox"
-                      checked={seleccionados.has(a.id)}
-                      onChange={() => toggleAnimal(a.id)}
-                      className="h-4 w-4 rounded border-divider cursor-pointer shrink-0 [accent-color:var(--color-world)]"
-                    />
-                    {/* Animal: crotal + nombre */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-ink truncate">
-                        <span className="font-medium">
-                          {a.crotal ?? <span className="italic text-ink-muted">Sin crotal</span>}
-                        </span>
-                        {a.nombre && (
-                          <span className="text-ink-muted"> · {a.nombre}</span>
-                        )}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={todosSeleccionados}
+                        ref={(el) => {
+                          if (el) el.indeterminate = algunoSeleccionado && !todosSeleccionados
+                        }}
+                        onChange={() => toggleTodos(animalesFiltrados)}
+                        className="h-4 w-4 rounded border-divider cursor-pointer shrink-0 [accent-color:var(--color-world)]"
+                      />
+                      <SortBtn col="crotal" label="Animal" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                     </div>
-                    {/* Tipo productivo */}
-                    <span className="flex-1 min-w-0 text-xs text-ink-muted truncate">
-                      {a.tipo_productivo_nombre ?? '—'}
-                    </span>
-                    {/* Sexo — oculto en pending (sin ubicación previa, aporta poco) */}
-                    {modo !== 'pending' && (
-                      <span className="flex-1 min-w-0 text-xs text-ink-muted text-center">
-                        {labelSexo(a.sexo)}
-                      </span>
-                    )}
-                    {/* Ubicación actual — solo en modo global */}
-                    {modo === 'global' && (
-                      <span className="flex-1 min-w-0 text-xs text-ink-muted truncate">
-                        {a.ubicacion_actual_nombre ?? <span className="italic">Sin ubicación</span>}
-                      </span>
-                    )}
-                    {/* Fecha último cambio — oculto en pending (sin historial de ubicación) */}
-                    {modo !== 'pending' && (
-                      <span className="flex-1 min-w-0 text-xs text-ink-muted tabular-nums text-right">
-                        {formatFecha(a.fecha_ultimo_cambio_ubicacion)}
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            )}
+                  </th>
+                  <th scope="col" className="sticky top-0 z-20 bg-surface-alt px-4 py-4 text-left">
+                    <SortBtn col="tipo_productivo" label="Tipo productivo" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                  </th>
+                  {modo !== 'pending' && (
+                    <th scope="col" className="sticky top-0 z-20 bg-surface-alt px-4 py-4 text-center">
+                      <SortBtn col="sexo" label="Sexo" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="justify-center" />
+                    </th>
+                  )}
+                  {modo === 'global' && (
+                    <th scope="col" className="sticky top-0 z-20 bg-surface-alt px-4 py-4 text-left">
+                      <SortBtn col="ubicacion" label="Ubicación actual" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                    </th>
+                  )}
+                  {modo !== 'pending' && (
+                    <th scope="col" className="sticky top-0 z-20 bg-surface-alt px-4 py-4 text-right">
+                      <SortBtn col="fecha" label="Fecha último cambio" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="justify-end" />
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-divider/30">
+                {animalesFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={99} className="px-4 py-8 text-sm text-ink-muted text-center">
+                      No se encontraron animales.
+                    </td>
+                  </tr>
+                ) : (
+                  animalesFiltrados.map((a) => (
+                    // group: las celdas sticky reaccionan al hover de la fila
+                    <tr
+                      key={a.id}
+                      onClick={() => toggleAnimal(a.id)}
+                      className="hover:bg-surface-row-hover transition-colors cursor-pointer select-none group"
+                    >
+                      {/* Sticky-left: checkbox + Animal.
+                          stopPropagation en el <input> (no en el <td>) evita doble-toggle al
+                          hacer clic en el checkbox, pero permite que el clic en cualquier
+                          otra parte de la celda burbujee hasta el <tr> y seleccione la fila. */}
+                      <td
+                        className={cn(
+                          'sticky left-0 z-10 bg-canvas group-hover:bg-surface-row-hover transition-colors',
+                          'px-4 py-3',
+                          "after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-full after:w-4",
+                          'after:bg-gradient-to-r after:from-black/[.07] after:to-transparent after:pointer-events-none',
+                          'after:transition-opacity after:duration-200',
+                          paso1Scrolled ? 'after:opacity-100' : 'after:opacity-0',
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={seleccionados.has(a.id)}
+                            onChange={() => toggleAnimal(a.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-divider cursor-pointer shrink-0 [accent-color:var(--color-world)]"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm text-ink">
+                              <span className="font-medium">
+                                {a.crotal ?? <span className="italic text-ink-muted">Sin crotal</span>}
+                              </span>
+                              {a.nombre && (
+                                <span className="text-ink-muted"> · {a.nombre}</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-ink-muted whitespace-nowrap">
+                        {a.tipo_productivo_nombre ?? '—'}
+                      </td>
+                      {modo !== 'pending' && (
+                        <td className="px-4 py-3 text-xs text-ink-muted text-center">
+                          {labelSexo(a.sexo)}
+                        </td>
+                      )}
+                      {modo === 'global' && (
+                        <td className="px-4 py-3 text-xs text-ink-muted whitespace-nowrap">
+                          {a.ubicacion_actual_nombre ?? <span className="italic">Sin ubicación</span>}
+                        </td>
+                      )}
+                      {modo !== 'pending' && (
+                        <td className="px-4 py-3 text-xs text-ink-muted tabular-nums text-right whitespace-nowrap">
+                          {formatFecha(a.fecha_ultimo_cambio_ubicacion)}
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -610,41 +666,45 @@ export function ReubicacionFlow({
       {/* ── Fecha + Destino: 2 columnas cuando el contenedor lo permite, cada una con su aviso ── */}
       <div className="grid grid-cols-1 @sm:grid-cols-2 gap-4 items-start">
 
-        {/* ── Columna izquierda: Fecha + aviso de fecha inválida ── */}
-        {(animalesEfectivos.length > 0 || !destinoId) && !destinoEsUbicacionActualIndividual && (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-ink">Fecha de reubicación</label>
-              <DatePicker
-                value={fecha}
-                onChange={setFecha}
-                placeholder="Selecciona una fecha"
-                minDate={minFecha}
-                maxDate={maxFecha}
-              />
-            </div>
-
-            {/* Aviso cuando la fecha cae por debajo del mínimo.
-                Ocurre si el usuario vuelve al paso 1, cambia la selección de animales,
-                y avanza con una fecha que ya no es válida para el nuevo conjunto. */}
-            {fechaInvalida && animalConFechaMinima && (
-              <div className={cn(
-                'rounded-lg border border-warning bg-warning-soft',
-                'px-3 py-2.5 flex items-start gap-2 text-sm text-warning',
-              )}>
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">La fecha seleccionada ya no es válida.</p>
-                  <p className="text-xs mt-0.5">
-                    {labelAnimal(animalConFechaMinima)} tiene como último cambio de ubicación
-                    el {formatFecha(animalConFechaMinima.fecha_ultimo_cambio_ubicacion)}.
-                    Selecciona una fecha igual o posterior.
-                  </p>
-                </div>
+        {/* ── Columna izquierda: siempre presente (DatePicker visible aunque animalesEfectivos === 0).
+            Se oculta solo en modo individual cuando destino = ubicación actual, único caso
+            en que mostrar una fecha no tiene ningún sentido. */}
+        <div className="flex flex-col gap-2">
+          {!destinoEsUbicacionActualIndividual && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-ink">Fecha de reubicación</label>
+                <DatePicker
+                  value={fecha}
+                  onChange={setFecha}
+                  placeholder="Selecciona una fecha"
+                  minDate={minFecha}
+                  maxDate={maxFecha}
+                />
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Aviso cuando la fecha cae por debajo del mínimo.
+                  Ocurre si el usuario vuelve al paso 1, cambia la selección de animales,
+                  y avanza con una fecha que ya no es válida para el nuevo conjunto. */}
+              {fechaInvalida && animalConFechaMinima && (
+                <div className={cn(
+                  'rounded-lg border border-warning bg-warning-soft',
+                  'px-3 py-2.5 flex items-start gap-2 text-sm text-warning',
+                )}>
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">La fecha seleccionada ya no es válida.</p>
+                    <p className="text-xs mt-0.5">
+                      {labelAnimal(animalConFechaMinima)} tiene como último cambio de ubicación
+                      el {formatFecha(animalConFechaMinima.fecha_ultimo_cambio_ubicacion)}.
+                      Selecciona una fecha igual o posterior.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {/* ── Columna derecha: Destino + desglose/avisos asociados ── */}
         <div className="flex flex-col gap-2">

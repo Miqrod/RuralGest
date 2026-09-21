@@ -22,6 +22,8 @@ const columns: ColumnDef<AnimalListItem, unknown>[] = [
   {
     accessorKey: 'crotal',
     header: 'Crotal',
+    size: 160,
+    meta: { sticky: true },
     // Busca en crotal Y en nombre para que el buscador sirva como campo único
     filterFn: (row, _columnId, filterValue: string) => {
       const q = filterValue.toLowerCase()
@@ -45,6 +47,7 @@ const columns: ColumnDef<AnimalListItem, unknown>[] = [
   {
     accessorKey: 'nombre',
     header: 'Nombre',
+    meta: { sticky: true },
     cell: ({ getValue }) => {
       const nombre = getValue<string | null>()
       return nombre ?? <span className="text-ink-muted">—</span>

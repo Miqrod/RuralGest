@@ -87,6 +87,7 @@ export function InstalacionesTable({ data }: Props) {
     {
       accessorKey: 'nombre',
       header: 'Nombre',
+      meta: { sticky: true },
       cell: ({ getValue }) => (
         <span className="font-medium">{getValue<string>()}</span>
       ),
@@ -145,7 +146,7 @@ export function InstalacionesTable({ data }: Props) {
       id: 'acciones',
       header: 'Acciones',
       enableSorting: false,
-      meta: { align: 'center' as const },
+      meta: { align: 'center' as const, sticky: 'right' as const },
       cell: ({ row }) => {
         const item = row.original
         return (
@@ -215,7 +216,11 @@ export function InstalacionesTable({ data }: Props) {
           columns={columns}
           data={data}
           pageSize={10}
-          getRowClassName={(row) => !row.activo ? 'bg-alert-soft/50 hover:bg-alert-soft/70' : undefined}
+          // bg-alert-row y bg-alert-row-hover son colores sólidos calculados con color-mix()
+          // (equivalentes planos de bg-alert-soft/50 y /70 sobre bg-canvas).
+          // Al ser sólidos, tanto las celdas normales como las sticky muestran el mismo color.
+          getRowClassName={(row) => !row.activo ? 'bg-alert-row hover:bg-alert-row-hover' : undefined}
+          getRowStickyClassName={(row) => !row.activo ? 'bg-alert-row group-hover:bg-alert-row-hover' : undefined}
         />
       </motion.div>
 

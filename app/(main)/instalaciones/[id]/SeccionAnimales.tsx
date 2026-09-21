@@ -6,10 +6,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowRightLeft, List } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Table, TableBody, TableCell, TableHead,
-  TableHeader, TableRow,
-} from '@/components/ui/table'
+import { type ColumnDef } from '@tanstack/react-table'
+import { DataTable } from '@/components/data-table/DataTable'
 import { ReubicacionFlow } from '@/modules/ganadero/instalaciones/ui/reubicacion/ReubicacionFlow'
 import { submitRegistrarReubicacion } from '@/app/(main)/instalaciones/actions'
 import { cn } from '@/lib/utils'
@@ -23,6 +21,53 @@ const ESPECIE_LINKS: Record<Especie, string> = {
   vacuno:  '/vacuno/animales',
   porcino: '/porcino/animales',
 }
+
+const columns: ColumnDef<AnimalEnInstalacion, unknown>[] = [
+  {
+    accessorKey: 'crotal',
+    header: 'Crotal',
+    meta: { sticky: true },
+    cell: ({ row, getValue }) => {
+      const crotal = getValue<string | null>()
+      return (
+        <Link
+          href={`${ESPECIE_LINKS[row.original.especie]}/${row.original.id}`}
+          className="font-mono text-world hover:underline underline-offset-2"
+        >
+          {crotal ?? <span className="text-ink-muted italic">Sin crotal</span>}
+        </Link>
+      )
+    },
+  },
+  {
+    accessorKey: 'nombre',
+    header: 'Nombre',
+    cell: ({ getValue }) => {
+      const v = getValue<string | null>()
+      return v ?? <span className="text-ink-muted">—</span>
+    },
+  },
+  {
+    accessorKey: 'tipo_productivo_nombre',
+    header: 'Tipo productivo',
+    cell: ({ getValue }) => {
+      const v = getValue<string | null>()
+      return v ?? <span className="text-ink-muted">—</span>
+    },
+  },
+  {
+    accessorKey: 'fecha_ubicacion',
+    header: 'Desde',
+    cell: ({ getValue }) => {
+      const fecha = getValue<string | null>()
+      if (!fecha) return <span className="text-ink-muted">—</span>
+      // T00:00:00 fuerza interpretación local (evita desfase UTC en fechas sin hora)
+      return new Date(fecha.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-ES', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      })
+    },
+  },
+]
 
 // La fecha de llegada a esta instalación es el último CAMBIO_UBICACION del animal,
 // ya que el animal está actualmente aquí (no ha sido reubicado desde que llegó).
@@ -127,54 +172,20 @@ export function SeccionAnimales({ instalacion, animales, destinos }: Props) {
 
       {/* ── Contenido ── */}
       <div className="p-5">
-        {/* Contenedor común: ambas vistas comparten borde, radio y sombra */}
-        <div className="rounded-xl border border-divider/60 shadow-sm overflow-hidden">
-
-          {tab === 'animales' ? (
-            animales.length === 0 ? (
+        {tab === 'animales' ? (
+          animales.length === 0 ? (
+            <div className="rounded-xl border border-divider/60 shadow-sm overflow-hidden">
               <p className="px-5 py-8 text-sm text-ink-muted text-center">
                 No hay animales asignados a esta instalación.
               </p>
-            ) : (
-              <Table>
-                <TableHeader className="bg-surface-alt">
-                  <TableRow className="border-divider/30">
-                    <TableHead className="px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider">Crotal</TableHead>
-                    <TableHead className="px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider">Nombre</TableHead>
-                    <TableHead className="px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider">Tipo productivo</TableHead>
-                    <TableHead className="px-6 py-4 text-xs font-bold text-ink-muted uppercase tracking-wider">Desde</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {animales.map((a) => (
-                    <TableRow key={a.id} className="border-divider/30 hover:bg-surface-alt/50 transition-colors">
-                      <TableCell className="px-6 py-4 text-sm">
-                        <Link
-                          href={`${ESPECIE_LINKS[a.especie]}/${a.id}`}
-                          className="font-mono text-world hover:underline underline-offset-2"
-                        >
-                          {a.crotal ?? <span className="text-ink-muted italic">Sin crotal</span>}
-                        </Link>
-                      </TableCell>
-                      <TableCell className={cn('px-6 py-4 text-sm', !a.nombre && 'text-ink-muted')}>
-                        {a.nombre ?? '—'}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-sm text-ink-muted">
-                        {a.tipo_productivo_nombre ?? '—'}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-sm text-ink-muted tabular-nums">
-                        {a.fecha_ubicacion
-                          ? new Date(a.fecha_ubicacion).toLocaleDateString('es-ES', {
-                              day: '2-digit', month: 'short', year: 'numeric',
-                            })
-                          : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )
+            </div>
           ) : (
+            // DataTable aporta su propio wrapper (borde + sombra + overflow) —
+            // no necesita contenedor externo adicional.
+            <DataTable columns={columns} data={animales} pageSize={20} />
+          )
+        ) : (
+          <div className="rounded-xl border border-divider/60 shadow-sm overflow-hidden">
             <ReubicacionFlow
               key={flowKey}
               modo="location"
@@ -185,9 +196,8 @@ export function SeccionAnimales({ instalacion, animales, destinos }: Props) {
               submitReubicacion={submitRegistrarReubicacion}
               classNamePaso2="p-5"
             />
-          )}
-
-        </div>
+          </div>
+        )}
       </div>
     </section>
   )

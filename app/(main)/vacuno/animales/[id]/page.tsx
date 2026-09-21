@@ -120,7 +120,7 @@ export default async function AnimalDetailPage({ params }: Props) {
             </div>
             <div className="flex flex-col gap-4">
               <SeccionUsoProductivo animal={animal} tiposDisponibles={tiposDisponibles} />
-              <SeccionEstados animal={animal} />
+              <SeccionEstados animal={animal} numCriasActivas={criasElegibles.length} />
             </div>
             <SeccionOrigen animal={animal} />
           </div>
@@ -128,7 +128,7 @@ export default async function AnimalDetailPage({ params }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-4">
               <SeccionUsoProductivo animal={animal} tiposDisponibles={tiposDisponibles} />
-              <SeccionEstados animal={animal} />
+              <SeccionEstados animal={animal} numCriasActivas={criasElegibles.length} />
             </div>
             <SeccionOrigen animal={animal} />
           </div>

@@ -91,6 +91,14 @@
     --color-alert: var(--status-alert);
     --color-alert-soft: var(--status-alert-soft);
     --color-priority: var(--status-priority);
+    /* Filas de tabla con estado de alerta — colores sólidos calculados con color-mix().
+       Se resuelven en runtime, por lo que se adaptan solos al dark mode cuando
+       --status-alert-soft y --canvas cambian. No hace falta redefinirlos en .dark. */
+    --color-alert-row: var(--status-alert-row);
+    --color-alert-row-hover: var(--status-alert-row-hover);
+    /* Hover estándar de fila — equivalente sólido de bg-surface-alt/50 sobre canvas.
+       Usado tanto en <tr> como en celdas sticky para que coincidan exactamente. */
+    --color-surface-row-hover: var(--status-surface-row-hover);
 }
 
 :root {
@@ -144,6 +152,13 @@
     --status-alert: #ca1414;
     --status-alert-soft: #FEE2E2;
     --status-priority: #065F46;
+    /* Equivalentes sólidos de bg-alert-soft/50 y /70 sobre bg-canvas (#ffffff).
+       color-mix() se resuelve en runtime → automático en dark mode. */
+    --status-alert-row: color-mix(in srgb, var(--status-alert-soft) 50%, var(--canvas));
+    --status-alert-row-hover: color-mix(in srgb, var(--status-alert-soft) 70%, var(--canvas));
+    /* Equivalente sólido de bg-surface-alt/50 sobre canvas — hover estándar de fila.
+       Se usa tanto en <tr> como en la celda sticky para que coincidan exactamente. */
+    --status-surface-row-hover: color-mix(in srgb, var(--surface-alt) 50%, var(--canvas));
 }
 
 .dark {

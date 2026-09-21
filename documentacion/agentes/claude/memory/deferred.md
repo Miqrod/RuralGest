@@ -212,6 +212,18 @@ Implementado: `modules/ganadero/animales/domain/availableActions.ts` con `getAva
 
 Implementado: `getCriasConVinculoActivo.ts` + `SeccionCriasDependientes.tsx` (server) + `CriasDependientesWidget.tsx` (client con DrawerIdentificacion). Se renderiza debajo del carrusel en col 1 de la ficha. Grid con `items-start` para que cols 2 y 3 no se estiren. Desaparece automáticamente cuando no hay vínculos activos.
 
+## PAGINACIÓN EN TABLA CUSTOM DE REUBICACIONES (paso 1)
+
+La tabla custom del paso 1 de `ReubicacionFlow` no tiene paginación. Añadirla requiere ~20 líneas:
+estado `paso1PageIndex` + `paso1PageSize`, memo `animalesPaginados`, `useEffect` de reset al filtrar,
+y un footer idéntico al de DataTable (select Filas + botones de página).
+
+No se convirtió a DataTable porque `seleccionados` (Set<UUID>) vive fuera de la tabla y lo necesita
+el paso 2. Convertirla requeriría añadir `onRowClick` a DataTable — abstracción especulativa
+sin un segundo caso de uso real que lo justifique.
+
+Cuando: cuando el usuario lo solicite.
+
 ## DISCARDED HOOKS
 
 Not needed: `useLocalStorage`, `usePrevious`, `useAsync`, `useMediaQuery`.
