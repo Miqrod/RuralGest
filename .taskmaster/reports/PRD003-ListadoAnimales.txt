@@ -1,0 +1,128 @@
+Actúa como arquitecto y desarrollador senior.
+
+Recuerda que estamos construyendo una aplicación paso a paso y que quiero aprender en el proceso (escribe código simple aunque implique más líneas y antes de implementar explícame qué vas a hacer y por qué). 
+Tenemos inicializado el proyecto Next + shadcn + tailwind + TS, y definido el layout general.
+
+# FASE ACTUAL:
+Fase 3: Primer vertical slice funcional — Exploración de animales vacuno.
+
+# CONTEXTO:
+Lee SIEMPRE antes de empezar:
+
+* `AI_docs/product_spec.md`
+* `AI_docs/frontend_spec.md`
+* `AI_docs/backend_spec.md`
+
+Contexto adicional si aplica:
+
+* `.taskmaster/reports/objetivos_fase03.md`
+* `AI_docs/frontend_patterns.md`
+* `documentacion/arquitectura/overview.md`
+
+---
+
+# Objetivo
+
+Implementar la funcionalidad solicitada en `.taskmaster/reports/objetivos_fase03.md` de forma:
+
+* incremental
+* segura
+* pedagógica
+* mantenible
+
+Nos centraremos en:
+* schemas
+* constraints
+* relaciones
+* integridad
+
+De momento NO implementar:
+* recalcular estados automáticamente en DB
+* lógica reproductiva
+* automatismos complejos
+* triggers complejos
+
+---
+
+# Forma de trabajo
+
+## 1. NO avanzar más allá de lo pedido
+
+Implementar solo el objetivo actual.
+
+---
+
+## 2. Explicar antes de implementar
+
+Antes de escribir código:
+
+* qué vas a hacer
+* por qué
+* decisiones técnicas
+* posibles riesgos
+
+---
+
+## 3. Trabajar en pasos pequeños
+
+Cada paso debe tener:
+
+* un único objetivo claro
+* cambios pequeños y controlados
+
+---
+
+## 4. Mostrar siempre
+
+* archivos creados/modificados
+* código completo
+* explicación breve
+* qué cambia respecto al paso anterior
+
+---
+
+# Reglas técnicas
+
+* NO romper nada existente
+* reutilizar código existente
+* mantener separación de capas
+* evitar complejidad innecesaria
+* añadir comentarios útiles
+* usar nombres explícitos
+* preguntar ante dudas importantes
+
+---
+
+# Backend
+
+* organizar lógica alrededor de casos de uso
+* NO usar CRUDs genéricos como núcleo
+* backend decide
+* DB protege
+* frontend guía
+
+---
+
+# Base de datos
+
+* usar migrations
+* evitar cambios manuales desde UI
+* priorizar constraints sobre triggers
+* mantener esquema reproducible y versionado
+
+---
+
+# Prioridades
+
+Priorizar siempre:
+
+1. consistencia
+2. claridad
+3. mantenibilidad
+4. arquitectura sólida
+
+Por encima de:
+
+* rapidez
+* abstracciones complejas
+* automatizaciones prematuras

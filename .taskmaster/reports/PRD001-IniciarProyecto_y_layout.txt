@@ -1,0 +1,42 @@
+Frontend Foundation > Project Setup
+
+Quiero empezar por la configuración e inicialización del proyecto:
+Next.js
+TypeScript
+Tailwind
+shadcn/ui
+ESLint/Prettier
+aliases
+estructura carpetas
+theme provider
+
+Frontend Foundation > Layout base
+
+Una vez creado el proyecto, quiero crear la estructura base:
+layout (sidebar, header, footer, mainsection)
+patterns
+navegación
+componentes
+responsive
+dark mode
+formularios
+tablas
+SIN:
+eventos
+ciclos
+ventas
+movimientos
+
+Para ello ten en cuenta los siguientes ficheros:
+- docs/product_spec.md
+- docs/frontend_spec.md
+- documentacion/frontend/*
+- bocetos/*
+
+Divide esto en tareas individuales. 
+
+Indica:
+- arquitectura propuesta
+- archivos afectados
+- decisiones técnicas
+- posibles riesgos

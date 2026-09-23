@@ -1,0 +1,1410 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "187",
+        "title": "Lectura y contextualización de documentación primaria",
+        "description": "Revisar exhaustivamente la documentación primaria del proyecto: specs de producto, backend, frontend; modelos reproductivo y ganadero; arquitectura y patrones de dominio.",
+        "details": "Leer en orden: AI_docs/product_spec.md, AI_docs/backend_spec.md, AI_docs/frontend_spec.md, AI_docs/frontend_patterns.md, modelo_reproductivo.md, modelo_ganadero.md, overview.md, dominios/reproductivo.md, context-rules-projection-pattern.md, action-usecase-event.md, rpc-transaccional.md. Documentar hallazgos clave y referencias cruzadas.",
+        "testStrategy": "Verificar que se han leído todos los documentos y que se comprende el contexto general del dominio reproductivo y su integración con el resto del sistema.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-29T22:19:14.592Z"
+      },
+      {
+        "id": "188",
+        "title": "Revisión de histórico de PRDs y decisiones previas",
+        "description": "Analizar PRD007–PRD012, documentación histórica y pending_documentation.md para entender decisiones previas, cambios acumulados y estado actual del dominio reproductivo.",
+        "details": "Revisar PRD007 (Cubrición), PRD008 (Confirmación gestación), PRD009, PRD010, PRD011, PRD012, y documentación histórica. Identificar decisiones que han quedado obsoletas vs. vigentes. Crear matriz de cambios acumulados.",
+        "testStrategy": "Crear un documento de síntesis que mapee decisiones por PRD y su estado actual. Identificar contradicciones explícitas entre PRDs.",
+        "priority": "high",
+        "dependencies": [
+          "187"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-29T22:28:44.678Z"
+      },
+      {
+        "id": "189",
+        "title": "Auditoría de estructura de código en modules/ganadero/reproductivo/",
+        "description": "Inspeccionar la implementación real del módulo reproductivo: estructura de carpetas, archivos de Use Cases, Context, Rules, Projection, persistencia y eventos.",
+        "details": "Mapear estructura actual: listar todos los archivos en modules/ganadero/reproductivo/, identificar patrones de organización, localizar implementaciones de Context, Rules, Projection para cada Use Case (Cubrición, Confirmación, Parto, Destete, Aborto, Cambio productivo, Salida). Documentar dependencias internas.",
+        "testStrategy": "Generar un árbol de estructura de código con anotaciones sobre responsabilidades. Verificar que cada Use Case sigue el patrón Context→Rules→Projection.",
+        "priority": "high",
+        "dependencies": [
+          "187"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-29T23:42:43.981Z"
+      },
+      {
+        "id": "190",
+        "title": "Auditoría de integraciones en UI (app/(main)/vacuno/animales/[id]/)",
+        "description": "Inspeccionar cómo la UI coordina los Use Cases reproductivos y qué información fluye entre frontend y backend.",
+        "details": "Revisar componentes de ficha del animal, formularios de cubrición, confirmación, parto, destete, aborto. Mapear qué datos se envían, qué validaciones ocurren en frontend vs. backend, qué eventos se disparan. Identificar lógica de negocio en frontend que debería estar en backend.",
+        "testStrategy": "Crear diagrama de flujo UI→Backend para cada operación reproductiva. Identificar inconsistencias entre intención en UI y autoridad en backend.",
+        "priority": "high",
+        "dependencies": [
+          "189"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-30T16:18:49.148Z"
+      },
+      {
+        "id": "191",
+        "title": "Identificación de reglas reproductivas duplicadas",
+        "description": "Localizar lógica reproductiva que se repite entre múltiples Use Cases o que está fragmentada en varios lugares.",
+        "details": "Buscar patrones como: validación de estado reproductivo, apertura/cierre de ciclos, cálculo de dependencias madre-cría, transiciones de estado. Crear matriz de qué regla está implementada dónde. Anotar si la duplicación es intencional o accidental.",
+        "testStrategy": "Generar reporte de duplicación con líneas de código y archivos. Clasificar cada duplicación como: necesaria (contexto diferente), accidental (refactorizable) o histórica (compatible).",
+        "priority": "high",
+        "dependencies": [
+          "189",
+          "190"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-30T16:52:15.632Z"
+      },
+      {
+        "id": "192",
+        "title": "Identificación de inconsistencias entre Context, Rules, Projection y persistencia",
+        "description": "Verificar que la información fluye coherentemente entre capas: qué datos necesita Context, qué reglas aplica Rules, qué estado produce Projection, qué se persiste en DB.",
+        "details": "Para cada Use Case: trazar qué información entra en Context, qué invariantes valida Rules, qué campos actualiza Projection, qué se guarda en ciclos/eventos. Identificar si hay datos que se validan en Rules pero no se protegen en DB, o viceversa.",
+        "testStrategy": "Crear tabla de trazabilidad: campo → Context → Rules → Projection → DB. Marcar inconsistencias como: validación faltante, protección faltante, o redundancia.",
+        "priority": "high",
+        "dependencies": [
+          "189",
+          "191"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-08-30T17:01:05.057Z"
+      },
+      {
+        "id": "193",
+        "title": "Análisis de código de compatibilidad histórica",
+        "description": "Identificar qué código existe para mantener compatibilidad con datos antiguos y determinar si sigue siendo necesario.",
+        "details": "Buscar comentarios sobre 'compatibilidad', 'legacy', 'histórico', versiones anteriores de campos. Revisar migraciones. Determinar si los datos históricos aún existen en producción y si el código de compatibilidad es crítico.",
+        "testStrategy": "Crear inventario de código de compatibilidad con justificación de necesidad. Marcar qué puede eliminarse si se ejecuta una migración.",
+        "priority": "medium",
+        "dependencies": [
+          "189",
+          "192"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "194",
+        "title": "Consolidación del contrato ReproductiveContext",
+        "description": "Definir con precisión qué información necesita el dominio reproductivo para tomar decisiones: qué datos del animal, qué ciclos abiertos, qué eventos previos.",
+        "details": "Especificar: campos del animal necesarios (edad, especie, tipo productivo), información del ciclo (fechas, estado, tipo), eventos relevantes (cubriciones previas, partos, abortos). Crear interfaz clara de ReproductiveContext con tipos TypeScript. Documentar qué información es obligatoria vs. opcional.",
+        "testStrategy": "Verificar que todos los Use Cases pueden construir un Context válido con la información disponible. Probar casos donde falta información y verificar que se rechaza adecuadamente.",
+        "priority": "high",
+        "dependencies": [
+          "192"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "195",
+        "title": "Consolidación del contrato ReproductiveRules",
+        "description": "Definir exhaustivamente qué invariantes y transiciones son responsabilidad del dominio reproductivo.",
+        "details": "Documentar reglas como: máximo un ciclo abierto, transiciones válidas de estado (ABIERTO→CUBIERTA→GESTANTE→LACTANTE→CERRADO), validaciones de fechas, restricciones por tipo productivo, consecuencias de cambios de tipo. Crear matriz de transiciones. Especificar qué reglas son comunes vs. específicas de especie.",
+        "testStrategy": "Para cada regla, crear test que valide su cumplimiento y su violación. Verificar que las reglas son exhaustivas y no contradictorias.",
+        "priority": "high",
+        "dependencies": [
+          "194"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "196",
+        "title": "Consolidación del contrato ReproductiveProjection",
+        "description": "Definir qué estado e información derivada produce el dominio reproductivo.",
+        "details": "Especificar: campos del ciclo que se actualizan (estado, fechas, tipo), información derivada (días en gestación, crías activas, próxima fecha esperada), snapshots de estado. Documentar qué es calculado vs. persistido. Crear interfaz clara de ReproductiveProjection.",
+        "testStrategy": "Verificar que la Projection es determinística: mismo Context + mismo evento = mismo Projection. Probar que los snapshots coinciden con eventos.",
+        "priority": "high",
+        "dependencies": [
+          "195"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "197",
+        "title": "Consolidación del contrato Use Case",
+        "description": "Definir qué operación de negocio coordina cada Use Case y cómo interactúa con Context, Rules, Projection, persistencia y eventos.",
+        "details": "Para cada Use Case (Cubrición, Confirmación, Parto, Destete, Aborto, Cambio productivo, Salida): documentar entrada, validaciones, cambios de estado, eventos generados, salida. Crear diagrama de flujo. Especificar responsabilidades: qué hace el Use Case vs. qué hace el dominio.",
+        "testStrategy": "Verificar que cada Use Case sigue el patrón: validar entrada → aplicar Rules → generar eventos → actualizar Projection → persistir. Probar casos válidos e inválidos.",
+        "priority": "high",
+        "dependencies": [
+          "196"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "198",
+        "title": "Análisis de lógica compartida entre Use Cases",
+        "description": "Identificar qué comportamiento es común entre múltiples Use Cases y podría beneficiarse de centralización.",
+        "details": "Comparar implementaciones de: apertura de ciclos, cierre de ciclos, validación de estado, cálculo de dependencias, transiciones de estado. Crear matriz de similitudes. Anotar si la similitud es accidental o estructural.",
+        "testStrategy": "Generar reporte de similitud de código entre Use Cases. Calcular porcentaje de código compartible vs. específico.",
+        "priority": "high",
+        "dependencies": [
+          "197"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "199",
+        "title": "Análisis de reglas de apertura/asignación/cierre de ciclos",
+        "description": "Examinar en detalle cómo se abren, asignan y cierran ciclos reproductivos en cada Use Case.",
+        "details": "Documentar: cuándo se abre un ciclo nuevo, qué información se asigna, cuándo se cierra, qué condiciones impiden cierre, qué sucede si se intenta cerrar un ciclo con dependencias activas. Identificar si hay inconsistencias entre Use Cases.",
+        "testStrategy": "Crear test suite que valide todas las transiciones de ciclo. Probar casos como: ciclo abierto sin cubrición, ciclo con múltiples cubriciones, ciclo con destete parcial.",
+        "priority": "high",
+        "dependencies": [
+          "198"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "200",
+        "title": "Análisis de validaciones reproductivas",
+        "description": "Catalogar todas las validaciones que ocurren en el dominio reproductivo y dónde están implementadas.",
+        "details": "Listar validaciones como: edad mínima para reproducción, estado reproductivo válido para operación, coherencia de fechas, restricciones por tipo productivo, validación de ciclo_id. Crear matriz: validación → dónde se implementa (Context, Rules, DB, UI).",
+        "testStrategy": "Para cada validación, crear test que la viola y verifica rechazo. Verificar que no hay validaciones contradictorias.",
+        "priority": "high",
+        "dependencies": [
+          "199"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "201",
+        "title": "Análisis de evolución del estado reproductivo",
+        "description": "Documentar cómo evoluciona el estado reproductivo de un animal a lo largo de su vida.",
+        "details": "Crear diagrama de estados: ABIERTO → CUBIERTA → GESTANTE → LACTANTE → CERRADO, con transiciones posibles, eventos que las disparan, y consecuencias. Incluir estados especiales (cambio de tipo productivo, salida). Verificar que el diagrama es completo y consistente.",
+        "testStrategy": "Simular ciclos de vida completos: entrada a reproducción, cubrición, gestación, parto, destete, salida. Verificar que todas las transiciones son válidas.",
+        "priority": "high",
+        "dependencies": [
+          "200"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "202",
+        "title": "Análisis de proyecciones y snapshots",
+        "description": "Examinar cómo se calculan y almacenan las proyecciones de estado reproductivo.",
+        "details": "Revisar cómo se construyen snapshots, con qué frecuencia se actualizan, qué información contienen. Verificar que los snapshots son consistentes con los eventos. Identificar si hay cálculos que se repiten innecesariamente.",
+        "testStrategy": "Comparar snapshots calculados vs. persistidos para varios ciclos. Verificar que la reconstrucción desde eventos produce el mismo snapshot.",
+        "priority": "medium",
+        "dependencies": [
+          "201"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "203",
+        "title": "Análisis de dependencias con eventos",
+        "description": "Examinar cómo el dominio reproductivo depende de eventos y cómo genera nuevos eventos.",
+        "details": "Documentar: qué eventos consume cada Use Case, qué eventos genera, qué información se extrae de eventos, qué se asume sobre inmutabilidad de eventos. Verificar que no hay lógica que dependa del orden de eventos.",
+        "testStrategy": "Crear test que reproduce eventos en orden diferente y verifica que el resultado es el mismo. Probar idempotencia de operaciones.",
+        "priority": "high",
+        "dependencies": [
+          "202"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "204",
+        "title": "Análisis de dependencias con persistencia",
+        "description": "Examinar cómo el dominio reproductivo interactúa con la capa de persistencia.",
+        "details": "Documentar: qué tablas se consultan, qué se actualiza, qué transacciones se usan, qué invariantes protege la DB. Verificar que la lógica de dominio no está mezclada con lógica de persistencia.",
+        "testStrategy": "Revisar queries y transacciones. Verificar que no hay lógica de negocio en triggers o stored procedures.",
+        "priority": "high",
+        "dependencies": [
+          "203"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "205",
+        "title": "Identificación de puntos de duplicación actuales",
+        "description": "Crear reporte consolidado de toda la duplicación encontrada en auditorías previas.",
+        "details": "Compilar hallazgos de tareas 191, 198, 199, 200. Clasificar cada duplicación: refactorizable (código idéntico), similar (lógica parecida), o necesaria (contexto diferente). Estimar esfuerzo de refactorización.",
+        "testStrategy": "Generar matriz de duplicación con prioridad de refactorización. Verificar que la clasificación es consistente.",
+        "priority": "medium",
+        "dependencies": [
+          "204"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "206",
+        "title": "Análisis de facilidad para añadir nuevos Use Cases",
+        "description": "Evaluar cuán fácil sería implementar un nuevo Use Case reproductivo con la estructura actual.",
+        "details": "Simular implementación de un nuevo Use Case (ej: cambio de ciclo, reinicio de ciclo). Documentar qué pasos serían necesarios, qué código se reutilizaría, qué habría que crear nuevo. Identificar barreras o puntos de fricción.",
+        "testStrategy": "Crear esquema de implementación para un Use Case hipotético. Verificar que es claro y no requiere cambios estructurales.",
+        "priority": "medium",
+        "dependencies": [
+          "205"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "207",
+        "title": "Evaluación de ReproductiveEngine: análisis de responsabilidad transversal",
+        "description": "Determinar si existe una responsabilidad transversal real cuya centralización reduciría complejidad sin ocultar comportamiento.",
+        "details": "Basándose en análisis previos (191-206), evaluar: ¿hay lógica que aparece en múltiples Use Cases? ¿Hay reglas que son difíciles de mantener distribuidas? ¿Hay coordinación compleja entre Context, Rules, Projection? Documentar evidencia a favor y en contra de un Engine.",
+        "testStrategy": "Crear documento de evaluación con matriz de criterios: duplicación, complejidad, mantenibilidad, extensibilidad. Puntuar estado actual vs. con Engine.",
+        "priority": "high",
+        "dependencies": [
+          "206"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "208",
+        "title": "Test de extensibilidad del Engine: nuevo Use Case con reglas existentes",
+        "description": "Simular implementación de un nuevo Use Case que reutiliza reglas existentes y evaluar si el Engine facilitaría esto.",
+        "details": "Ejemplo: nuevo Use Case para 'reinicio de ciclo' que reutiliza validaciones de estado, apertura de ciclo, etc. Documentar qué cambios serían necesarios en Engine vs. sin Engine. Evaluar claridad y mantenibilidad.",
+        "testStrategy": "Crear prototipo de implementación en ambos escenarios (con/sin Engine). Comparar líneas de código, complejidad, claridad.",
+        "priority": "high",
+        "dependencies": [
+          "207"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "209",
+        "title": "Test de extensibilidad del Engine: nuevo Use Case con regla nueva",
+        "description": "Simular implementación de un nuevo Use Case que introduce una regla reproductiva nueva.",
+        "details": "Ejemplo: nuevo Use Case para 'sincronización de ciclos' que introduce regla de 'ciclos vinculados'. Documentar cómo se integraría en Engine vs. sin Engine. Evaluar si requiere modificación estructural.",
+        "testStrategy": "Crear prototipo de implementación. Verificar que la nueva regla no rompe reglas existentes. Evaluar complejidad de integración.",
+        "priority": "high",
+        "dependencies": [
+          "208"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "210",
+        "title": "Test de extensibilidad del Engine: descubrimiento de regla mal modelada",
+        "description": "Simular escenario donde un nuevo Use Case revela que una regla existente estaba mal modelada.",
+        "details": "Ejemplo: nuevo Use Case para 'corrección de parto' que revela que la regla de 'cierre de ciclo' no contemplaba correcciones. Documentar cómo se detectaría y corrigiría en Engine vs. sin Engine.",
+        "testStrategy": "Crear escenario de corrección. Verificar que la solución no rompe casos existentes. Evaluar facilidad de detección y corrección.",
+        "priority": "high",
+        "dependencies": [
+          "209"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "211",
+        "title": "Test multi-especie: análisis de reglas comunes vs. específicas",
+        "description": "Analizar qué parte de las reglas reproductivas actuales pertenece al dominio común y qué es específica de especie.",
+        "details": "Revisar reglas de cubrición, gestación, parto, destete, aborto. Identificar qué es universal (ej: máximo un ciclo abierto) vs. específico de bovino (ej: duración de gestación). Documentar cómo se modelaría para porcino sin crear abstracciones prematuras.",
+        "testStrategy": "Crear matriz de reglas: común vs. bovino vs. porcino. Verificar que la clasificación es coherente.",
+        "priority": "medium",
+        "dependencies": [
+          "210"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "212",
+        "title": "Decisión arquitectónica sobre ReproductiveEngine",
+        "description": "Tomar decisión final (Opción A: implementar, Opción B: no implementar, Opción C: extracción parcial) basada en evidencia de análisis previos.",
+        "details": "Compilar hallazgos de tareas 207-211. Documentar: qué problema resuelve (o no), qué responsabilidad posee, qué queda fuera, cómo se comportará ante nuevos Use Cases, cómo encaja con futuras especies. Justificar decisión con evidencia concreta.",
+        "testStrategy": "Crear documento de decisión arquitectónica con secciones: problema, solución, alternativas consideradas, justificación, implicaciones. Obtener validación de responsable del proyecto.",
+        "priority": "high",
+        "dependencies": [
+          "211"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "213",
+        "title": "Auditoría de atomicidad de operaciones",
+        "description": "Verificar que operaciones que producen varios cambios (ej: parto que crea ciclo nuevo y actualiza estado) son atómicas.",
+        "details": "Revisar cada Use Case: qué cambios produce, cómo se coordinan, qué transacciones se usan. Identificar si hay puntos donde una operación podría fallar parcialmente. Documentar mecanismos de rollback.",
+        "testStrategy": "Crear test que simula fallos en diferentes puntos de cada operación. Verificar que el estado es consistente después del rollback.",
+        "priority": "high",
+        "dependencies": [
+          "197"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "214",
+        "title": "Auditoría de invariantes protegidas en DB",
+        "description": "Verificar que las invariantes críticas del dominio están protegidas en la base de datos.",
+        "details": "Revisar constraints, triggers, índices. Verificar que se protege: máximo un ciclo abierto por animal, coherencia de ciclo_id, integridad referencial de eventos. Documentar qué invariantes están protegidas vs. confiadas a aplicación.",
+        "testStrategy": "Intentar violar cada invariante directamente en DB. Verificar que la DB rechaza la violación.",
+        "priority": "high",
+        "dependencies": [
+          "204"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "215",
+        "title": "Auditoría de coherencia entre eventos y snapshots",
+        "description": "Verificar que los snapshots de estado reproductivo son consistentes con los eventos persistidos.",
+        "details": "Para varios ciclos, reconstruir estado desde eventos y comparar con snapshot. Identificar discrepancias. Documentar si hay eventos que no se reflejan en snapshot o viceversa.",
+        "testStrategy": "Crear test que reconstruye estado desde eventos para múltiples ciclos y verifica coincidencia con snapshots.",
+        "priority": "high",
+        "dependencies": [
+          "202",
+          "214"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "216",
+        "title": "Auditoría de consistencia de ciclo_id",
+        "description": "Verificar que ciclo_id se asigna correctamente y se mantiene consistente a lo largo del ciclo.",
+        "details": "Revisar: cómo se genera ciclo_id, cómo se asigna a eventos, cómo se valida en operaciones. Verificar que no hay ciclos sin ciclo_id, ciclos con ciclo_id inconsistente, o eventos con ciclo_id incorrecto.",
+        "testStrategy": "Crear test que verifica ciclo_id en múltiples escenarios: ciclo nuevo, múltiples eventos en ciclo, cierre de ciclo.",
+        "priority": "high",
+        "dependencies": [
+          "215"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "217",
+        "title": "Auditoría de consistencia temporal",
+        "description": "Verificar que las fechas y secuencias temporales son coherentes según las reglas del dominio.",
+        "details": "Revisar: orden de eventos, fechas de transiciones, duración de estados. Verificar que no hay eventos con fechas inconsistentes (ej: parto antes de cubrición, destete antes de parto).",
+        "testStrategy": "Crear test que verifica orden temporal de eventos para ciclos completos. Probar casos con fechas límite.",
+        "priority": "high",
+        "dependencies": [
+          "216"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "218",
+        "title": "Auditoría de idempotencia",
+        "description": "Verificar que operaciones que deberían ser idempotentes lo son realmente.",
+        "details": "Identificar qué operaciones deberían ser idempotentes (ej: confirmación de gestación, destete). Documentar cómo se garantiza idempotencia. Probar ejecutando operación dos veces.",
+        "testStrategy": "Para cada operación idempotente, ejecutar dos veces y verificar que el resultado es idéntico.",
+        "priority": "medium",
+        "dependencies": [
+          "217"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "219",
+        "title": "Auditoría de comportamiento ante concurrencia",
+        "description": "Verificar que el dominio se comporta correctamente cuando múltiples operaciones ocurren simultáneamente.",
+        "details": "Identificar escenarios de concurrencia: dos cubriciones simultáneas, cubrición y confirmación simultáneas, etc. Documentar cómo se previene race conditions. Revisar locks y transacciones.",
+        "testStrategy": "Crear test que simula operaciones concurrentes. Verificar que el resultado es consistente y predecible.",
+        "priority": "high",
+        "dependencies": [
+          "218"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "220",
+        "title": "Creación de batería de regresión: casos de cubrición",
+        "description": "Implementar tests de regresión para operación de cubrición: primer ciclo, nueva cubrición dentro del ciclo, reutilización del ciclo correcto.",
+        "details": "Crear tests en Vitest que cubran: apertura de ciclo en cubrición, asignación de ciclo_id, validación de estado previo, generación de evento, actualización de snapshot. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: estado final del ciclo, evento persistido, snapshot actualizado, ciclo_id asignado correctamente.",
+        "priority": "high",
+        "dependencies": [
+          "219"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "221",
+        "title": "Creación de batería de regresión: casos de confirmación de gestación",
+        "description": "Implementar tests de regresión para confirmación de gestación: después de cubrición, sin cubrición previa, restricciones posteriores.",
+        "details": "Crear tests que cubran: validación de estado CUBIERTA, transición a GESTANTE, cálculo de fecha esperada de parto, restricciones posteriores (ej: no nueva cubrición). Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: transición de estado, evento persistido, restricciones aplicadas, snapshot actualizado.",
+        "priority": "high",
+        "dependencies": [
+          "220"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "222",
+        "title": "Creación de batería de regresión: casos de parto",
+        "description": "Implementar tests de regresión para parto: desde CUBIERTA, desde GESTANTE, actualización a LACTANTE, ciclo abierto.",
+        "details": "Crear tests que cubran: validación de estado previo, creación de crías, asignación de dependencias madre-cría, transición a LACTANTE, ciclo permanece abierto. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: estado final, crías creadas, dependencias registradas, ciclo abierto, eventos persistidos.",
+        "priority": "high",
+        "dependencies": [
+          "221"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "223",
+        "title": "Creación de batería de regresión: casos de destete",
+        "description": "Implementar tests de regresión para destete: una cría, destete parcial, múltiples crías en fechas diferentes, cierre de ciclo, transición CRÍA→RECRÍA.",
+        "details": "Crear tests que cubran: validación de dependencias activas, cierre de dependencias, transición de crías a RECRÍA, cierre de ciclo cuando desaparece última dependencia, creación de siguiente ciclo. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: dependencias cerradas, crías transicionadas, ciclo cerrado cuando corresponde, siguiente ciclo creado, eventos persistidos.",
+        "priority": "high",
+        "dependencies": [
+          "222"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "224",
+        "title": "Creación de batería de regresión: casos de aborto",
+        "description": "Implementar tests de regresión para aborto: dentro de ciclo válido, cierre correcto, estado posterior, nuevo ciclo, distinción frente a parto de cría muerta.",
+        "details": "Crear tests que cubran: validación de estado (CUBIERTA o GESTANTE), cierre de ciclo, generación de evento de aborto, estado reproductivo posterior, creación de nuevo ciclo cuando corresponda. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: ciclo cerrado, evento de aborto persistido, estado posterior correcto, nuevo ciclo creado si corresponde.",
+        "priority": "high",
+        "dependencies": [
+          "223"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "225",
+        "title": "Creación de batería de regresión: casos de cambio de tipo productivo",
+        "description": "Implementar tests de regresión para cambio de tipo productivo: entrada/salida del ámbito reproductivo, consecuencias sobre ciclo, coherencia de es_reproductora.",
+        "details": "Crear tests que cubran: cambio a tipo no reproductivo (cierre de ciclo), cambio a tipo reproductivo (apertura de ciclo si corresponde), actualización de es_reproductora, coherencia de historial. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: ciclo cerrado/abierto según corresponda, es_reproductora actualizado, eventos persistidos, historial coherente.",
+        "priority": "high",
+        "dependencies": [
+          "224"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "226",
+        "title": "Creación de batería de regresión: casos de venta/muerte",
+        "description": "Implementar tests de regresión para venta/muerte: cierre del ciclo propio, finalización de vínculos activos, ausencia de consecuencias posteriores.",
+        "details": "Crear tests que cubran: cierre de ciclo abierto, finalización de dependencias activas (si es madre), finalización de dependencia con madre (si es cría), ausencia de nuevos eventos posteriores. Incluir casos inválidos.",
+        "testStrategy": "Tests deben verificar: ciclo cerrado, dependencias finalizadas, ausencia de eventos posteriores, estado final consistente.",
+        "priority": "high",
+        "dependencies": [
+          "225"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "227",
+        "title": "Creación de batería de regresión: invariantes",
+        "description": "Implementar tests que verifican invariantes del dominio: nunca dos ciclos abiertos, eventos inmutables, estados no editables, coherencia eventos-ciclos-snapshots.",
+        "details": "Crear tests que intentan violar cada invariante y verifican que se rechaza. Incluir: intentar abrir dos ciclos, intentar editar evento, intentar editar estado directamente, crear inconsistencia entre eventos y snapshots.",
+        "testStrategy": "Tests deben verificar que cada violación de invariante es rechazada. Verificar que el estado permanece consistente después de intentos fallidos.",
+        "priority": "high",
+        "dependencies": [
+          "226"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "228",
+        "title": "Configuración de infraestructura de testing con Vitest",
+        "description": "Configurar Vitest para ejecutar tests de integración con conexión real a base de datos.",
+        "details": "Configurar: conexión a DB de test, fixtures de datos, setup/teardown, transacciones de test, limpieza de datos. Crear helpers para crear animales, ciclos, eventos de test. Documentar cómo ejecutar tests.",
+        "testStrategy": "Verificar que tests pueden conectar a DB, crear datos, ejecutar operaciones, y limpiar después. Probar en ambiente aislado.",
+        "priority": "high",
+        "dependencies": [
+          "227"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "229",
+        "title": "Conversión de it.todo en tests/machorra.test.ts a tests ejecutables",
+        "description": "Convertir los 25 it.todo marcados en tests/machorra.test.ts en tests ejecutables con infraestructura real.",
+        "details": "Revisar cada it.todo, entender qué escenario debe probar, implementar test con setup de datos, ejecución de operación, y verificación de resultado. Usar infraestructura de testing configurada en tarea 228.",
+        "testStrategy": "Cada test debe ser ejecutable y pasar. Verificar que cubre el escenario descrito en el it.todo.",
+        "priority": "high",
+        "dependencies": [
+          "228"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "230",
+        "title": "Ejecución y validación de batería de regresión completa",
+        "description": "Ejecutar todos los tests de regresión (tareas 220-227, 229) y validar que pasan.",
+        "details": "Ejecutar suite completa de tests. Documentar resultados: tests pasados, fallidos, skipped. Investigar y corregir fallos. Documentar cobertura de código.",
+        "testStrategy": "Todos los tests deben pasar. Cobertura de código debe ser >= 80% para módulo reproductivo.",
+        "priority": "high",
+        "dependencies": [
+          "229"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "231",
+        "title": "Identificación de datos históricos incompatibles",
+        "description": "Detectar registros en producción que fueron creados bajo modelo anterior y que podrían ser incompatibles con reglas actuales.",
+        "details": "Ejecutar queries que identifiquen: ciclos sin ciclo_id, eventos con fechas inconsistentes, estados no válidos, dependencias huérfanas. Documentar cantidad y tipo de registros problemáticos.",
+        "testStrategy": "Queries deben ejecutarse sin error. Resultados deben ser documentados y revisados.",
+        "priority": "medium",
+        "dependencies": [
+          "230"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "232",
+        "title": "Evaluación de necesidad de migración de datos",
+        "description": "Determinar si es necesaria una migración para corregir datos históricos incompatibles.",
+        "details": "Basándose en hallazgos de tarea 231: evaluar si los datos pueden coexistir con código de compatibilidad, o si requieren migración. Si se requiere migración, documentar estrategia: qué se corrige, cómo se verifica, cómo se valida.",
+        "testStrategy": "Crear plan de migración con pasos claros y verificaciones. Probar en ambiente de test.",
+        "priority": "medium",
+        "dependencies": [
+          "231"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "233",
+        "title": "Actualización de pending_documentation.md",
+        "description": "Actualizar documentación de pendientes: marcar resueltos, eliminar obsoletos, documentar nuevos pendientes identificados.",
+        "details": "Revisar pending_documentation.md. Para cada pendiente: verificar si fue resuelto por PRD010-012 o PRD013, si es obsoleto, o si sigue siendo válido. Actualizar estado. Documentar nuevos pendientes identificados durante auditoría.",
+        "testStrategy": "Documento actualizado debe ser coherente con decisiones de PRD013. Revisar con responsable del proyecto.",
+        "priority": "medium",
+        "dependencies": [
+          "212"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "234",
+        "title": "Preparación de actualizaciones para documentación permanente",
+        "description": "Identificar cambios que deben trasladarse a documentación permanente y preparar actualizaciones.",
+        "details": "Basándose en consolidaciones de tareas 194-197 y decisión de tarea 212: identificar qué debe actualizarse en modelo_reproductivo.md, modelo_ganadero.md, dominios/reproductivo.md, patrones. Crear lista de cambios con justificación.",
+        "testStrategy": "Lista de cambios debe ser clara y justificada. Cambios deben ser coherentes con decisiones de PRD013.",
+        "priority": "medium",
+        "dependencies": [
+          "233"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "235",
+        "title": "Documento final de consolidación y decisiones",
+        "description": "Crear documento que resume consolidación del dominio reproductivo, decisiones tomadas, y próximos pasos.",
+        "details": "Documento debe incluir: resumen de auditoría, reglas consolidadas, contrato Context-Rules-Projection, decisión sobre ReproductiveEngine con justificación, resultados de regresión, cambios a documentación permanente, pendientes resueltos y nuevos.",
+        "testStrategy": "Documento debe ser completo, coherente, y aprobado por responsable del proyecto.",
+        "priority": "high",
+        "dependencies": [
+          "234"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "236",
+        "title": "PRD013-fix: Migración RPC registrar_destete_lote atómico",
+        "description": "Crear función PL/pgSQL registrar_destete_lote(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT) que procesa el destete de múltiples crías en una única transacción Postgres.",
+        "details": "Por cada cría del array: validar elegibilidad (tipo='Cría', viva, vínculo activo, fecha >= fecha_nacimiento), actualizar animal (Recría + vínculo finalizado), crear evento DESTETE con el ciclo_id HISTÓRICO de la cría (obtenido via parto_evento_id, nunca el ciclo actual de la madre), insertar en evento_animales (rol='cria' y rol='madre'). Tras procesar todas las crías: por cada ciclo_id histórico afectado, comprobar vínculos activos restantes; si v_active_bonds = 0, cerrar el ciclo con AND resultado IS NOT NULL AND fecha_fin IS NULL. Si cualquier validación falla, RAISE EXCEPTION (rollback automático de toda la transacción). Retorna JSONB: { destetes: [{criaId, eventoId}], cicloCerrado: boolean }. Crear con supabase migration new y usar las validaciones del RPC actual en 20260830220931_robustez_destete_coherencia_temporal.sql como referencia.",
+        "testStrategy": "Ejecutar en local con supabase db reset. Probar: (1) lote de 1 cría → mismo resultado que RPC unitario, (2) lote de 2+ crías → todas actualizadas en una transacción, (3) lote con una cría inválida → ninguna se aplica, (4) ciclo_id de cada evento DESTETE = parto_evento_id.ciclo_id de la cría, no el ciclo abierto de la madre.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "237",
+        "title": "PRD013-fix: Domain types RegistrarDesteteLoteInput + RegistrarDesteteLoteResult",
+        "description": "Añadir tipos de dominio para la operación de destete en lote en modules/ganadero/reproductivo/domain/types.ts.",
+        "details": "Añadir: RegistrarDesteteLoteInput { cria_ids: UUID[], fecha: ISODate, observaciones?: string } y RegistrarDesteteLoteResult { destetes: { criaId: UUID; eventoId: UUID }[], cicloCerrado: boolean }. No eliminar los tipos unitarios hasta confirmar que no tienen otros callers.",
+        "testStrategy": "tsc --noEmit sin errores.",
+        "priority": "medium",
+        "dependencies": [
+          "236"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "238",
+        "title": "PRD013-fix: Application action registrarDesteteLote (llamada RPC única)",
+        "description": "Reescribir modules/ganadero/reproductivo/application/actions/registrarDestete.ts para delegar al RPC de lote en una única llamada, eliminando el loop de la capa de aplicación.",
+        "details": "Renombrar función exportada a registrarDesteteLote. Input: RegistrarDesteteLoteInput. Pre-validación en TS: cargar todas las crías con getAnimalById, aplicar getWeaningBlockers a cada una, acumular errores y lanzar si alguna falla (fail-fast antes de tocar la DB). Llamada única: supabase.rpc('registrar_destete_lote', { p_cria_ids, p_fecha, p_observaciones }). Retornar RegistrarDesteteLoteResult.",
+        "testStrategy": "tsc --noEmit sin errores. Verificar en UI que un lote de 2 crías produce una sola llamada RPC (visible en Supabase logs o network tab).",
+        "priority": "medium",
+        "dependencies": [
+          "237"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "239",
+        "title": "PRD013-fix: Server Action submitRegistrarDesteteLote en actions.ts",
+        "description": "Actualizar app/(main)/vacuno/animales/[id]/actions.ts: renombrar submitRegistrarDestete a submitRegistrarDesteteLote y cambiar su firma para recibir criaIds: string[] en lugar de criaId: string.",
+        "details": "Delegar a registrarDesteteLote({ cria_ids, fecha, observaciones }). Eliminar la función antigua una vez sin callers. Mantener el mismo patrón de manejo de errores con extractMessage.",
+        "testStrategy": "tsc --noEmit sin errores. Verificar que FormDestete.tsx importa correctamente el nuevo Server Action.",
+        "priority": "medium",
+        "dependencies": [
+          "238"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "240",
+        "title": "PRD013-fix: UI FormDestete.tsx — eliminar for loop, llamada única",
+        "description": "Simplificar modules/ganadero/reproductivo/ui/FormDestete.tsx: reemplazar el for...of sobre criaIds por una única llamada a submitRegistrarDesteteLote(pendingValues.criaIds, ...).",
+        "details": "En handleConfirm: eliminar el loop, llamar submitRegistrarDesteteLote con el array completo de IDs. cicloCerrado viene del único resultado. El resto de la UI no cambia: checkboxes, dialog de confirmación, toasts y el callback onSuccess(count, cicloCerrado) permanecen igual.",
+        "testStrategy": "Probar en UI local: seleccionar 2+ crías → confirmar → verificar que ambas quedan destetadas en una sola operación. Probar caso de error (simular fallo de red) → ninguna cría debe quedar destetada.",
+        "priority": "medium",
+        "dependencies": [
+          "239"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "241",
+        "title": "PRD013-fix: Actualizar evals de destete para operaciones en lote",
+        "description": "Actualizar evals/destete.eval.ts (y evals/destete-vacuno.eval.ts si existe) para cubrir los nuevos casos del destete en lote.",
+        "details": "Añadir casos: (1) lote de 2+ crías válidas → todas destetadas, (2) lote con una cría inválida → ninguna destetada (rollback), (3) lote completo = todas las crías activas del ciclo → cicloCerrado=true, (4) lote parcial → cicloCerrado=false, (5) verificar que ciclo_id en eventos DESTETE es el histórico (via parto_evento_id), no el ciclo abierto actual de la madre.",
+        "testStrategy": "Ejecutar evals y verificar que todos los casos pasan. Asegurarse de que los casos unitarios previos siguen pasando.",
+        "priority": "low",
+        "dependencies": [
+          "240"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "242",
+        "title": "PRD014 — Contexto y auditoría inicial",
+        "description": "Revisar PRD014, objetivos_fase14, migraciones existentes de animal/lote/eventos y RPCs a extender para mapear el estado actual del esquema antes de implementar.",
+        "details": "Leer PRD014 y objetivos_fase14. Revisar: ganadero_base.sql (ubicacion_actual_id en animal/lote sin FK, columnas de eventos, evento_animales.rol), rol_evento_animal_enum, rpcs_transaccionales.sql, rpc_registrar_parto.sql (versión activa: 20260829000002), registrar_salida_animal (versión activa: 20260905161232 tras fix fecha_salida). Mapear: qué existe (columnas sin FK, CAMBIO_UBICACION en tipo_evento), qué hay que crear (tabla ubicacion, FK, enum 'self', columnas en eventos).",
+        "testStrategy": "Mapa claro del estado actual antes de tocar ninguna migración. Confirmar que ubicacion_actual_id existe en animal y lote como UUID NULL sin FK y que no hay ninguna migración previa que toque ubicacion.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "243",
+        "title": "PRD014 — Migración: enum tipo_instalacion_enum y tabla instalacion",
+        "description": "Crear el tipo enumerado tipo_instalacion_enum y la tabla instalacion con los campos de v1, incluyendo los booleanos de configuración operativa.",
+        "details": "Crear tipo: CREATE TYPE tipo_instalacion_enum AS ENUM ('corral', 'nave', 'prado', 'cercado', 'almacen', 'otro'). Crear tabla instalacion: id UUID PK DEFAULT gen_random_uuid(), nombre TEXT NOT NULL, tipo tipo_instalacion_enum NOT NULL, activo BOOLEAN NOT NULL DEFAULT true, admite_animales BOOLEAN NOT NULL DEFAULT true, admite_stock BOOLEAN NOT NULL DEFAULT false, coordenadas JSONB NULL (formato {lat, lng}), observaciones TEXT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), created_by UUID NULL REFERENCES auth.users(id). Habilitar RLS. Política SELECT para authenticated (lectura pública autenticada). Las operaciones de escritura (INSERT/UPDATE) se protegen por autorización en backend. NO incluir: perimetro, PostGIS, jerarquías, sistema genérico/dinámico de capacidades.",
+        "testStrategy": "Migración aplica sin errores. INSERT + SELECT básico. RLS activo: authenticated puede leer; escritura protegida. admite_animales DEFAULT true, admite_stock DEFAULT false en filas nuevas. supabase db diff coherente.",
+        "priority": "high",
+        "dependencies": [
+          "242"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "244",
+        "title": "PRD014 — Migración: extender eventos con ubicacion_origen_id y ubicacion_destino_id",
+        "description": "Añadir las dos columnas de ubicación como FK a instalacion en la tabla eventos.",
+        "details": "ALTER TABLE eventos ADD COLUMN ubicacion_origen_id UUID NULL REFERENCES instalacion(id); ALTER TABLE eventos ADD COLUMN ubicacion_destino_id UUID NULL REFERENCES instalacion(id). Ambas nullable: la mayoría de eventos no son CAMBIO_UBICACION. Son datos estructurales del evento — NO van en metadata_json. Añadir índices: idx_eventos_ubicacion_origen, idx_eventos_ubicacion_destino. Nota: el PRD §9.2 referenciaba erróneamente ubicacion.id (entidad obsoleta) — la FK correcta es instalacion.id.",
+        "testStrategy": "\\d eventos muestra las columnas con FK a instalacion correctas. Evento con ubicacion_origen_id/destino_id NULL → OK. Evento con UUID de instalacion real → OK. UUID inventado → FK violation.",
+        "priority": "high",
+        "dependencies": [
+          "243"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "245",
+        "title": "PRD014 — Migración: completar FK de animal.ubicacion_actual_id y lote.ubicacion_actual_id",
+        "description": "Añadir las restricciones de clave foránea que faltan en animal y lote hacia la nueva tabla instalacion.",
+        "details": "ALTER TABLE animal ADD CONSTRAINT animal_ubicacion_actual_id_fkey FOREIGN KEY (ubicacion_actual_id) REFERENCES instalacion(id). ALTER TABLE lote ADD CONSTRAINT lote_ubicacion_actual_id_fkey FOREIGN KEY (ubicacion_actual_id) REFERENCES instalacion(id). Las columnas ya existen como UUID NULL — solo añadir la restricción. Los registros existentes con NULL no se ven afectados.",
+        "testStrategy": "Migración aplica sin error con filas existentes (todas tienen NULL). \\d animal muestra FK a instalacion. Intentar insertar animal con UUID no existente en instalacion → FK violation. NULL → OK.",
+        "priority": "high",
+        "dependencies": [
+          "243"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "246",
+        "title": "PRD014 — Migración: añadir 'self' a rol_evento_animal_enum",
+        "description": "Extender el enum rol_evento_animal_enum con el valor 'self'. Semántica: el animal participa en el evento como objeto directo del mismo. No representa una relación con otro animal.",
+        "details": "ALTER TYPE rol_evento_animal_enum ADD VALUE IF NOT EXISTS 'self'. Se usa en evento_animales para animales cuya ubicación cambia (CAMBIO_UBICACION en reubicaciones, parto, compra, salida). Los valores 'madre' y 'cria' no se modifican. ALTER TYPE ADD VALUE no requiere DROP/CREATE — seguro con filas existentes. Es valor interno: nunca se muestra al usuario.",
+        "testStrategy": "SELECT enum_range(NULL::rol_evento_animal_enum) devuelve ('madre','cria','self'). INSERT en evento_animales con rol='self' → OK. Sin error de constraint en filas existentes.",
+        "priority": "high",
+        "dependencies": [
+          "242"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "247",
+        "title": "PRD014 — Migración: RPC registrar_reubicacion_animales",
+        "description": "Implementar el RPC atómico de reubicación de uno o varios animales. Es el único mecanismo de backend para cualquier reubicación, independientemente del punto de entrada UI.",
+        "details": "Firma: registrar_reubicacion_animales(p_animal_ids UUID[], p_ubicacion_destino_id UUID, p_fecha DATE) RETURNS JSONB. Regla arquitectónica inviolable: todos los puntos de entrada UI (ficha animal, Reubicaciones, detalle de instalación, dashboard) deben converger en este RPC. Validaciones en orden dentro de la TX: lista no vacía, destino existe, destino activo Y admite_animales=true, fecha ≤ hoy. Lock FOR UPDATE de todos los animales en orden determinista por animal.id. Por cada animal: existe → vivo → origen (animal.ubicacion_actual_id) ≠ destino cuando ambos son UUID (NULL→UUID siempre válido) → fecha ≥ último CAMBIO_UBICACION (ORDER BY fecha DESC, created_at DESC LIMIT 1) → INSERT eventos con ubicacion_origen_id/destino_id → INSERT evento_animales(rol='self') → UPDATE animal.ubicacion_actual_id. ROLLBACK completo si falla cualquier animal.",
+        "testStrategy": "Lista vacía → error. Destino inactivo → error. Destino activo pero admite_animales=false → error. Animal inexistente → error. Animal muerto → error. Destino=origen (UUID) → error. Fecha futura → error. Fecha < último CAMBIO_UBICACION → error. 1 animal válido → OK, evento creado, ubicacion_actual_id actualizado. N animales válidos → todos OK. 1 inválido en N → rollback completo, ninguno modificado. Dos llamadas concurrentes → no deadlock.",
+        "priority": "high",
+        "dependencies": [
+          "244",
+          "245",
+          "246"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "248",
+        "title": "PRD014 — Migración: extender registrar_parto con CAMBIO_UBICACION inicial de crías vivas",
+        "description": "Para cada cría viva en registrar_parto, insertar CAMBIO_UBICACION inicial heredando la ubicación de la madre.",
+        "details": "Dentro de la transacción de registrar_parto, en el loop de crías vivas (tras INSERT animal): obtener v_ubicacion_madre = animal.ubicacion_actual_id de la madre (ya leído en el SELECT FOR UPDATE inicial). INSERT eventos: tipo_evento='CAMBIO_UBICACION', ubicacion_origen_id=NULL, ubicacion_destino_id=v_ubicacion_madre (puede ser NULL), fecha=p_fecha, especie, metadata_json='{\"contexto\":\"parto\"}'. INSERT evento_animales(evento_id, animal_id=v_cria_id, rol='self'). UPDATE animal SET ubicacion_actual_id=v_ubicacion_madre WHERE id=v_cria_id. Caso NULL→NULL: generar el evento igualmente. Crías muertas: NO generar CAMBIO_UBICACION.",
+        "testStrategy": "Parto con madre ubicada → cría.ubicacion_actual_id = madre.ubicacion_actual_id, existe CAMBIO_UBICACION con destino correcto y contexto='parto'. Parto con madre sin ubicación → cría.ubicacion_actual_id=NULL, existe CAMBIO_UBICACION NULL→NULL. Cría muerta → no existe CAMBIO_UBICACION para esa cría.",
+        "priority": "high",
+        "dependencies": [
+          "244",
+          "246"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "249",
+        "title": "PRD014 — Migración: extender registrar_compra_animal con CAMBIO_UBICACION inicial",
+        "description": "Añadir parámetro opcional de ubicación a registrar_compra_animal y generar siempre el CAMBIO_UBICACION inicial.",
+        "details": "La firma cambia → DROP + CREATE OR REPLACE para evitar overload en Postgres. Añadir p_ubicacion_inicial_id UUID DEFAULT NULL. Dentro de la transacción, tras el INSERT animal: INSERT eventos CAMBIO_UBICACION con ubicacion_origen_id=NULL, ubicacion_destino_id=p_ubicacion_inicial_id, fecha=p_fecha_compra, metadata_json='{\"contexto\":\"compra\"}'. INSERT evento_animales(rol='self'). UPDATE animal SET ubicacion_actual_id=p_ubicacion_inicial_id. El evento se genera siempre (NULL→UUID o NULL→NULL). Regenerar tipos Supabase tras la migración.",
+        "testStrategy": "Compra con ubicación → animal.ubicacion_actual_id=UUID, evento CAMBIO_UBICACION con destino correcto. Compra sin ubicación → animal.ubicacion_actual_id=NULL, evento CAMBIO_UBICACION NULL→NULL. Tipos Supabase regenerados con el nuevo parámetro.",
+        "priority": "high",
+        "dependencies": [
+          "244",
+          "246"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "250",
+        "title": "PRD014 — Migración: extender registrar_salida_animal con CAMBIO_UBICACION final",
+        "description": "En registrar_salida_animal, generar el CAMBIO_UBICACION de cierre solo si el animal tiene ubicación, y limpiar ubicacion_actual_id.",
+        "details": "Dentro de la transacción de registrar_salida_animal (versión activa: 20260905161232 con fecha_salida restaurada), leer v_ubicacion_actual = animal.ubicacion_actual_id en el SELECT FOR UPDATE inicial. IF v_ubicacion_actual IS NOT NULL THEN: INSERT eventos CAMBIO_UBICACION con ubicacion_origen_id=v_ubicacion_actual, ubicacion_destino_id=NULL, metadata_json con contexto 'venta' o 'muerte' según p_motivo. INSERT evento_animales(rol='self'). UPDATE animal SET ubicacion_actual_id=NULL. END IF. Si ya era NULL: no generar evento adicional. Mantener atomicidad con el resto de la salida.",
+        "testStrategy": "Salida con ubicación → animal.ubicacion_actual_id=NULL, CAMBIO_UBICACION con origen correcto y contexto adecuado. Salida sin ubicación → no se genera CAMBIO_UBICACION. Venta → contexto='venta'. Muerte → contexto='muerte'.",
+        "priority": "high",
+        "dependencies": [
+          "244",
+          "246"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "251",
+        "title": "PRD014 — Dominio: types y Use Cases de instalaciones",
+        "description": "Crear el módulo modules/ganadero/instalaciones/ con domain types y Use Cases, separando consulta/operación de administración.",
+        "details": "domain/types.ts: InstalacionInput { nombre, tipo, observaciones? }; InstalacionListItem { id, nombre, tipo, activo, admite_animales, admite_stock, coordenadas?, animales_count }; InstalacionDetail { ...listItem, observaciones?, created_at }; ConfiguracionUsosInput { admite_animales: boolean, admite_stock: boolean }; ReubicacionAnimalesInput { animal_ids: string[], ubicacion_destino_id: string, fecha: ISODate }; HistorialUbicacionItem { id, fecha, instalacion_origen: { id, nombre } | null, instalacion_destino: { id, nombre } | null, contexto?: string }; AnimalParaReubicar { id, crotal?, nombre?, instalacion_actual: { id, nombre } | null, ultima_fecha_cambio: ISODate | null }. application/consulta: listarInstalaciones.ts, getDetalleInstalacion.ts, getAnimalesEnInstalacion.ts, getAnimalesParaReubicar.ts, getHistorialUbicacionesAnimal.ts, registrarReubicacionAnimales.ts. application/admin: crearInstalacion.ts, actualizarInstalacion.ts, activarInstalacion.ts, desactivarInstalacion.ts, configurarUsosInstalacion.ts (puede consolidarse en actualizarInstalacion si el contrato admin resulta más claro). Las operaciones admin verifican permisos en backend.",
+        "testStrategy": "tsc --noEmit sin errores. Use Cases de escritura delegan al RPC sin añadir lógica de negocio. desactivarInstalacion lanza error descriptivo si hay animales vivos. configurarUsosInstalacion con admite_animales=false y animales presentes → no modifica ubicación de animales.",
+        "priority": "high",
+        "dependencies": [
+          "243",
+          "246"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "252",
+        "title": "PRD014 — Infrastructure: mapper y queries de instalaciones",
+        "description": "Implementar la capa de infraestructura: mapper y todas las queries de lectura necesarias para las pantallas del PRD.",
+        "details": "infrastructure/mapper.ts: fromRow para InstalacionListItem y InstalacionDetail. infrastructure/queries.ts: listInstalaciones() con animales_count como subquery COUNT(animal.id WHERE ubicacion_actual_id=i.id AND estado_vital='vivo'); getInstalacion(id) para detalle; getAnimalesEnInstalacion(instalacion_id) → animales vivos en esa instalación; getAnimalesParaReubicar({ search?, instalacion_ids?, incluir_sin_ubicacion? }) → lista paginable de animales con ultima_fecha_cambio calculada via subquery (ORDER BY fecha DESC, created_at DESC LIMIT 1 sobre CAMBIO_UBICACION del animal); getDestinos() → instalaciones activas con admite_animales=true para los selectores de destino; getHistorialUbicacionesAnimal(animal_id) → eventos CAMBIO_UBICACION ORDER BY fecha DESC, created_at DESC con nombres de instalaciones resueltos. animales_count y ultima_fecha_cambio no se persisten: se calculan en consulta.",
+        "testStrategy": "listInstalaciones devuelve animales_count correcto. getAnimalesParaReubicar filtra por instalacion_ids y sin_ubicacion. getDestinos excluye instalaciones inactivas y con admite_animales=false. ultima_fecha_cambio refleja ORDER BY fecha DESC, created_at DESC LIMIT 1. getHistorialUbicacionesAnimal ordena correctamente dos eventos el mismo día. tsc --noEmit sin errores.",
+        "priority": "high",
+        "dependencies": [
+          "251"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "253",
+        "title": "PRD014 — Extender getAnimalDetail con ubicacion_actual",
+        "description": "Añadir ubicacion_actual (instalación) al tipo AnimalDetail y a su query.",
+        "details": "LEFT JOIN instalacion ON animal.ubicacion_actual_id = instalacion.id en la query existente de detalle del animal. Añadir al tipo AnimalDetail: ubicacion_actual: { id: string; nombre: string; tipo: string } | null. Actualizar el mapper. La ubicación actual no necesita Use Case independiente — es parte de la lectura de detalle existente.",
+        "testStrategy": "Animal con ubicación → AnimalDetail.ubicacion_actual con id, nombre y tipo de instalacion. Animal sin ubicación → AnimalDetail.ubicacion_actual = null. tsc --noEmit sin errores.",
+        "priority": "medium",
+        "dependencies": [
+          "252"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "254",
+        "title": "PRD014 — UI: Gestión/Configuración — administración de instalaciones",
+        "description": "Implementar la primera sección del entorno de Gestión/Configuración para crear, editar y administrar instalaciones y sus usos operativos.",
+        "details": "Nueva sección en Gestión/Configuración (ruta por definir, p.ej. app/(main)/gestion/instalaciones/). Funcionalidades: listado de instalaciones con estado y usos operativos; formulario crear/editar (nombre, tipo, observaciones); gestión de activo mediante acciones desactivar/activar con reglas de negocio; gestión de admite_animales y admite_stock protegidos por permisos de backend; coordenadas definidas mediante mapa + marcador (no entrada manual primaria de lat/lng); configuración de coordenadas base de la explotación desde la configuración general de la explotación. Comportamiento de desactivar activo: bloqueo si existen animales vivos o lotes activos → mensaje explicativo '⚠️ No se puede desactivar esta instalación porque actualmente contiene N animales. Reubica primero los animales.' Comportamiento de cambiar admite_animales=false: si existen animales, mostrar confirmación informativa '⚠️ Esta instalación tiene actualmente N animales. Desactivar la admisión de animales impedirá utilizarla como destino para nuevas ubicaciones. Los animales actuales permanecerán.' → [Cancelar] [Confirmar]. Server Actions con autorización verificada en backend para todas las operaciones admin.",
+        "testStrategy": "Crear instalación → aparece en listado con admite_animales/admite_stock correctos. Editar nombre → persiste. Configurar coordenadas con mapa+marcador → se guardan. Desactivar (activo) con animales → error descriptivo, instalación no se desactiva. Desactivar admite_animales con animales → confirmación informativa, tras confirmar: admite_animales=false, animales permanecen, ningún CAMBIO_UBICACION generado. Activar instalación inactiva → OK. Coordenadas base de explotación configurables. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "251",
+          "252"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "255",
+        "title": "PRD014 — UI: pantalla Instalaciones (mapa + listado, solo consulta)",
+        "description": "Implementar la pantalla de consulta de instalaciones con mapa básico y listado ordenable. No es una pantalla de administración.",
+        "details": "Ruta: app/(main)/vacuno/instalaciones/page.tsx. Layout: mapa + listado combinados. Listado: nombre (link a Detalle de instalación), tipo, estado activo/inactivo, badges informativos de admite_animales y admite_stock, animales_count; ordenable por columnas relevantes. Sin botón de creación ni acciones de edición — eso va en Gestión/Configuración (tarea 254). Mapa: puntos por instalación con coordenadas, hover muestra nombre + animales_count, click navega a Detalle de instalación. Sin coordenadas → aparece en listado pero no en mapa. Centro inicial del mapa: coordenadas base de la explotación si existen, o vista amplia por defecto. Responsive.",
+        "testStrategy": "Listado muestra instalaciones con animales_count correcto y badges de usos. Ordenar por nombre/tipo funciona. Hover en mapa muestra info básica. Click en nombre o punto de mapa navega a Detalle. Sin botones de crear/editar en esta pantalla. Mapa se centra en coordenadas base de explotación si existen. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "252"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "256",
+        "title": "PRD014 — UI: Detalle de instalación",
+        "description": "Implementar la ficha de una instalación con datos de consulta, badges de usos operativos y sección de animales con alternancia Animales / Reubicar animales.",
+        "details": "Ruta: app/(main)/vacuno/instalaciones/[id]/page.tsx. Mostrar (solo lectura operativa): nombre, tipo, estado activo/inactivo, badges admite_animales y admite_stock, coordenadas cuando existan (valor legible además de mini-mapa), observaciones. Los campos activo, admite_animales, admite_stock NO son editables desde esta ficha. Mini-mapa contextual centrado en: coords de esta instalación si existen > coords base de explotación > vista amplia. Sección de animales (condicional): si existen animales, mostrar controles alternantes [Animales] [Reubicar animales]. Vista Animales: listado de consulta de animales vivos. Vista Reubicar animales: versión compacta del componente compartido (tarea 257) limitada a animales de esta instalación — sin filtros de instalación porque el origen ya está determinado. Si admite_animales=false pero quedan animales: sección sigue visible para permitir vaciarla. Cuando no queden animales: sección desaparece. Preparar estructura para futuras secciones (lotes, existencias) sin implementarlas. Responsive: en escritorio, sección de animales con ancho suficiente.",
+        "testStrategy": "Detalle muestra datos correctos con badges de usos. activo/admite_animales/admite_stock no editables desde la ficha. Mapa centrado en coords de la instalación si existen. Tab Animales lista animales. Tab Reubicar muestra checkboxes + última fecha. Reubicar usa registrar_reubicacion_animales. Tras reubicar, lista se actualiza. admite_animales=false con animales → sección visible. Sin animales → sección oculta. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "252",
+          "255"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "257",
+        "title": "PRD014 — UI: componente compartido de reubicación (paso 1 + paso 2)",
+        "description": "Implementar el componente reutilizable de reubicación usado por los cuatro puntos de entrada, adaptado visualmente a cada contexto.",
+        "details": "Componente en modules/ganadero/instalaciones/ui/ (o components/). Dos pasos: Paso 1 — selección de animales: listado con checkbox, crotal/nombre, instalación actual, última fecha de cambio (read-only, nunca editable). No mostrado en ficha animal (el animal ya está determinado). Paso 2 — datos comunes: selector de instalación destino alimentado por getDestinos() (solo instalaciones activas con admite_animales=true), DatePicker con fecha mínima = MAX(última fecha de cambio de todos los animales seleccionados) y fecha máxima = hoy. [Cancelar] [Confirmar]. Al confirmar, Server Action → registrarReubicacionAnimales. Fecha mínima es ayuda UX preventiva — el RPC es la autoridad definitiva. Variantes visuales: compacta sin filtros (Detalle de instalación), completa con filtros (pantalla Reubicaciones), inline sin paso 1 (ficha animal), drawer para paso 2 (dashboard). Una operación: N animales + 1 destino + 1 fecha.",
+        "testStrategy": "3 animales con distintas últimas fechas → fecha mínima datepicker = la más reciente. Fecha futura bloqueada. Selector destino muestra solo instalaciones activas con admite_animales=true. Confirmar con destino válido → llama a registrar_reubicacion_animales. Error del RPC → toast descriptivo. Verificar en UI local en los 4 contextos.",
+        "priority": "high",
+        "dependencies": [
+          "247",
+          "252"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "258",
+        "title": "PRD014 — UI: pantalla global Reubicaciones",
+        "description": "Implementar la pantalla para reubicar cualquier animal, con búsqueda, filtros dinámicos por instalación y selección múltiple.",
+        "details": "Ruta: app/(main)/vacuno/reubicaciones/page.tsx. Funcionalidades: listado de animales con búsqueda por crotal/nombre; filtros dinámicos por instalación generados automáticamente a partir de instalaciones activas con admite_animales=true (sin crearlos manualmente); opción 'Sin ubicación' para animales con ubicacion_actual_id=NULL; combinación de varios filtros de instalación; checkbox de selección múltiple; columna con última fecha de cambio de instalación (read-only, nunca editable); botón 'Reubicar' que abre paso 2 del componente compartido (257) con los animales seleccionados. Responsive: en móvil, tabla pasa a tarjetas con checkbox y última fecha visibles. No implementar drag & drop.",
+        "testStrategy": "Sin filtros → todos los animales. Filtro por instalación A → solo animales de A. Filtro 'Sin ubicación' → solo animales sin ubicacion_actual_id. Filtros dinámicos generados de instalaciones activas con admite_animales=true. Última fecha visible. Seleccionar 3 → Reubicar → paso 2 con fecha mínima = MAX de los 3. Confirmar → registrar_reubicacion_animales exitoso. Verificar responsive. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "252",
+          "257"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "259",
+        "title": "PRD014 — UI: reubicación inline desde ficha animal (ACCIONES)",
+        "description": "Añadir reubicación en la ficha del animal como formulario inline desplegado desde el panel ACCIONES, sin drawer ni modal.",
+        "details": "En la ficha del animal (app/(main)/vacuno/animales/[id]/), dentro del panel ACCIONES añadir acción 'Reubicar animal' visible solo si el animal está vivo. Al activar, el formulario se despliega inline dentro del propio panel (no drawer, no modal). Formulario mínimo (el animal ya está determinado): DatePicker con fecha mínima = última fecha de CAMBIO_UBICACION de este animal y fecha máxima = hoy; selector de instalación destino alimentado por getDestinos() (solo activas con admite_animales=true, excluye la actual). [Cancelar] [Confirmar]. Al confirmar, Server Action → registrarReubicacionAnimales({ animal_ids: [id], ... }). Tras éxito, refrescar ubicacion_actual en la ficha. Toast de confirmación o error descriptivo. No añadir segundo botón de reubicación en el widget de ubicación actual.",
+        "testStrategy": "Botón visible en animal vivo, oculto en muerto/vendido. Formulario se despliega inline sin drawer ni modal. DatePicker min = última fecha del animal. Selector destino: solo instalaciones activas con admite_animales=true, excluye la actual. Destino válido → OK, ubicacion_actual en ficha actualizada. Destino inactivo o admite_animales=false → error. Fecha futura → bloqueada en datepicker y rechazada por RPC. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "247",
+          "252",
+          "253",
+          "257"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "260",
+        "title": "PRD014 — UI: dashboard — widget pendientes de ubicar",
+        "description": "Añadir widget en el dashboard para animales vivos sin ubicación actual, con selección múltiple y flujo de reubicación.",
+        "details": "Widget en el dashboard que muestra animales vivos con ubicacion_actual_id=NULL. Permite seleccionar uno o varios animales mediante checkbox. Botón 'Reubicar' abre el paso 2 del componente compartido (257) como drawer para mantener el contexto del dashboard. El conjunto está implícitamente limitado a los animales sin ubicación (sin filtros adicionales). Al confirmar, llama a registrar_reubicacion_animales. Tras éxito, los animales reubicados desaparecen del widget.",
+        "testStrategy": "Widget muestra solo animales vivos sin ubicacion_actual_id. Seleccionar varios → Reubicar → drawer con paso 2. Fecha mínima = MAX de los seleccionados (hoy si ninguno tiene historial previo). Confirmar → animales desaparecen del widget. Verificar en UI local.",
+        "priority": "low",
+        "dependencies": [
+          "247",
+          "252",
+          "257"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "261",
+        "title": "PRD014 — UI: historial de ubicación en ficha del animal",
+        "description": "Mostrar el historial de CAMBIO_UBICACION del animal en su ficha, con coletilla contextual cuando corresponda.",
+        "details": "Nueva sección en la ficha del animal. Usar getHistorialUbicacionesAnimal. Por cada evento mostrar: fecha, nombre de instalación origen ('Sin ubicación' si NULL), nombre de instalación destino ('Sin ubicación' si NULL), coletilla contextual si metadata_json.contexto existe: '(parto)', '(compra)', '(venta)', '(muerte)'. Orden: fecha DESC, created_at DESC. Si no hay historial: texto 'Sin historial de ubicación'.",
+        "testStrategy": "Animal con varios CAMBIO_UBICACION → listados en orden correcto con nombres de instalación resueltos. CAMBIO_UBICACION de parto → aparece '(parto)'. Dos cambios el mismo día → ordenados por created_at. Animal sin historial → mensaje adecuado. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "252",
+          "253"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "262",
+        "title": "PRD014 — UI: extender formulario de compra con instalación inicial",
+        "description": "Añadir selector opcional de instalación inicial al formulario de compra de animal. El campo instalacion_id es OPCIONAL. Adelantar tras tarea 252.",
+        "details": "HACER JUSTO DESPUÉS DE LA TAREA 252 (infra + queries).\n\nEn el formulario de alta/compra de animal, añadir campo opcional 'Ubicación inicial' con selector alimentado por getDestinos() (instalaciones activas con admite_animales=true). Si no se selecciona → null. El Server Action de compra pasa ubicacion_inicial_id al Use Case, que lo incluye en la llamada al RPC extendido. Campo claramente opcional para no bloquear el flujo de compra.",
+        "testStrategy": "Compra con instalación seleccionada → animal.ubicacion_actual_id=UUID, CAMBIO_UBICACION con contexto='compra'. Compra sin selección → animal.ubicacion_actual_id=NULL, CAMBIO_UBICACION NULL→NULL con contexto='compra'. Selector solo muestra instalaciones activas con admite_animales=true. Verificar en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "249",
+          "252"
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": "263",
+        "title": "PRD014 — Seed: instalaciones y animales ubicados",
+        "description": "Actualizar el seed con 5-6 instalaciones con combinaciones variadas de usos operativos y asignar ubicacion_actual_id directamente a la mayoría de animales.",
+        "details": "Añadir 5-6 instalaciones con: tipos variados (corral, nave, prado, cercado, almacen, otro); combinaciones variadas de admite_animales/admite_stock (p.ej. corral con admite_animales=true, almacen con admite_stock=true y admite_animales=false); al menos 1 instalación inactiva; al menos 2-3 instalaciones con coordenadas y 1-2 sin coordenadas (para QA del mapa). Asignar ubicacion_actual_id directamente en la tabla animal a la mayoría de animales vivos. Dejar 2-3 animales vivos sin ubicación (para QA del widget dashboard y filtro 'Sin ubicación'). NO crear eventos CAMBIO_UBICACION artificiales (seed no es producción). Distribuir animales de forma que varias instalaciones tengan >1 animal.",
+        "testStrategy": "listInstalaciones() devuelve 5-6 instalaciones con animales_count correcto. Instalación con admite_animales=false no aparece en getDestinos(). Instalación inactiva no aparece en getDestinos(). 2-3 animales con ubicacion_actual_id=NULL. Mapa muestra puntos donde hay coordenadas. Verificar en UI local.",
+        "priority": "low",
+        "dependencies": [
+          "245",
+          "248",
+          "249",
+          "250"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "264",
+        "title": "PRD014 — QA / Evals: cobertura completa de criterios de aceptación",
+        "description": "Crear evals que cubran todos los criterios del PRD014: instalaciones (incluyendo admite_animales y admin), reubicación, inicialización, salida, UX/UI y proyección.",
+        "details": "Crear evals/instalaciones.eval.ts. Instalaciones: listar, detalle, crear/editar desde admin, autorización backend, activar, desactivar con bloqueo por animales/lotes, desactivar admite_animales con animales sin desubicarlos + confirmación informativa, mantener sección animales visible cuando admite_animales=false y hay animales, ocultar sección cuando vacía, conservar histórico, impedir destino si activo=false o admite_animales=false, configurar coordenadas via mapa+marcador, coordenadas NULL válidas, mapa centra en coords instalación > coords explotación > vista amplia. Reubicación — RPC: lista vacía, inexistente, muerto, destino inactivo, destino con admite_animales=false, destino=origen, fecha futura, fecha < último cambio, rollback completo, N animales válidos, concurrencia. Reubicación — múltiple: distintas últimas fechas, fecha mínima común = MAX, fecha válida/inválida, único destino, única fecha. Inicialización: parto con/sin ubicación madre, cría muerta, compra con/sin instalación. Salida: venta/muerte con/sin instalación. UX: 4 puntos de entrada convergen en registrar_reubicacion_animales, última fecha visible y no editable. Proyección: coherencia historial CAMBIO_UBICACION vs animal.ubicacion_actual_id.",
+        "testStrategy": "Todos los casos pasan. Casos de error → mensajes descriptivos. Rollback verificado: ningún animal modificado cuando uno falla. UI: verificar los 4 puntos de entrada en UI local.",
+        "priority": "medium",
+        "dependencies": [
+          "247",
+          "248",
+          "249",
+          "250",
+          "254",
+          "255",
+          "256",
+          "257",
+          "258",
+          "259",
+          "260",
+          "261",
+          "262",
+          "263"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "265",
+        "title": "PRD014 — Actualizar documentación permanente",
+        "description": "Reflejar las decisiones de PRD014 en la documentación permanente al cierre de la fase.",
+        "details": "decisions.md: entidad instalacion (no ubicacion), semántica de ubicación operativa y CAMBIO_UBICACION, campos admite_animales/admite_stock y semántica (config explícita no derivada), regla de modificación admin y permisos backend, semántica de NULL, regla temporal ORDER BY fecha DESC LIMIT 1, exclusión de MOVIMIENTO y operation_id, rol 'self', comportamiento de admite_animales=false (no desplaza animales), separación consulta/operación vs Gestión/Configuración. overview.md: entidad instalacion con sus campos. patterns.md: validación de desactivación con bloqueo por animales activos, confirmación informativa para admite_animales, componente compartido de reubicación como patrón UX, getDestinos() como query canónica para selectores de destino. Documentar: distinción 'sin ubicación con historial' vs 'sin historial', 4 puntos de entrada UX y convergencia en registrar_reubicacion_animales, coordenadas de instalación vs coordenadas base de explotación, prioridad de centro del mapa. Nota deuda técnica: rename registrar_destete_lote → registrar_destete_animales.",
+        "testStrategy": "Sin referencias a 'ubicacion' (tabla obsoleta) en documentación permanente. El modelo ganadero refleja la entidad instalacion con admite_animales y admite_stock. La separación admin/consulta está documentada. Los 4 puntos de entrada y el componente compartido están documentados.",
+        "priority": "low",
+        "dependencies": [
+          "264"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 266,
+        "title": "Configurar estructura base de Analítica y módulo de Reproducción",
+        "description": "Crear la estructura de carpetas y componentes base para la sección de Analítica, separada del dashboard operativo. Establecer rutas /analitica y /analitica/reproduccion.",
+        "details": "Crear directorio /pages/analitica/reproduccion. Implementar layout base que permita crecer hacia Ganadero, Finanzas y Operaciones. Configurar routing en Next.js. Establecer estructura de componentes: ReproductiveAnalyticsPage, CurrentSituationSection, HistoricalActivitySection, OffspringFollowUpSection. No implementar lógica de negocio aún, solo estructura visual.",
+        "testStrategy": "Verificar que las rutas son accesibles, que la estructura de carpetas permite extensión futura, que los componentes se renderizan sin errores.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 267,
+        "title": "Implementar modelo de datos de Situación Reproductiva Actual",
+        "description": "Crear tipos TypeScript y proyecciones para CurrentReproductiveSituation que represente el estado actual de la explotación sin dependencia del periodo histórico.",
+        "details": "Definir tipos: CurrentReproductiveSituation con campos: reproductoras_total, vacías, cubiertas, gestantes, requieren_revision. Crear proyección en backend que consulte el estado actual del ciclo reproductivo de cada animal. No incluir filtros de periodo. Implementar repositorio que obtenga esta información de eventos reproductivos sin considerar fecha_desde/fecha_hasta.",
+        "testStrategy": "Verificar que los conteos son correctos, que no varían al cambiar periodo, que solo incluyen hembras vivas con tipo_productivo=REPRODUCTORA, que los estados son mutuamente excluyentes.",
+        "priority": "high",
+        "dependencies": [
+          266
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 268,
+        "title": "Implementar lógica de cálculo de umbral de revisión reproductiva",
+        "description": "Crear la lógica que determina si un animal requiere revisión reproductiva basándose en el umbral configurable y el tiempo transcurrido en el ciclo.",
+        "details": "Obtener configuración umbral_revision_reproductiva_dias de la explotación (valor inicial 240). Implementar función que evalúa: es_hembra AND está_viva AND tipo_productivo=REPRODUCTORA AND ciclo_abierto AND estado IN (VACÍA, CUBIERTA) AND (fecha_actual - fecha_inicio_ciclo) > umbral_dias. Usar semántica 'supera X días' (241 días con umbral 240 = requiere revisión). Retornar lista de animales que cumplen criterios.",
+        "testStrategy": "Casos: 239 días con umbral 240 (no alerta), 240 días (no alerta), 241 días (alerta), gestante (no alerta), ciclo cerrado (no alerta), no reproductora (no alerta), animal muerto (no alerta).",
+        "priority": "high",
+        "dependencies": [
+          267
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 269,
+        "title": "Crear endpoint de configuración de umbral de revisión reproductiva",
+        "description": "Implementar endpoint para obtener y actualizar el umbral configurable de revisión reproductiva desde la sección de configuración de la explotación.",
+        "details": "POST /api/explotacion/configuracion/umbral-revision-reproductiva con payload {umbral_dias: number}. GET /api/explotacion/configuracion/umbral-revision-reproductiva para obtener valor actual. Almacenar en tabla explotacion_configuracion o similar. Validar que el valor sea positivo. No hardcodear en frontend ni backend.",
+        "testStrategy": "Verificar que se puede obtener el valor actual, que se puede actualizar, que la validación rechaza valores inválidos, que el cambio se refleja inmediatamente en la lógica de revisión.",
+        "priority": "high",
+        "dependencies": [
+          268
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 270,
+        "title": "Implementar selector de periodo temporal con presets",
+        "description": "Crear componente de UI para seleccionar periodo histórico con presets predefinidos y opción de personalización manual.",
+        "details": "Componente PeriodSelector con presets: Últimos 30 días, Últimos 3 meses, Últimos 6 meses, Últimos 12 meses, Año actual, Año anterior, Personalizado. Cada preset calcula fecha_desde y fecha_hasta. Mostrar campos de fecha visibles que reflejen el rango real. Si usuario modifica manualmente cualquier fecha, cambiar a 'Personalizado'. Estado: {preset: string, fecha_desde: Date, fecha_hasta: Date}. Validar que fecha_desde <= fecha_hasta.",
+        "testStrategy": "Verificar que cada preset genera fechas correctas, que modificación manual convierte a Personalizado, que las fechas visibles coinciden con las enviadas al backend, que rango inválido se rechaza.",
+        "priority": "high",
+        "dependencies": [
+          266
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 271,
+        "title": "Implementar selector de dimensión de instalación",
+        "description": "Crear componente de filtro por instalación para la analítica histórica.",
+        "details": "Componente InstallationFilter que permite seleccionar una instalación o 'Todas'. Obtener lista de instalaciones activas de la explotación. Pasar instalacion_id al backend (undefined si 'Todas'). El filtro solo afecta a métricas puntuales, no al seguimiento de crías.",
+        "testStrategy": "Verificar que se cargan las instalaciones, que se puede seleccionar una o todas, que el valor se pasa correctamente al backend, que el seguimiento de crías no cambia al cambiar instalación.",
+        "priority": "medium",
+        "dependencies": [
+          270
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 272,
+        "title": "Implementar reconstrucción de ubicación histórica de animales",
+        "description": "Crear función que determina la ubicación histórica de un animal en una fecha específica basándose en eventos CAMBIO_UBICACION.",
+        "details": "Función getHistoricalLocation(animal_id, fecha): ubicacion_id. Consultar eventos CAMBIO_UBICACION ordenados por fecha DESC, created_at DESC. Retornar ubicacion_id del último evento con fecha <= fecha_consulta. Si no existe evento anterior, retornar ubicacion_inicial del animal. Usar para atribuir eventos históricos a instalaciones.",
+        "testStrategy": "Verificar que retorna la ubicación correcta antes del primer cambio, después de un cambio, después de múltiples cambios, en fecha exacta de cambio, en fecha posterior.",
+        "priority": "high",
+        "dependencies": [
+          271
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 273,
+        "title": "Implementar consulta de actividad reproductiva histórica",
+        "description": "Crear endpoint que retorna métricas de actividad reproductiva filtradas por periodo e instalación.",
+        "details": "GET /api/analitica/reproduccion/actividad-historica con parámetros: fecha_desde, fecha_hasta, instalacion_id?. Retornar: {cubriciones, gestaciones_confirmadas, abortos, partos}. Para cada evento: filtrar por fecha del evento, reconstruir ubicación histórica del animal en esa fecha, comparar con instalacion_id si existe. Usar eventos: CUBRICION, CONFIRMACION_GESTACION, ABORTO, PARTO.",
+        "testStrategy": "Verificar que eventos dentro del rango se incluyen, fuera se excluyen, ubicación histórica se determina correctamente, filtro de instalación funciona, eventos sin instalación se manejan.",
+        "priority": "high",
+        "dependencies": [
+          272
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 274,
+        "title": "Implementar consulta de resultado de partos",
+        "description": "Crear endpoint que retorna métricas de nacimientos (vivos y muertos) filtradas por periodo e instalación.",
+        "details": "GET /api/analitica/reproduccion/resultado-partos con parámetros: fecha_desde, fecha_hasta, instalacion_id?. Retornar: {crías_nacidas, crías_nacidas_vivas, crías_nacidas_muertas}. Identificar crías por relación animal.parto_evento_id = parto_event_id. Filtrar por fecha del evento PARTO. Atribuir a instalación histórica de la madre en fecha del parto. Separar por estado_vital (vivo/muerto).",
+        "testStrategy": "Verificar que se cuentan correctamente nacidas vivas y muertas, que se atribuyen a instalación de la madre, que el periodo filtra correctamente, que no se infieren datos de eventos posteriores.",
+        "priority": "high",
+        "dependencies": [
+          273
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 275,
+        "title": "Implementar modelo de seguimiento de crías (cohorte)",
+        "description": "Crear tipos y lógica para representar el seguimiento de crías nacidas durante un periodo hasta su destete o cierre de vínculo.",
+        "details": "Definir OffspringFollowUp: {cria_id, parto_evento_id, fecha_nacimiento, estado_vital, estado_seguimiento: DESTETADA|MUERTA_ANTES_DESTETE|OTRO_CIERRE|PENDIENTE, fecha_cierre?}. Implementar lógica que: identifica crías nacidas en periodo, sigue cada cría hasta DESTETE (evento natural de cierre), detecta MUERTE antes de destete, identifica otros cierres de vínculo, marca como PENDIENTE si no hay cierre. El periodo define qué nacimientos incluir, no limita el seguimiento.",
+        "testStrategy": "Verificar que cría nacida en periodo se incluye, que destete posterior al periodo cierra correctamente, que muerte antes de destete genera desenlace conocido, que cría lactante queda pendiente, que cambio de instalación no altera pertenencia.",
+        "priority": "high",
+        "dependencies": [
+          274
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 276,
+        "title": "Implementar consulta de seguimiento de crías durante el periodo",
+        "description": "Crear endpoint que retorna métricas globales de seguimiento de crías nacidas en el periodo.",
+        "details": "GET /api/analitica/reproduccion/seguimiento-crias con parámetros: fecha_desde, fecha_hasta. Retornar: {crías_nacidas_vivas, crías_destetadas, muertes_antes_destete, pendientes, otros_cierres}. NO recibe instalacion_id (métricas globales). Usar modelo OffspringFollowUp. Contar por estado_seguimiento. Ignorar cambios de instalación durante el seguimiento.",
+        "testStrategy": "Verificar que solo incluye crías nacidas en el periodo, que cuenta correctamente cada estado, que no responde a filtro de instalación, que destete posterior al periodo se incluye, que pendientes se identifican correctamente.",
+        "priority": "high",
+        "dependencies": [
+          275
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 277,
+        "title": "Implementar endpoint de situación reproductiva actual",
+        "description": "Crear endpoint que retorna la situación actual sin dependencia del periodo histórico.",
+        "details": "GET /api/analitica/reproduccion/situacion-actual. Retornar CurrentReproductiveSituation: {reproductoras, vacías, cubiertas, gestantes, requieren_revision}. No recibe fecha_desde/fecha_hasta. Consulta estado actual de cada animal. Incluye cálculo de revisión reproductiva usando umbral configurado.",
+        "testStrategy": "Verificar que no cambia al modificar periodo, que refleja estado actual, que conteos son correctos, que revisión se calcula con umbral actual.",
+        "priority": "high",
+        "dependencies": [
+          269,
+          276
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 278,
+        "title": "Implementar componente de Situación Actual en UI",
+        "description": "Crear componente visual que muestra la situación reproductiva actual como cabecera persistente de la pantalla de analítica.",
+        "details": "Componente CurrentSituationCard que muestra: Reproductoras (total), Vacías, Cubiertas, Gestantes, Requieren revisión. Debe permanecer visible mientras usuario consulta datos históricos. Usar datos de endpoint /api/analitica/reproduccion/situacion-actual. No depende de periodo. Diseño responsive que se adapte a pantallas pequeñas.",
+        "testStrategy": "Verificar que se renderiza correctamente, que muestra valores actuales, que no cambia al modificar periodo, que es responsive.",
+        "priority": "medium",
+        "dependencies": [
+          277
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 279,
+        "title": "Implementar componente de Actividad Reproductiva Histórica",
+        "description": "Crear componente que muestra métricas de actividad reproductiva (cubriciones, gestaciones, abortos, partos) filtradas por periodo e instalación.",
+        "details": "Componente ReproductiveActivitySection que consume endpoint /api/analitica/reproduccion/actividad-historica. Mostrar: Cubriciones, Gestaciones confirmadas, Abortos, Partos. Responde a cambios en PeriodSelector e InstallationFilter. Mostrar claramente que estas métricas responden al filtro de instalación.",
+        "testStrategy": "Verificar que se actualiza al cambiar periodo, que se actualiza al cambiar instalación, que muestra valores correctos, que es responsive.",
+        "priority": "medium",
+        "dependencies": [
+          273,
+          278
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 280,
+        "title": "Implementar componente de Resultado de Partos",
+        "description": "Crear componente que muestra métricas de nacimientos (vivos y muertos) filtradas por periodo e instalación.",
+        "details": "Componente BirthOutcomeSection que consume endpoint /api/analitica/reproduccion/resultado-partos. Mostrar: Crías nacidas, Crías nacidas vivas, Crías nacidas muertas. Responde a cambios en PeriodSelector e InstallationFilter.",
+        "testStrategy": "Verificar que se actualiza al cambiar periodo, que se actualiza al cambiar instalación, que muestra valores correctos, que suma de vivas+muertas = total.",
+        "priority": "medium",
+        "dependencies": [
+          274,
+          279
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 281,
+        "title": "Implementar componente de Seguimiento de Crías",
+        "description": "Crear componente que muestra métricas globales de seguimiento de crías nacidas en el periodo, diferenciado visualmente como métrica global.",
+        "details": "Componente OffspringFollowUpSection que consume endpoint /api/analitica/reproduccion/seguimiento-crias. Mostrar: Crías nacidas vivas, Crías destetadas, Muertes antes del destete, Pendientes, Otros cierres. Incluir explicación: 'El seguimiento de las crías se muestra como dato global porque una cría puede cambiar de instalación antes del destete'. NO responde a filtro de instalación. Diferenciación visual clara del bloque anterior.",
+        "testStrategy": "Verificar que no cambia al cambiar instalación, que muestra valores correctos, que explicación es clara, que es visualmente diferenciado.",
+        "priority": "medium",
+        "dependencies": [
+          276,
+          280
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 282,
+        "title": "Implementar acción de Machorra en ciclo reproductivo",
+        "description": "Integrar la acción registrar_machorra en el flujo de ciclo reproductivo con validaciones de elegibilidad.",
+        "details": "Implementar RPC registrar_machorra que: valida que animal es hembra, está vivo, tipo_productivo=REPRODUCTORA, ciclo abierto, estado IN (VACÍA, CUBIERTA). NO permite desde GESTANTE. Establece resultado='machorra', fecha_fin=CURRENT_DATE. Aplica reglas de cierre de ciclo existentes. Si animal continúa siendo reproductora, inicia siguiente ciclo VACÍA. Mantiene consistencia transaccional. Resultado es inmutable.",
+        "testStrategy": "Verificar que se ejecuta correctamente desde VACÍA, desde CUBIERTA, rechaza desde GESTANTE, rechaza si no es reproductora, rechaza si está muerto, fecha es generada por sistema, resultado es inmutable, ciclo siguiente se inicia si corresponde.",
+        "priority": "high",
+        "dependencies": [
+          267
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 283,
+        "title": "Implementar disponibilidad de acción Machorra en AvailableActions",
+        "description": "Integrar la acción Machorra en el sistema de AvailableActions para que aparezca cuando sea elegible.",
+        "details": "Actualizar lógica de AvailableActions para incluir 'registrar_machorra'. Disponible cuando: es hembra, está viva, tipo_productivo=REPRODUCTORA, ciclo abierto, estado IN (VACÍA, CUBIERTA). No disponible desde GESTANTE. Incluir en contexto de ficha animal.",
+        "testStrategy": "Verificar que aparece cuando es elegible, que no aparece cuando no es elegible, que se puede ejecutar desde AvailableActions, que el resultado es correcto.",
+        "priority": "high",
+        "dependencies": [
+          282
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 284,
+        "title": "Implementar alerta de revisión reproductiva en ficha animal",
+        "description": "Mostrar advertencia contextual en la ficha animal cuando el ciclo supera el umbral de revisión reproductiva.",
+        "details": "En sección 'Historial reproductivo' de ficha animal, mostrar alerta cuando: ciclo abierto, estado IN (VACÍA, CUBIERTA), días transcurridos > umbral. Alerta debe permitir acceder a acción Machorra si animal es elegible. No crear lista persistente de candidatas a machorra.",
+        "testStrategy": "Verificar que alerta aparece cuando corresponde, que desaparece cuando ciclo se cierra o animal pasa a GESTANTE, que permite acceder a acción Machorra, que no aparece para no reproductoras.",
+        "priority": "medium",
+        "dependencies": [
+          268,
+          283
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 285,
+        "title": "Implementar widget de revisión reproductiva en dashboard",
+        "description": "Crear widget en dashboard que muestra animales que requieren revisión reproductiva.",
+        "details": "Widget 'Animales que requieren revisión reproductiva' que muestra número de animales y lista de IDs/nombres. Usa datos de CurrentReproductiveSituation. Permite navegar a ficha animal o a acción Machorra. Se actualiza en tiempo real.",
+        "testStrategy": "Verificar que muestra número correcto, que lista es actualizada, que permite navegar a ficha animal, que permite ejecutar acción Machorra.",
+        "priority": "medium",
+        "dependencies": [
+          284
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 286,
+        "title": "Implementar página completa de Analítica de Reproducción",
+        "description": "Integrar todos los componentes en la página de Analítica de Reproducción con layout y flujo de usuario correcto.",
+        "details": "Página /analitica/reproduccion que integra: PeriodSelector, InstallationFilter, CurrentSituationCard, ReproductiveActivitySection, BirthOutcomeSection, OffspringFollowUpSection. Orden: 1. Situación actual (cabecera persistente), 2. Selector de periodo, 3. Dimensiones, 4. Actividad reproductiva, 5. Resultado de partos, 6. Seguimiento de crías. Estado inicial: Año actual, Todas las instalaciones. Manejo de carga y errores.",
+        "testStrategy": "Verificar que todos los componentes se renderizan, que el flujo de usuario es intuitivo, que los datos se actualizan correctamente, que es responsive, que maneja errores.",
+        "priority": "high",
+        "dependencies": [
+          278,
+          279,
+          280,
+          281
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 287,
+        "title": "Implementar pruebas de periodo temporal",
+        "description": "Crear suite de pruebas para validar la lógica de periodo temporal y presets.",
+        "details": "Pruebas: presets generan correctamente fecha_desde/fecha_hasta, modificación manual convierte a Personalizado, backend recibe fechas mostradas, rango inválido se rechaza, cambio de periodo actualiza métricas históricas, situación actual no cambia.",
+        "testStrategy": "Unit tests para cálculo de presets, integration tests para flujo completo, E2E tests para interacción de usuario.",
+        "priority": "medium",
+        "dependencies": [
+          270,
+          286
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 288,
+        "title": "Implementar pruebas de atribución histórica a instalaciones",
+        "description": "Crear suite de pruebas para validar que la ubicación histórica se reconstruye correctamente.",
+        "details": "Pruebas: ubicación antes del primer cambio, después de un cambio, después de múltiples cambios, en fecha exacta de cambio, eventos atribuidos correctamente a instalación, ubicación actual no se usa para hechos históricos.",
+        "testStrategy": "Unit tests para getHistoricalLocation, integration tests para consultas de analítica con instalación, E2E tests para filtro de instalación.",
+        "priority": "medium",
+        "dependencies": [
+          272,
+          287
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 289,
+        "title": "Implementar pruebas de seguimiento de crías",
+        "description": "Crear suite de pruebas para validar la lógica de seguimiento de crías hasta destete.",
+        "details": "Pruebas: cría nacida en periodo se incluye, destete posterior al periodo cierra correctamente, muerte antes de destete genera desenlace conocido, cría lactante queda pendiente, cambio de instalación no altera pertenencia, métricas de seguimiento no cambian al aplicar instalación.",
+        "testStrategy": "Unit tests para lógica de OffspringFollowUp, integration tests para consultas de seguimiento, E2E tests para casos complejos.",
+        "priority": "medium",
+        "dependencies": [
+          275,
+          288
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 290,
+        "title": "Implementar pruebas de revisión reproductiva y Machorra",
+        "description": "Crear suite de pruebas para validar la lógica de revisión reproductiva y acción Machorra.",
+        "details": "Pruebas revisión: 239 días con umbral 240 (no alerta), 240 días (no alerta), 241 días (alerta), gestante (no alerta), ciclo cerrado (no alerta), no reproductora (no alerta). Pruebas Machorra: disponible en VACÍA, disponible en CUBIERTA, no disponible en GESTANTE, fecha generada por sistema, resultado correcto, doble ejecución protegida.",
+        "testStrategy": "Unit tests para lógica de elegibilidad, integration tests para RPC registrar_machorra, E2E tests para flujo completo.",
+        "priority": "medium",
+        "dependencies": [
+          282,
+          289
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2026-09-23T12:02:45.745Z",
+      "updated": "2026-09-23T12:02:45.745Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

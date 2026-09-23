@@ -71,7 +71,11 @@ dev-debug.log
 # tasks/
 
 # Herramientas locales de IA y contexto generado
-.taskmaster/
+# .taskmaster/tasks/tasks.json y reports/ se rastrean en git para preservar historial
+.taskmaster/config.json
+.taskmaster/state.json
+.taskmaster/templates/
+.taskmaster/docs/
 .agent/
 .agents/
 .claude/
