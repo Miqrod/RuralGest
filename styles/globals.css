@@ -256,6 +256,26 @@
   .bg-world-gradient {
     background: var(--world-banner-gradient);
   }
+
+  /* Fondo degradado de la card "Situación actual" */
+  .card-bg-situacion {
+    background: radial-gradient(ellipse 140% 125% at 0% 0%,
+      color-mix(in srgb, var(--color-world) 5%, white) 0%,
+      color-mix(in srgb, var(--color-world) 25%, white) 100%);
+  }
+  .dark .card-bg-situacion {
+    background: radial-gradient(ellipse 140% 125% at 0% 0%,
+      color-mix(in srgb, var(--color-world) 8%, #292524) 0%,
+      color-mix(in srgb, var(--color-world) 20%, #1c1917) 100%);
+  }
+
+  /* Fondo degradado de la card compartida "Actividad + Seguimiento crías" */
+  .card-bg-actividad {
+    background: radial-gradient(ellipse 140% 125% at 0% 0%, #ffffff 60%, rgba(229,231,235,0.9) 100%);
+  }
+  .dark .card-bg-actividad {
+    background: radial-gradient(ellipse 140% 125% at 0% 0%, #292524 0%, #1c1917 100%);
+  }
 }
 
 @layer base {

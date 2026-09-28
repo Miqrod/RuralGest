@@ -19,7 +19,7 @@ const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-med
 const RESULTADO_CONFIG: Record<ResultadoCiclo, { label: string; className: string }> = {
   parto:        { label: 'Parto',         className: 'bg-success-soft text-success'  },
   aborto:       { label: 'Aborto',        className: 'bg-alert-soft text-alert'      },
-  machorra:     { label: 'Machorra',      className: 'bg-surface-alt text-ink-muted' },
+  machorra:     { label: 'Machorra',      className: 'bg-warning-soft text-warning'  },
   cierre_manual:{ label: 'Cierre manual', className: 'bg-surface-alt text-ink-muted' },
 }
 
@@ -288,18 +288,20 @@ function agruparDestetes(eventos: EventoHistorial[]): EventoHistorial[] {
 // ─── Carousel ───────────────────────────────────────────────────────────────────
 
 interface Props {
-  ciclos:             CicloHistorial[]
-  animalId:           string
-  animalNombre?:      string | null
-  madreCrotal:        string | null
-  fechaPrevistaParto: string | null
+  ciclos:                 CicloHistorial[]
+  animalId:               string
+  animalNombre?:          string | null
+  madreCrotal:            string | null
+  fechaPrevistaParto:     string | null
   // Necesarios para la anotación contextual en animales vendidos/fallecidos
-  estadoVital:        EstadoVital
-  fechaSalida:        ISODate | null
-  canMachorra:        boolean
+  estadoVital:            EstadoVital
+  fechaSalida:            ISODate | null
+  canMachorra:            boolean
+  enRevisionReproductiva: boolean
+  diasEnCiclo:            number
 }
 
-export function HistorialCarousel({ ciclos, animalId, animalNombre, madreCrotal, fechaPrevistaParto, estadoVital, fechaSalida, canMachorra }: Props) {
+export function HistorialCarousel({ ciclos, animalId, animalNombre, madreCrotal, fechaPrevistaParto, estadoVital, fechaSalida, canMachorra, enRevisionReproductiva, diasEnCiclo }: Props) {
   const router = useRouter()
   // ciclos[0] es el más reciente (query devuelve ORDER BY numero_ciclo DESC)
   const [idx, setIdx] = useState(0)
@@ -423,12 +425,14 @@ export function HistorialCarousel({ ciclos, animalId, animalNombre, madreCrotal,
         )
       })()}
 
-      {/* Acción Machorra — solo en el ciclo actual, solo si el animal es elegible */}
-      {idx === 0 && !ciclo.fecha_fin && canMachorra && (
+      {/* Acción Machorra — solo en el ciclo actual, solo si el animal cumple condiciones de revisión */}
+      {idx === 0 && !ciclo.fecha_fin && canMachorra && enRevisionReproductiva && (
         <div className="mt-4 pt-4 border-t border-divider">
           <div className="space-y-3 flex flex-col items-center text-center">
             <p className="text-xs text-warning">
-              Esta vaca no ha quedado gestante. Puedes marcarla como machorra y dar por terminada esta oportunidad reproductiva.
+              Este animal lleva <strong>{diasEnCiclo} días</strong> en el ciclo actual sin haber quedado gestante.
+              Es susceptible de presentar problemas reproductivos.
+              Puedes marcarla como machorra y dar por terminada esta oportunidad reproductiva.
             </p>
             <Button
               type="button"

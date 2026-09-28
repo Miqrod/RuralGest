@@ -1,5 +1,43 @@
 # ⏳ Deferred
 
+## TASAS REPRODUCTIVAS — CÁLCULO LONGITUDINAL (COHORTE)
+
+Las tasas `tasaGestacion`, `tasaFertilidad` y `tasaAborto` que existen en `MetricasReproductivas`
+**no son válidas** con el cálculo actual. El problema: se cuentan eventos independientes dentro
+del periodo seleccionado sin correlacionar cada cubrición con su desenlace concreto. Una
+cubrición registrada en el periodo puede no tener aún resultado, y un parto registrado puede
+venir de una cubrición anterior al periodo. Mezclar estos eventos produce tasas sin significado
+veterinario.
+
+**Cálculo correcto (pendiente de implementar):**
+Fijar una cohorte de cubriciones (p.ej. "todas las cubriciones del periodo X") y seguir cada
+una hasta su desenlace final (parto, aborto, machorra), aunque este desenlace ocurra fuera del
+rango temporal seleccionado. Requiere una query longitudinal que:
+1. Selecciona todos los ciclos que tuvieron una CUBRICION dentro del periodo.
+2. Busca el evento de cierre de cada ciclo (PARTO / ABORTO / MACHORRA / MACHORRA implícita)
+   sin restricción de fecha.
+3. Calcula las tasas sobre ese conjunto completo y conocido.
+
+Las columnas de tasas están **ocultas en la UI** (`SeccionActividadHistorica`) hasta que se
+implemente este cálculo. Los campos siguen presentes en `MetricasReproductivas` para no romper
+el contrato de tipos.
+
+Cuando: al implementar el análisis reproductivo avanzado (tarea post-#24).
+
+---
+
+## BUCKET `documentos` EN SUPABASE STORAGE
+
+Cuando se implemente la gestión de documentos (facturas PDF, certificados veterinarios, etc.)
+crear un bucket `documentos` separado con `public: false` y políticas RLS de lectura privada.
+
+El bucket `images` (creado en PRD015) es público y solo para imágenes. Mezclar tipos con
+necesidades de acceso distintas en el mismo bucket complica las políticas RLS.
+
+Cuando: al diseñar el módulo de gestión documental / facturas.
+
+---
+
 ## ~~DESTETE DE CRÍAS DE MADRE CON es_reproductora=false~~ ✅ RESUELTO
 
 El gate `esReproductora &&` fue eliminado de `getAvailableActions` y de la llamada a `getCriasParaDestete` en `page.tsx`. El destete ahora depende solo de `tieneCriasElegibles` (tipo='Cría', vínculo='activo'), independiente de `es_reproductora`. Eval actualizado.

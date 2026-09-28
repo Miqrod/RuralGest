@@ -3,16 +3,25 @@ import { getCensoVacunoVivo } from '@/modules/ganadero/animales/application/quer
 import { getAnimalesPendientesIdentificacion } from '@/modules/ganadero/animales/application/queries/getAnimalesPendientesIdentificacion'
 import { getAnimalesSinUbicacion } from '@/modules/ganadero/instalaciones/application/queries/getAnimalesSinUbicacion'
 import { listarDestinosReubicacion } from '@/modules/ganadero/instalaciones/application/queries/listarDestinosReubicacion'
+import { getRevisionReproductiva } from '@/modules/ganadero/reproductivo/application/queries/getRevisionReproductiva'
 import { KPIBannerVacuno } from '@/modules/ganadero/animales/ui/dashboard/KPIBannerVacuno'
 import { WidgetPendientesIdentificacion } from '@/modules/ganadero/animales/ui/dashboard/WidgetPendientesIdentificacion'
 import { WidgetPendientesUbicacion } from '@/modules/ganadero/instalaciones/ui/dashboard/WidgetPendientesUbicacion'
+import { WidgetRevisionReproductiva } from '@/modules/ganadero/reproductivo/ui/dashboard/WidgetRevisionReproductiva'
 
 export default async function HomePage() {
-  const [censo, { animales: pendientesId, total: totalId }, { animales: sinUbicacion, total: totalUbicacion }, destinos] = await Promise.all([
+  const [
+    censo,
+    { animales: pendientesId, total: totalId },
+    { animales: sinUbicacion, total: totalUbicacion },
+    destinos,
+    revisionReproductiva,
+  ] = await Promise.all([
     getCensoVacunoVivo(),
     getAnimalesPendientesIdentificacion('vacuno', 20),
     getAnimalesSinUbicacion(),
     listarDestinosReubicacion(),
+    getRevisionReproductiva(),
   ])
 
   return (
@@ -35,6 +44,12 @@ export default async function HomePage() {
         </div>
         <div className="md:col-span-1 lg:col-span-2">
           <WidgetPendientesUbicacion animales={sinUbicacion} total={totalUbicacion} destinos={destinos} />
+        </div>
+        <div className="md:col-span-1 lg:col-span-2">
+          <WidgetRevisionReproductiva
+            animales={revisionReproductiva.animales}
+            umbralDias={revisionReproductiva.umbralDias}
+          />
         </div>
       </div>
 

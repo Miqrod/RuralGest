@@ -1,4 +1,5 @@
 import {
+  Activity,
   ArrowRightLeft,
   Banknote,
   BarChart3,
@@ -11,11 +12,13 @@ import {
   FileText,
   Home,
   Layers,
+  LineChart,
   List,
   PiggyBank,
   PlusCircle,
   Receipt,
   Settings,
+  SlidersHorizontal,
   TrendingUp,
   Users,
   Warehouse,
@@ -86,18 +89,23 @@ export const NAV_ITEMS: NavItem[] = [
       { href: '/instalaciones/reubicar-animales', label: 'Reubicar animales', icon: ArrowRightLeft, world: 'default' },
     ],
   },
+  {
+    label: 'Analítica',
+    icon: LineChart,
+    world: 'default',
+    children: [
+      { href: '/analitica/reproduccion', label: 'Reproducción', icon: Activity, world: 'default' },
+    ],
+  },
   { href: '/docs', label: 'Documentación', icon: BookOpen, world: 'default' },
   {
     label: 'Configuración',
     icon: Settings,
     world: 'configuracion',
     children: [
-      // GESTIÓN DE LA EXPLOTACIÓN
-      // "Datos de la explotación" pendiente → hidden hasta que exista la página
-      // "Datos de la explotación" pendiente (hidden) — cuando se active, mover sectionLabel de "Instalaciones" a este ítem
-      { href: '/configuracion/explotacion', label: 'Datos de la explotación', icon: Building2, world: 'configuracion', hidden: true },
-      // sectionLabel aquí porque es el primer ítem visible de la sección
-      { href: '/configuracion/instalaciones', label: 'Instalaciones', icon: Warehouse, world: 'configuracion', sectionLabel: 'GESTIÓN DE LA EXPLOTACIÓN' },
+      { href: '/configuracion/explotacion', label: 'Datos de la explotación', icon: Building2, world: 'configuracion', sectionLabel: 'GESTIÓN DE LA EXPLOTACIÓN' },
+      { href: '/configuracion/parametrizaciones', label: 'Parametrizaciones', icon: SlidersHorizontal, world: 'configuracion' },
+      { href: '/configuracion/instalaciones', label: 'Instalaciones', icon: Warehouse, world: 'configuracion' },
       // ACCESO Y SEGURIDAD — pendiente, hidden hasta que exista la página
       { href: '/configuracion/usuarios', label: 'Usuarios y permisos', icon: Users, world: 'configuracion', sectionLabel: 'ACCESO Y SEGURIDAD', hidden: true },
     ],

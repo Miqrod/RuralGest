@@ -907,3 +907,132 @@ En un `grid grid-cols-2`, si una columna tiene contenido condicional y se render
 ```
 
 Para el campo Fecha en ReubicacionFlow paso 2: la condición que oculta el DatePicker se simplificó a solo `!destinoEsUbicacionActualIndividual` (el único caso donde mostrar una fecha realmente no tiene sentido). En modo multi-selección el DatePicker siempre se muestra aunque `animalesEfectivos.length === 0` — el botón de confirmar desactivado ya comunica que no se puede proceder.
+
+## Secciones de analítica: tarjeta compartida por selector de periodo
+
+Cuando varias secciones de una página de analítica comparten el mismo filtro de periodo, se envuelven en una **única tarjeta visual** para comunicar que la respuesta de todas al cambio de filtro es una invariante — no una coincidencia.
+
+```tsx
+{/* page.tsx — las dos secciones dentro de la misma card */}
+<div className="rounded-2xl border border-divider shadow-sm card-bg-actividad">
+  <SeccionActividadHistorica actividad={actividad} periodo={periodo} />
+  <SeccionSeguimientoCrias desenlaces={crias} />
+</div>
+```
+
+- El `SelectorPeriodoNav` vive **dentro** de la primera sección, no en `page.tsx`.
+- La segunda sección hereda el periodo implícitamente (lo recibe como prop desde la página).
+- **No** añadir `overflow-hidden` a la card compartida: rompe `position: sticky` en las tablas internas. Solo `overflow-x-auto` en el contenedor directo del scroll.
+
+## Fondo de sección con degradado radial basado en `--color-world`
+
+Las secciones de analítica usan un degradado radial que parte del token de color del mundo activo. Esto ancla visualmente la pantalla al contexto de negocio (vacuno, porcino…) y diferencia las secciones de analítica de las fichas y listados operativos.
+
+**Patrón de clases CSS** — definir en `@layer utilities` de `globals.css`, nunca como `style` prop inline. Así los Server Components también pueden usarlas y el dark mode funciona con el selector `.dark`:
+
+```css
+/* globals.css — @layer utilities */
+.card-bg-situacion {
+  background: radial-gradient(ellipse 140% 125% at 0% 0%,
+    color-mix(in srgb, var(--color-world) 5%, white) 0%,
+    color-mix(in srgb, var(--color-world) 25%, white) 100%);
+}
+.dark .card-bg-situacion {
+  background: radial-gradient(ellipse 140% 125% at 0% 0%,
+    color-mix(in srgb, var(--color-world) 8%, #292524) 0%,
+    color-mix(in srgb, var(--color-world) 20%, #1c1917) 100%);
+}
+
+.card-bg-actividad {
+  background: radial-gradient(ellipse 140% 125% at 0% 0%, #ffffff 60%, rgba(229,231,235,0.9) 100%);
+}
+.dark .card-bg-actividad {
+  background: radial-gradient(ellipse 140% 125% at 0% 0%, #292524 0%, #1c1917 100%);
+}
+```
+
+**Reglas de intensidad** (ajustar según contraste necesario):
+- Fondo coloreado de sección principal (`card-bg-situacion`): 5 % → 25 % en light mode, 8 % → 20 % en dark.
+- Fondo neutro de bloque de tabla (`card-bg-actividad`): blanco en light, canvas → surface-alt en dark.
+
+**Por qué `color-mix` y no hex fijo:** el mundo cambia por ruta (`data-world="vacuno"` → `#800000`, default → `#166534`). Con `color-mix(in srgb, var(--color-world) X%, white)` el degradado se adapta automáticamente sin redefinir la clase por mundo.
+
+**Mezcla con `white`, no con `transparent`:** mezclar con `transparent` da colores semitransparentes que se comportan mal sobre otros fondos coloreados. Mezclar con `white` (o el color canvas del dark mode) produce siempre un color sólido predecible.
+
+## Borde con color de mundo en sección principal de analítica
+
+La sección de mayor jerarquía en una página de analítica usa `border-world` en lugar de `border-divider`. Refuerza el anclaje visual al mundo activo y distingue el bloque de resumen del resto de contenido.
+
+```tsx
+<section className="rounded-2xl border border-world shadow-sm ... card-bg-situacion">
+```
+
+Las tarjetas secundarias (tablas, gráficos) usan `border-divider` como siempre.
+
+## Cards internas con fondo semi-transparente sobre degradado coloreado
+
+Cuando una sección tiene fondo coloreado (`card-bg-situacion`), las cards internas usan `bg-white/60` para dejar que el degradado trascienda ligeramente. Esto crea profundidad visual sin perder legibilidad del contenido.
+
+```tsx
+<div className="rounded-xl border border-divider bg-white/60 p-4">
+```
+
+- **No usar** `bg-white` (opaco): anula completamente el efecto del fondo.
+- **No bajar de `bg-white/50`**: por debajo el contraste de texto puede ser insuficiente.
+- En dark mode, `bg-white/60` produce un gris muy oscuro translúcido sobre el canvas dark — correcto visualmente.
+- El texto en estado muted (`text-ink-muted`) puede perder contraste en dark mode sobre este fondo; añadir `dark:text-white` si es necesario.
+
+## Recharts para gráficos de analítica
+
+Recharts (MIT) es la librería de gráficos del proyecto. Usar para cualquier visualización nueva en pantallas de analítica.
+
+**Configuración base obligatoria:**
+
+```tsx
+'use client'  // siempre — Recharts usa hooks y accede al DOM
+
+<ResponsiveContainer width="100%" height={220}>
+  <BarChart data={data} margin={{ top: 32, right: 8, left: 8, bottom: 0 }}>
+    <Bar dataKey="total" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+      <LabelList dataKey="total" position="top"
+        style={{ fontSize: '13px', fontWeight: '600', fill: '#111827' }} />
+      {data.map(d => <Cell key={d.key} fill={COLOR[d.key]} />)}
+    </Bar>
+    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+  </BarChart>
+</ResponsiveContainer>
+```
+
+- `isAnimationActive={false}` en `<Bar>` es **obligatorio**: la animación de entrada falla en SSR / App Router y produce hydration warnings.
+- `fill="var(--color-world)"` funciona en SVG moderno — CSS custom properties son válidas como presentation attributes.
+- `barCategoryGap="35%"` para barras con buena separación visual.
+- `margin={{ top: 32 }}` para que los `LabelList` sobre las barras no queden cortados.
+
+**Leyenda personalizada** — nunca usar la `<Legend>` de Recharts: no permite InfoPopovers ni control de layout. Implementar siempre debajo del gráfico con `flex gap-3 pt-4 border-t border-divider`.
+
+## Breakpoint `min-[480px]` para grid de cards en móvil estrecho
+
+Para grids de 2-4 cards que deben apilarse solo en móviles muy estrechos (no en tablets), usar el breakpoint arbitrario `min-[480px]:` en lugar de `sm:` (640 px) o `md:` (768 px):
+
+```tsx
+<div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-3">
+  {items.map(item => (
+    <div className="...">
+      <div className="flex items-center gap-3 min-[480px]:block">
+        {/* en móvil: número + % + badge en línea horizontal */}
+        {/* en 480px+: apilados verticalmente */}
+      </div>
+    </div>
+  ))}
+</div>
+```
+
+- **Por debajo de 480 px**: las cards se apilan (1 por fila) y los elementos internos se disponen en fila horizontal para aprovechar el ancho completo.
+- **480 px en adelante** (tablets y escritorio): 3 columnas, elementos apilados verticalmente.
+- Usar `shrink-0` en el elemento numérico para que no se comprima en la fila horizontal de móvil.
+
+## Texto en español: "período" con acento (esdrújula)
+
+Usar siempre la forma acentuada **período** (no "periodo") en todos los textos visibles en la UI. Ambas son válidas según la RAE, pero "período" es la entrada canónica del DLE (esdrújula).
+
+Esta regla aplica **solo a strings visibles en UI**. Los identificadores de código, nombres de variables, tipos TypeScript y parámetros de función mantienen `periodo` sin acento (convenio de código, no cambia).

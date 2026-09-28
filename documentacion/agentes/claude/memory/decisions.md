@@ -562,3 +562,75 @@ Esta regla preserve la trazabilidad animal → evento → ciclo sin corrupción 
 La comprobación de si el ciclo queda sin vínculos activos se hace DESPUÉS de procesar todas las crías del lote. El cierre a mitad del bucle produciría counts incorrectos.
 
 **Regla:** cualquier operación que afecte a N entidades de la misma familia en una sola acción del usuario debe ser un RPC lote, nunca N llamadas seriales desde la capa de aplicación.
+
+## PRD analítica — Proyecciones analíticas: contratos de dominio, no entidades de BD
+
+Los tipos de analítica (`PeriodoAnalisis`, `ActividadReproductivaHistorica`, `DesenlacesCriasPeriodo`, `SituacionReproductivaActual`, etc.) son **proyecciones calculadas en la capa de aplicación**, no mapeos directos de tablas.
+
+Viven en `modules/ganadero/reproductivo/domain/analytics.ts` porque representan conceptos del dominio reproductivo (no de infraestructura), pero **no tienen entidad en DB**. Son el contrato entre las queries de `application/queries/` y los componentes de `ui/analitica/`.
+
+**Consecuencias:**
+- No se regeneran con `supabase gen types`: son tipos TypeScript puros.
+- Si la UI necesita un campo nuevo, se añade al tipo y a la query — nunca se cambia el schema para acomodarlo.
+- Los buckets, totales y porcentajes se calculan en la query, no en el componente.
+- Las tasas derivadas (`tasaGestacion`, `tasaFertilidad`, `tasaAborto`) son `number | null` — `null` cuando el denominador es 0, para que la UI muestre "—" en lugar de 0%.
+
+## PRD analítica — Regla de clasificación de crías: `undefined` vs `null` en `destetoMap`
+
+En `getDesenlacesCriasPeriodo`, la detección de nacidas muertas se basa en la **presencia o ausencia** de la cría en el `destetoMap`, no en el valor almacenado:
+
+| Estado en `destetoMap` | Significado | Clasificación |
+|---|---|---|
+| `undefined` (cría no en el mapa) | Sin evento DESTETE — nunca tuvo vínculo activo | `nacida_muerta` |
+| `null` (en mapa, `metadata_json = NULL`) | DESTETE explícito del ganadero sin causa especial | `destete_natural` |
+| `{ cierre_por_salida: true }` | Madre salió (muerte/venta) con vínculo activo | `destete_forzado` |
+| `{ cierre_por_cria: 'muerte' }` | Cría murió con vínculo activo | `muerte_antes_destete` |
+| `{ cierre_por_cria: 'venta' }` | Cría vendida con vínculo activo | `vendida_antes_destete` |
+
+**Por qué funciona:** las nacidas muertas reciben `estado_vinculo_materno = 'finalizado'` en el momento del parto (nunca estuvieron activas) pero el sistema **nunca crea un evento DESTETE para ellas**. Por tanto no aparecen en `destetoMap`. Cualquier animal con `finalizado` que no esté en el mapa es, por definición, una nacida muerta.
+
+La distinción `undefined` vs `null` es intencional e importante: no usar `destetoMap.get(id) ?? null` — colapsa los dos casos.
+
+## PRD analítica — Lógica pura exportada de queries para testabilidad
+
+Las queries de analítica contienen lógica de dominio pura (cálculos, clasificaciones, filtros) que puede y debe ser testeable sin acceder a la BD. El patrón es **extraer y exportar** esa lógica como funciones nombradas dentro del mismo archivo de la query:
+
+```ts
+// Dentro de getXxx.ts — lógica pura, exportada para tests
+export function calcularDistribucion(rows) { ... }
+export function filtrarEnRevision(animales, ciclos, umbralDias, hoy) { ... }
+export function generarBuckets(desde, hasta) { ... }
+export function calcularTasas(m) { ... }
+export function clasificarFinalizada(meta) { ... }
+
+// La query principal usa estas funciones internamente
+export async function getXxx(...) {
+  const data = await supabase...
+  return calcularDistribucion(data)
+}
+```
+
+**Regla:** cualquier función con lógica no trivial dentro de una query (que no sea una llamada directa a Supabase) debe ser extraída y exportada. El eval correspondiente la importa directamente y la prueba sin mock.
+
+**Riesgo a evitar:** no exportar funciones cuyo único propósito es encapsular una llamada a Supabase — esas no son testeables sin infraestructura y no aportan valor en un eval.
+
+## PRD analítica — Recharts como librería de gráficos
+
+**Recharts** (licencia MIT) es la librería de gráficos del proyecto. Elegida sobre soluciones CSS-puras por:
+- Reutilización: el módulo de analítica crecerá con más tipos de gráficos (líneas, área, scatter).
+- Accesibilidad y tooltip nativos.
+- MIT — sin coste de licencia.
+
+Alternativas descartadas: Chart.js (más pesado, API menos React-friendly), D3 directo (demasiado bajo nivel para el uso actual), Victory (menor comunidad).
+
+**Requisito obligatorio en App Router:** `isAnimationActive={false}` en todos los `<Bar>`, `<Line>`, etc. La animación de entrada accede al DOM durante el montaje y falla en SSR produciendo hydration warnings.
+
+## PRD analítica — Terminología de seguimiento de crías
+
+El término **"cohorte"** (y su equivalente en inglés "cohort") está **rechazado explícitamente** por el usuario para este dominio. No usar en nombres de funciones, tipos, comentarios ni UI.
+
+Terminología aprobada:
+- `desenlaces` — resultado final de cada cría nacida en el periodo
+- `getDesenlacesCriasPeriodo` — nombre canónico de la query
+- `DesenlacesCriasPeriodo` — tipo de dominio
+- `periodo` / `período` — rango temporal de análisis (ver patrón de "período" con acento en `patterns.md`)

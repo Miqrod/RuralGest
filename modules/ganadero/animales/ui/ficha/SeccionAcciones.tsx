@@ -14,6 +14,7 @@ import { FormConfirmacionGestacion } from '@/modules/ganadero/reproductivo/ui/Fo
 import { FormParto } from '@/modules/ganadero/reproductivo/ui/FormParto'
 import { FormDestete } from '@/modules/ganadero/reproductivo/ui/FormDestete'
 import { FormAborto } from '@/modules/ganadero/reproductivo/ui/FormAborto'
+import { ConfirmMachorraModal } from '@/modules/ganadero/reproductivo/ui/ConfirmMachorraModal'
 import { ReubicacionFlow } from '@/modules/ganadero/instalaciones/ui/reubicacion/ReubicacionFlow'
 import { submitRegistrarReubicacion } from '@/app/(main)/instalaciones/actions'
 import type { EstadoVital, EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
@@ -23,6 +24,8 @@ import type { CriaParaDesteteItem } from '@/modules/ganadero/reproductivo/applic
 import type { InstalacionDestino, AnimalParaReubicar } from '@/modules/ganadero/instalaciones/domain/types'
 
 type AccionActiva = 'salida' | 'cubricion' | 'confirmacion' | 'parto' | 'destete' | 'aborto' | 'reubicar' | null
+
+// machorra usa modal, no acción activa inline
 
 function buildPartoToastMessage(vivos: number, muertos: number): string {
   const a = (n: number, singular: string, plural: string) =>
@@ -61,6 +64,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
   const [panelOpen,     setPanelOpen]     = useState(false)
   const [accionActiva,  setAccionActiva]  = useState<AccionActiva>(null)
   const [headerHovered, setHeaderHovered] = useState(false)
+  const [machorraOpen,  setMachorraOpen]  = useState(false)
 
   function togglePanel() {
     const closing = panelOpen
@@ -170,6 +174,7 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
   })
 
   return (
+    <>
     <div className="rounded-lg border border-divider shadow-sm overflow-hidden">
 
       {/* ── Cabecera: ÚNICO trigger del panel ─────────────────────────────── */}
@@ -266,6 +271,16 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
                     onClick={handleAbortoClick}
                   >
                     Registrar aborto
+                  </Button>
+                )}
+                {acciones.has('machorra') && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto py-2 px-5 border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                    onClick={() => setMachorraOpen(true)}
+                  >
+                    Marcar como machorra
                   </Button>
                 )}
                 {destinos.length > 0 && (
@@ -450,5 +465,21 @@ export function SeccionAcciones({ animalId, crotal, nombre, estadoVital, esRepro
       </AnimatePresence>
 
     </div>
+    {/* Modal machorra — fuera del panel animado para que persista durante el cierre */}
+    <ConfirmMachorraModal
+      open={machorraOpen}
+      onClose={() => setMachorraOpen(false)}
+      animalId={animalId}
+      crotal={crotal}
+      nombre={nombre}
+      onSuccess={() => {
+        setMachorraOpen(false)
+        setPanelOpen(false)
+        setAccionActiva(null)
+        toast.success('Animal marcado como machorra')
+        router.refresh()
+      }}
+    />
+  </>
   )
 }

@@ -18,6 +18,7 @@ import { tieneCiclosReproductivos } from '@/modules/ganadero/reproductivo/applic
 import { getAvailableActions } from '@/modules/ganadero/animales/domain/availableActions'
 import { listarDestinosReubicacion } from '@/modules/ganadero/instalaciones/application/queries/listarDestinosReubicacion'
 import { getHistorialUbicacionesAnimal } from '@/modules/ganadero/instalaciones/application/queries/getHistorialUbicacionesAnimal'
+import { getParametrizacion } from '@/modules/ganadero/shared/application/getParametrizacion'
 import { AnimatedPageContent } from './AnimatedPageContent'
 
 interface Props {
@@ -30,7 +31,7 @@ export default async function AnimalDetailPage({ params }: Props) {
 
   if (!animal) notFound()
 
-  const [machos, cicloAbierto, criasElegibles, tiposDisponibles, tieneHistorial, destinos] = await Promise.all([
+  const [machos, cicloAbierto, criasElegibles, tiposDisponibles, tieneHistorial, destinos, umbralParam] = await Promise.all([
     animal.es_reproductora ? getMachosDisponibles(animal.especie) : Promise.resolve([]),
     // Fetch del ciclo siempre que el animal tenga módulo reproductivo activo (estado != null).
     // Un animal con es_reproductora=false puede tener ciclo abierto si fue retirada de
@@ -53,9 +54,26 @@ export default async function AnimalDetailPage({ params }: Props) {
     tieneCiclosReproductivos(animal.id),
     // Destinos disponibles para reubicación desde la ficha individual.
     animal.estado_vital === 'vivo' ? listarDestinosReubicacion() : Promise.resolve([]),
+    // Umbral para revisión reproductiva: solo necesario si el animal puede estar en revisión.
+    animal.es_reproductora && animal.estado_reproductivo !== null
+      ? getParametrizacion('umbral_revision_reproductiva_dias', animal.especie)
+      : Promise.resolve(null),
   ])
 
   const fechaUltimoEvento = cicloAbierto?.fechaUltimoEvento ?? null
+
+  // Revisión reproductiva: animal con ciclo abierto que supera el umbral de días sin gestar
+  const diasEnCiclo = (() => {
+    if (!cicloAbierto) return 0
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+    const inicio = new Date(cicloAbierto.fecha_inicio); inicio.setHours(0, 0, 0, 0)
+    return Math.floor((hoy.getTime() - inicio.getTime()) / 86_400_000)
+  })()
+  const enRevisionReproductiva =
+    cicloAbierto !== null &&
+    (animal.estado_reproductivo === 'vacia' || animal.estado_reproductivo === 'cubierta') &&
+    umbralParam !== null &&
+    diasEnCiclo > parseInt(umbralParam.valor, 10)
 
   const acciones = getAvailableActions({
     estadoVital:         animal.estado_vital,
@@ -112,6 +130,8 @@ export default async function AnimalDetailPage({ params }: Props) {
                 estadoVital={animal.estado_vital}
                 fechaSalida={animal.fecha_salida}
                 canMachorra={acciones.has('machorra')}
+                enRevisionReproductiva={enRevisionReproductiva}
+                diasEnCiclo={diasEnCiclo}
               />
               <SeccionCriasDependientes
                 animalId={animal.id}
