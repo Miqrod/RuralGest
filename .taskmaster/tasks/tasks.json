@@ -1066,7 +1066,7 @@
         "subtasks": []
       },
       {
-        "id": 266,
+        "id": "266",
         "title": "Configurar estructura base de Analítica y módulo de Reproducción",
         "description": "Crear la estructura de carpetas y componentes base para la sección de Analítica, separada del dashboard operativo. Establecer rutas /analitica y /analitica/reproduccion.",
         "details": "Crear directorio /pages/analitica/reproduccion. Implementar layout base que permita crecer hacia Ganadero, Finanzas y Operaciones. Configurar routing en Next.js. Establecer estructura de componentes: ReproductiveAnalyticsPage, CurrentSituationSection, HistoricalActivitySection, OffspringFollowUpSection. No implementar lógica de negocio aún, solo estructura visual.",
@@ -1077,334 +1077,403 @@
         "subtasks": []
       },
       {
-        "id": 267,
+        "id": "267",
         "title": "Implementar modelo de datos de Situación Reproductiva Actual",
         "description": "Crear tipos TypeScript y proyecciones para CurrentReproductiveSituation que represente el estado actual de la explotación sin dependencia del periodo histórico.",
         "details": "Definir tipos: CurrentReproductiveSituation con campos: reproductoras_total, vacías, cubiertas, gestantes, requieren_revision. Crear proyección en backend que consulte el estado actual del ciclo reproductivo de cada animal. No incluir filtros de periodo. Implementar repositorio que obtenga esta información de eventos reproductivos sin considerar fecha_desde/fecha_hasta.",
         "testStrategy": "Verificar que los conteos son correctos, que no varían al cambiar periodo, que solo incluyen hembras vivas con tipo_productivo=REPRODUCTORA, que los estados son mutuamente excluyentes.",
         "priority": "high",
         "dependencies": [
-          266
+          "266"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 268,
+        "id": "268",
         "title": "Implementar lógica de cálculo de umbral de revisión reproductiva",
         "description": "Crear la lógica que determina si un animal requiere revisión reproductiva basándose en el umbral configurable y el tiempo transcurrido en el ciclo.",
+        "status": "pending",
+        "dependencies": [
+          "267",
+          "292"
+        ],
+        "priority": "high",
         "details": "Obtener configuración umbral_revision_reproductiva_dias de la explotación (valor inicial 240). Implementar función que evalúa: es_hembra AND está_viva AND tipo_productivo=REPRODUCTORA AND ciclo_abierto AND estado IN (VACÍA, CUBIERTA) AND (fecha_actual - fecha_inicio_ciclo) > umbral_dias. Usar semántica 'supera X días' (241 días con umbral 240 = requiere revisión). Retornar lista de animales que cumplen criterios.",
         "testStrategy": "Casos: 239 días con umbral 240 (no alerta), 240 días (no alerta), 241 días (alerta), gestante (no alerta), ciclo cerrado (no alerta), no reproductora (no alerta), animal muerto (no alerta).",
-        "priority": "high",
-        "dependencies": [
-          267
-        ],
-        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 269,
+        "id": "269",
         "title": "Crear endpoint de configuración de umbral de revisión reproductiva",
         "description": "Implementar endpoint para obtener y actualizar el umbral configurable de revisión reproductiva desde la sección de configuración de la explotación.",
         "details": "POST /api/explotacion/configuracion/umbral-revision-reproductiva con payload {umbral_dias: number}. GET /api/explotacion/configuracion/umbral-revision-reproductiva para obtener valor actual. Almacenar en tabla explotacion_configuracion o similar. Validar que el valor sea positivo. No hardcodear en frontend ni backend.",
         "testStrategy": "Verificar que se puede obtener el valor actual, que se puede actualizar, que la validación rechaza valores inválidos, que el cambio se refleja inmediatamente en la lógica de revisión.",
         "priority": "high",
         "dependencies": [
-          268
+          "268"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 270,
+        "id": "270",
         "title": "Implementar selector de periodo temporal con presets",
         "description": "Crear componente de UI para seleccionar periodo histórico con presets predefinidos y opción de personalización manual.",
         "details": "Componente PeriodSelector con presets: Últimos 30 días, Últimos 3 meses, Últimos 6 meses, Últimos 12 meses, Año actual, Año anterior, Personalizado. Cada preset calcula fecha_desde y fecha_hasta. Mostrar campos de fecha visibles que reflejen el rango real. Si usuario modifica manualmente cualquier fecha, cambiar a 'Personalizado'. Estado: {preset: string, fecha_desde: Date, fecha_hasta: Date}. Validar que fecha_desde <= fecha_hasta.",
         "testStrategy": "Verificar que cada preset genera fechas correctas, que modificación manual convierte a Personalizado, que las fechas visibles coinciden con las enviadas al backend, que rango inválido se rechaza.",
         "priority": "high",
         "dependencies": [
-          266
+          "266"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 271,
+        "id": "271",
         "title": "Implementar selector de dimensión de instalación",
         "description": "Crear componente de filtro por instalación para la analítica histórica.",
         "details": "Componente InstallationFilter que permite seleccionar una instalación o 'Todas'. Obtener lista de instalaciones activas de la explotación. Pasar instalacion_id al backend (undefined si 'Todas'). El filtro solo afecta a métricas puntuales, no al seguimiento de crías.",
         "testStrategy": "Verificar que se cargan las instalaciones, que se puede seleccionar una o todas, que el valor se pasa correctamente al backend, que el seguimiento de crías no cambia al cambiar instalación.",
         "priority": "medium",
         "dependencies": [
-          270
+          "270"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 272,
+        "id": "272",
         "title": "Implementar reconstrucción de ubicación histórica de animales",
         "description": "Crear función que determina la ubicación histórica de un animal en una fecha específica basándose en eventos CAMBIO_UBICACION.",
         "details": "Función getHistoricalLocation(animal_id, fecha): ubicacion_id. Consultar eventos CAMBIO_UBICACION ordenados por fecha DESC, created_at DESC. Retornar ubicacion_id del último evento con fecha <= fecha_consulta. Si no existe evento anterior, retornar ubicacion_inicial del animal. Usar para atribuir eventos históricos a instalaciones.",
         "testStrategy": "Verificar que retorna la ubicación correcta antes del primer cambio, después de un cambio, después de múltiples cambios, en fecha exacta de cambio, en fecha posterior.",
         "priority": "high",
         "dependencies": [
-          271
+          "271"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 273,
+        "id": "273",
         "title": "Implementar consulta de actividad reproductiva histórica",
         "description": "Crear endpoint que retorna métricas de actividad reproductiva filtradas por periodo e instalación.",
         "details": "GET /api/analitica/reproduccion/actividad-historica con parámetros: fecha_desde, fecha_hasta, instalacion_id?. Retornar: {cubriciones, gestaciones_confirmadas, abortos, partos}. Para cada evento: filtrar por fecha del evento, reconstruir ubicación histórica del animal en esa fecha, comparar con instalacion_id si existe. Usar eventos: CUBRICION, CONFIRMACION_GESTACION, ABORTO, PARTO.",
         "testStrategy": "Verificar que eventos dentro del rango se incluyen, fuera se excluyen, ubicación histórica se determina correctamente, filtro de instalación funciona, eventos sin instalación se manejan.",
         "priority": "high",
         "dependencies": [
-          272
+          "272"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 274,
+        "id": "274",
         "title": "Implementar consulta de resultado de partos",
         "description": "Crear endpoint que retorna métricas de nacimientos (vivos y muertos) filtradas por periodo e instalación.",
         "details": "GET /api/analitica/reproduccion/resultado-partos con parámetros: fecha_desde, fecha_hasta, instalacion_id?. Retornar: {crías_nacidas, crías_nacidas_vivas, crías_nacidas_muertas}. Identificar crías por relación animal.parto_evento_id = parto_event_id. Filtrar por fecha del evento PARTO. Atribuir a instalación histórica de la madre en fecha del parto. Separar por estado_vital (vivo/muerto).",
         "testStrategy": "Verificar que se cuentan correctamente nacidas vivas y muertas, que se atribuyen a instalación de la madre, que el periodo filtra correctamente, que no se infieren datos de eventos posteriores.",
         "priority": "high",
         "dependencies": [
-          273
+          "273"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 275,
+        "id": "275",
         "title": "Implementar modelo de seguimiento de crías (cohorte)",
         "description": "Crear tipos y lógica para representar el seguimiento de crías nacidas durante un periodo hasta su destete o cierre de vínculo.",
         "details": "Definir OffspringFollowUp: {cria_id, parto_evento_id, fecha_nacimiento, estado_vital, estado_seguimiento: DESTETADA|MUERTA_ANTES_DESTETE|OTRO_CIERRE|PENDIENTE, fecha_cierre?}. Implementar lógica que: identifica crías nacidas en periodo, sigue cada cría hasta DESTETE (evento natural de cierre), detecta MUERTE antes de destete, identifica otros cierres de vínculo, marca como PENDIENTE si no hay cierre. El periodo define qué nacimientos incluir, no limita el seguimiento.",
         "testStrategy": "Verificar que cría nacida en periodo se incluye, que destete posterior al periodo cierra correctamente, que muerte antes de destete genera desenlace conocido, que cría lactante queda pendiente, que cambio de instalación no altera pertenencia.",
         "priority": "high",
         "dependencies": [
-          274
+          "274"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 276,
+        "id": "276",
         "title": "Implementar consulta de seguimiento de crías durante el periodo",
         "description": "Crear endpoint que retorna métricas globales de seguimiento de crías nacidas en el periodo.",
         "details": "GET /api/analitica/reproduccion/seguimiento-crias con parámetros: fecha_desde, fecha_hasta. Retornar: {crías_nacidas_vivas, crías_destetadas, muertes_antes_destete, pendientes, otros_cierres}. NO recibe instalacion_id (métricas globales). Usar modelo OffspringFollowUp. Contar por estado_seguimiento. Ignorar cambios de instalación durante el seguimiento.",
         "testStrategy": "Verificar que solo incluye crías nacidas en el periodo, que cuenta correctamente cada estado, que no responde a filtro de instalación, que destete posterior al periodo se incluye, que pendientes se identifican correctamente.",
         "priority": "high",
         "dependencies": [
-          275
+          "275"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 277,
+        "id": "277",
         "title": "Implementar endpoint de situación reproductiva actual",
         "description": "Crear endpoint que retorna la situación actual sin dependencia del periodo histórico.",
         "details": "GET /api/analitica/reproduccion/situacion-actual. Retornar CurrentReproductiveSituation: {reproductoras, vacías, cubiertas, gestantes, requieren_revision}. No recibe fecha_desde/fecha_hasta. Consulta estado actual de cada animal. Incluye cálculo de revisión reproductiva usando umbral configurado.",
         "testStrategy": "Verificar que no cambia al modificar periodo, que refleja estado actual, que conteos son correctos, que revisión se calcula con umbral actual.",
         "priority": "high",
         "dependencies": [
-          269,
-          276
+          "269",
+          "276"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 278,
+        "id": "278",
         "title": "Implementar componente de Situación Actual en UI",
         "description": "Crear componente visual que muestra la situación reproductiva actual como cabecera persistente de la pantalla de analítica.",
         "details": "Componente CurrentSituationCard que muestra: Reproductoras (total), Vacías, Cubiertas, Gestantes, Requieren revisión. Debe permanecer visible mientras usuario consulta datos históricos. Usar datos de endpoint /api/analitica/reproduccion/situacion-actual. No depende de periodo. Diseño responsive que se adapte a pantallas pequeñas.",
         "testStrategy": "Verificar que se renderiza correctamente, que muestra valores actuales, que no cambia al modificar periodo, que es responsive.",
         "priority": "medium",
         "dependencies": [
-          277
+          "277"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 279,
+        "id": "279",
         "title": "Implementar componente de Actividad Reproductiva Histórica",
         "description": "Crear componente que muestra métricas de actividad reproductiva (cubriciones, gestaciones, abortos, partos) filtradas por periodo e instalación.",
         "details": "Componente ReproductiveActivitySection que consume endpoint /api/analitica/reproduccion/actividad-historica. Mostrar: Cubriciones, Gestaciones confirmadas, Abortos, Partos. Responde a cambios en PeriodSelector e InstallationFilter. Mostrar claramente que estas métricas responden al filtro de instalación.",
         "testStrategy": "Verificar que se actualiza al cambiar periodo, que se actualiza al cambiar instalación, que muestra valores correctos, que es responsive.",
         "priority": "medium",
         "dependencies": [
-          273,
-          278
+          "273",
+          "278"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 280,
+        "id": "280",
         "title": "Implementar componente de Resultado de Partos",
         "description": "Crear componente que muestra métricas de nacimientos (vivos y muertos) filtradas por periodo e instalación.",
         "details": "Componente BirthOutcomeSection que consume endpoint /api/analitica/reproduccion/resultado-partos. Mostrar: Crías nacidas, Crías nacidas vivas, Crías nacidas muertas. Responde a cambios en PeriodSelector e InstallationFilter.",
         "testStrategy": "Verificar que se actualiza al cambiar periodo, que se actualiza al cambiar instalación, que muestra valores correctos, que suma de vivas+muertas = total.",
         "priority": "medium",
         "dependencies": [
-          274,
-          279
+          "274",
+          "279"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 281,
+        "id": "281",
         "title": "Implementar componente de Seguimiento de Crías",
         "description": "Crear componente que muestra métricas globales de seguimiento de crías nacidas en el periodo, diferenciado visualmente como métrica global.",
         "details": "Componente OffspringFollowUpSection que consume endpoint /api/analitica/reproduccion/seguimiento-crias. Mostrar: Crías nacidas vivas, Crías destetadas, Muertes antes del destete, Pendientes, Otros cierres. Incluir explicación: 'El seguimiento de las crías se muestra como dato global porque una cría puede cambiar de instalación antes del destete'. NO responde a filtro de instalación. Diferenciación visual clara del bloque anterior.",
         "testStrategy": "Verificar que no cambia al cambiar instalación, que muestra valores correctos, que explicación es clara, que es visualmente diferenciado.",
         "priority": "medium",
         "dependencies": [
-          276,
-          280
+          "276",
+          "280"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 282,
+        "id": "282",
         "title": "Implementar acción de Machorra en ciclo reproductivo",
         "description": "Integrar la acción registrar_machorra en el flujo de ciclo reproductivo con validaciones de elegibilidad.",
         "details": "Implementar RPC registrar_machorra que: valida que animal es hembra, está vivo, tipo_productivo=REPRODUCTORA, ciclo abierto, estado IN (VACÍA, CUBIERTA). NO permite desde GESTANTE. Establece resultado='machorra', fecha_fin=CURRENT_DATE. Aplica reglas de cierre de ciclo existentes. Si animal continúa siendo reproductora, inicia siguiente ciclo VACÍA. Mantiene consistencia transaccional. Resultado es inmutable.",
         "testStrategy": "Verificar que se ejecuta correctamente desde VACÍA, desde CUBIERTA, rechaza desde GESTANTE, rechaza si no es reproductora, rechaza si está muerto, fecha es generada por sistema, resultado es inmutable, ciclo siguiente se inicia si corresponde.",
         "priority": "high",
         "dependencies": [
-          267
+          "267"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 283,
+        "id": "283",
         "title": "Implementar disponibilidad de acción Machorra en AvailableActions",
         "description": "Integrar la acción Machorra en el sistema de AvailableActions para que aparezca cuando sea elegible.",
         "details": "Actualizar lógica de AvailableActions para incluir 'registrar_machorra'. Disponible cuando: es hembra, está viva, tipo_productivo=REPRODUCTORA, ciclo abierto, estado IN (VACÍA, CUBIERTA). No disponible desde GESTANTE. Incluir en contexto de ficha animal.",
         "testStrategy": "Verificar que aparece cuando es elegible, que no aparece cuando no es elegible, que se puede ejecutar desde AvailableActions, que el resultado es correcto.",
         "priority": "high",
         "dependencies": [
-          282
+          "282"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 284,
+        "id": "284",
         "title": "Implementar alerta de revisión reproductiva en ficha animal",
         "description": "Mostrar advertencia contextual en la ficha animal cuando el ciclo supera el umbral de revisión reproductiva.",
         "details": "En sección 'Historial reproductivo' de ficha animal, mostrar alerta cuando: ciclo abierto, estado IN (VACÍA, CUBIERTA), días transcurridos > umbral. Alerta debe permitir acceder a acción Machorra si animal es elegible. No crear lista persistente de candidatas a machorra.",
         "testStrategy": "Verificar que alerta aparece cuando corresponde, que desaparece cuando ciclo se cierra o animal pasa a GESTANTE, que permite acceder a acción Machorra, que no aparece para no reproductoras.",
         "priority": "medium",
         "dependencies": [
-          268,
-          283
+          "268",
+          "283"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 285,
+        "id": "285",
         "title": "Implementar widget de revisión reproductiva en dashboard",
         "description": "Crear widget en dashboard que muestra animales que requieren revisión reproductiva.",
         "details": "Widget 'Animales que requieren revisión reproductiva' que muestra número de animales y lista de IDs/nombres. Usa datos de CurrentReproductiveSituation. Permite navegar a ficha animal o a acción Machorra. Se actualiza en tiempo real.",
         "testStrategy": "Verificar que muestra número correcto, que lista es actualizada, que permite navegar a ficha animal, que permite ejecutar acción Machorra.",
         "priority": "medium",
         "dependencies": [
-          284
+          "284"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 286,
+        "id": "286",
         "title": "Implementar página completa de Analítica de Reproducción",
         "description": "Integrar todos los componentes en la página de Analítica de Reproducción con layout y flujo de usuario correcto.",
         "details": "Página /analitica/reproduccion que integra: PeriodSelector, InstallationFilter, CurrentSituationCard, ReproductiveActivitySection, BirthOutcomeSection, OffspringFollowUpSection. Orden: 1. Situación actual (cabecera persistente), 2. Selector de periodo, 3. Dimensiones, 4. Actividad reproductiva, 5. Resultado de partos, 6. Seguimiento de crías. Estado inicial: Año actual, Todas las instalaciones. Manejo de carga y errores.",
         "testStrategy": "Verificar que todos los componentes se renderizan, que el flujo de usuario es intuitivo, que los datos se actualizan correctamente, que es responsive, que maneja errores.",
         "priority": "high",
         "dependencies": [
-          278,
-          279,
-          280,
-          281
+          "278",
+          "279",
+          "280",
+          "281"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 287,
+        "id": "287",
         "title": "Implementar pruebas de periodo temporal",
         "description": "Crear suite de pruebas para validar la lógica de periodo temporal y presets.",
         "details": "Pruebas: presets generan correctamente fecha_desde/fecha_hasta, modificación manual convierte a Personalizado, backend recibe fechas mostradas, rango inválido se rechaza, cambio de periodo actualiza métricas históricas, situación actual no cambia.",
         "testStrategy": "Unit tests para cálculo de presets, integration tests para flujo completo, E2E tests para interacción de usuario.",
         "priority": "medium",
         "dependencies": [
-          270,
-          286
+          "270",
+          "286"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 288,
+        "id": "288",
         "title": "Implementar pruebas de atribución histórica a instalaciones",
         "description": "Crear suite de pruebas para validar que la ubicación histórica se reconstruye correctamente.",
         "details": "Pruebas: ubicación antes del primer cambio, después de un cambio, después de múltiples cambios, en fecha exacta de cambio, eventos atribuidos correctamente a instalación, ubicación actual no se usa para hechos históricos.",
         "testStrategy": "Unit tests para getHistoricalLocation, integration tests para consultas de analítica con instalación, E2E tests para filtro de instalación.",
         "priority": "medium",
         "dependencies": [
-          272,
-          287
+          "272",
+          "287"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 289,
+        "id": "289",
         "title": "Implementar pruebas de seguimiento de crías",
         "description": "Crear suite de pruebas para validar la lógica de seguimiento de crías hasta destete.",
         "details": "Pruebas: cría nacida en periodo se incluye, destete posterior al periodo cierra correctamente, muerte antes de destete genera desenlace conocido, cría lactante queda pendiente, cambio de instalación no altera pertenencia, métricas de seguimiento no cambian al aplicar instalación.",
         "testStrategy": "Unit tests para lógica de OffspringFollowUp, integration tests para consultas de seguimiento, E2E tests para casos complejos.",
         "priority": "medium",
         "dependencies": [
-          275,
-          288
+          "275",
+          "288"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 290,
+        "id": "290",
         "title": "Implementar pruebas de revisión reproductiva y Machorra",
         "description": "Crear suite de pruebas para validar la lógica de revisión reproductiva y acción Machorra.",
         "details": "Pruebas revisión: 239 días con umbral 240 (no alerta), 240 días (no alerta), 241 días (alerta), gestante (no alerta), ciclo cerrado (no alerta), no reproductora (no alerta). Pruebas Machorra: disponible en VACÍA, disponible en CUBIERTA, no disponible en GESTANTE, fecha generada por sistema, resultado correcto, doble ejecución protegida.",
         "testStrategy": "Unit tests para lógica de elegibilidad, integration tests para RPC registrar_machorra, E2E tests para flujo completo.",
         "priority": "medium",
         "dependencies": [
-          282,
-          289
+          "282",
+          "289"
         ],
         "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "291",
+        "title": "PRD015 — Componente ImageUploadCropper reutilizable",
+        "description": "Crear components/ui/image-upload-cropper.tsx con subida a Supabase Storage y recorte de imagen.",
+        "details": "Librería: añadir react-easy-crop al proyecto.\nProps: aspectRatio ('square' | 'round' | '16:9' | '4:3'), storageBucket (string), storagePath (string), currentUrl? (string), onUploadComplete(url: string), maxSizeMb? (default 5).\nEstados internos: idle, selecting, cropping, uploading, error.\nFlujo: input file → FileReader → blob URL como fuente para react-easy-crop → editor con zoom y pan → botón Recortar → canvas.toBlob() → upload a Supabase Storage → URL pública → onUploadComplete(url).\nVariante 'round': máscara CSS circular en preview.\nCrear bucket 'images' en Supabase Storage si no existe, con RLS adecuada (authenticated puede subir a su ruta).\nSeguir patrones de UI existentes del proyecto (border-divider, bg-canvas, botones con clases world).\nComponente en components/ui/image-upload-cropper.tsx.",
+        "testStrategy": "",
+        "status": "in-progress",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-09-23T17:52:12.383Z"
+      },
+      {
+        "id": "292",
+        "title": "PRD015 — Migración BD: tablas explotacion y parametrizacion",
+        "description": "Crear migraciones Supabase para explotacion (singleton) y parametrizacion con sus enums y seeds.",
+        "details": "1. Tabla explotacion: id UUID PK, nombre TEXT NOT NULL, nombre_comercial TEXT NULL, email TEXT NULL, telefono TEXT NULL, direccion TEXT NULL, codigo_postal TEXT NULL, municipio TEXT NULL, provincia TEXT NULL, pais TEXT NULL, latitud DECIMAL NULL, longitud DECIMAL NULL, logo_storage_path TEXT NULL, created_at TIMESTAMP DEFAULT now(), updated_at TIMESTAMP DEFAULT now(). RLS: authenticated todo. Seed: INSERT INTO explotacion (nombre) VALUES ('Hermanos Rodríguez').\n2. Enums: CREATE TYPE categoria_parametrizacion_enum AS ENUM ('REPRODUCTIVO','FINANCIERO','OPERATIVO'); CREATE TYPE tipo_valor_parametrizacion_enum AS ENUM ('INTEGER','DECIMAL','BOOLEAN','TEXT','DATE'); CREATE TYPE unidad_parametrizacion_enum AS ENUM ('DIAS','EUROS','PORCENTAJE','KG','UNIDADES').\n3. Tabla parametrizacion: id UUID PK, codigo TEXT NOT NULL, descripcion TEXT NOT NULL, valor TEXT NOT NULL, especie especie_enum NULL (usar enum existente, NO FK), categoria categoria_parametrizacion_enum NOT NULL, tipo_valor tipo_valor_parametrizacion_enum NOT NULL, unidad unidad_parametrizacion_enum NULL, created_at, updated_at, created_by UUID NULL, updated_by UUID NULL. RLS: authenticated todo.\n4. Unicidad con dos índices parciales: CREATE UNIQUE INDEX uq_param_codigo_especie ON parametrizacion(codigo,especie) WHERE especie IS NOT NULL; CREATE UNIQUE INDEX uq_param_codigo_sin_especie ON parametrizacion(codigo) WHERE especie IS NULL.\n5. Seed: INSERT INTO parametrizacion(codigo,descripcion,valor,especie,categoria,tipo_valor,unidad) VALUES('umbral_revision_reproductiva_dias','Días para sugerir revisión reproductiva','240','vacuno','REPRODUCTIVO','INTEGER','DIAS').\n6. Verificar/crear índice (animal_id, fecha) en eventos para ubicación histórica.\n7. Regenerar types: supabase gen types typescript --local > types/supabase.ts.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-09-23T17:30:11.875Z"
+      },
+      {
+        "id": "293",
+        "title": "PRD015 — Navigation: WorldId analitica + Parametrizaciones en Configuración",
+        "description": "Actualizar lib/navigation.ts y Sidebar.tsx para los nuevos puntos de menú de Analítica y Configuración.",
+        "details": "1. Añadir 'analitica' a WorldId en types/navigation.ts. Añadir color en WORLDS. Añadir entradas en WORLD_ACTIVE, WORLD_HOVER, WORLD_TEXT, WORLD_HOVER_TEXT, WORLD_ARROW_HOVER en Sidebar.tsx.\n2. Añadir nav item Analítica en NAV_ITEMS entre Finanzas e Instalaciones, con hijo { href: '/analitica/reproduccion', label: 'Reproducción', world: 'analitica' }. isActive: (p) => p.startsWith('/analitica').\n3. En Configuración: unhide /configuracion/explotacion. Añadir /configuracion/parametrizaciones. sectionLabel 'GESTIÓN DE LA EXPLOTACIÓN' en el primer ítem visible. Mantener Usuarios y permisos hidden.\n4. Verificar que getWorldForPath funciona para /analitica/*.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-09-23T17:36:33.379Z"
+      },
+      {
+        "id": "294",
+        "title": "PRD015 — Página Datos de la explotación (/configuracion/explotacion)",
+        "description": "Crear desde cero app/(main)/configuracion/explotacion/page.tsx con formulario de edición de la entidad explotacion.",
+        "details": "Campos editables: nombre (obligatorio), nombre_comercial, email, telefono, direccion, codigo_postal, municipio, provincia, pais, latitud/longitud (via selector de mapa — mismo mecanismo que instalaciones: clic sobre mapa rellena coordenadas), logo (via ImageUploadCropper con aspectRatio='square' y storageBucket='images').\nLógica: Server Action con upsert en explotacion (SELECT * FROM explotacion LIMIT 1 para leer; upsert para guardar).\nArquitectura: Page → Server Action → Repository → Supabase. No acceder Supabase desde componente.\nUX: secciones Identidad / Contacto / Dirección / Ubicación / Identidad visual. Toast de confirmación (Sonner). Validación: nombre obligatorio.\nUnhide el nav item en navigation.ts una vez creada la página.",
+        "testStrategy": "",
+        "status": "in-progress",
+        "dependencies": [
+          "292",
+          "291"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-09-23T17:52:15.713Z"
+      },
+      {
+        "id": "295",
+        "title": "PRD015 — Página Parametrizaciones (/configuracion/parametrizaciones)",
+        "description": "Crear app/(main)/configuracion/parametrizaciones/page.tsx para visualizar y editar valores de parametrizacion.",
+        "details": "Listar todos los parámetros de la tabla parametrizacion agrupados por categoria (REPRODUCTIVO, FINANCIERO, OPERATIVO).\nPermitir editar el valor de cada parámetro. Mostrar: descripcion, valor editable, unidad (si existe), especie (si existe).\nNO permitir crear/eliminar parámetros ni cambiar codigo/tipo/categoria/unidad.\nValidación backend: Server Action actualizarParametrizacion(id, nuevoValor) valida que valor es compatible con tipo_valor antes de UPDATE.\nLayout: secciones por categoria con campo editable inline por parámetro. Toast de confirmación (Sonner).\nArquitectura: Page → Server Action → Application Use Case → Repository → Supabase.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "292"
+        ],
+        "priority": "medium",
         "subtasks": []
       }
     ],
     "metadata": {
-      "created": "2026-09-23T12:02:45.745Z",
-      "updated": "2026-09-23T12:02:45.745Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2026-09-23T17:52:15.713Z",
+      "taskCount": 109,
+      "completedCount": 21,
+      "tags": [
+        "master"
+      ]
     }
   }
 }

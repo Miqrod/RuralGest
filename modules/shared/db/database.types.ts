@@ -546,6 +546,60 @@ export type Database = {
           },
         ]
       }
+      explotacion: {
+        Row: {
+          codigo_postal: string | null
+          created_at: string
+          direccion: string | null
+          email: string | null
+          id: string
+          latitud: number | null
+          logo_storage_path: string | null
+          longitud: number | null
+          municipio: string | null
+          nombre: string
+          nombre_comercial: string | null
+          pais: string | null
+          provincia: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          codigo_postal?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          latitud?: number | null
+          logo_storage_path?: string | null
+          longitud?: number | null
+          municipio?: string | null
+          nombre: string
+          nombre_comercial?: string | null
+          pais?: string | null
+          provincia?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          codigo_postal?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          latitud?: number | null
+          logo_storage_path?: string | null
+          longitud?: number | null
+          municipio?: string | null
+          nombre?: string
+          nombre_comercial?: string | null
+          pais?: string | null
+          provincia?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       factura: {
         Row: {
           created_at: string
@@ -832,6 +886,57 @@ export type Database = {
           id?: string
           tipo_movimiento?: string
           usuario_id?: string | null
+        }
+        Relationships: []
+      }
+      parametrizacion: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_parametrizacion_enum"]
+          codigo: string
+          created_at: string
+          created_by: string | null
+          descripcion: string
+          especie: Database["public"]["Enums"]["especie_enum"] | null
+          id: string
+          tipo_valor: Database["public"]["Enums"]["tipo_valor_parametrizacion_enum"]
+          unidad:
+            | Database["public"]["Enums"]["unidad_parametrizacion_enum"]
+            | null
+          updated_at: string
+          updated_by: string | null
+          valor: string
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["categoria_parametrizacion_enum"]
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          descripcion: string
+          especie?: Database["public"]["Enums"]["especie_enum"] | null
+          id?: string
+          tipo_valor: Database["public"]["Enums"]["tipo_valor_parametrizacion_enum"]
+          unidad?:
+            | Database["public"]["Enums"]["unidad_parametrizacion_enum"]
+            | null
+          updated_at?: string
+          updated_by?: string | null
+          valor: string
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_parametrizacion_enum"]
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string
+          especie?: Database["public"]["Enums"]["especie_enum"] | null
+          id?: string
+          tipo_valor?: Database["public"]["Enums"]["tipo_valor_parametrizacion_enum"]
+          unidad?:
+            | Database["public"]["Enums"]["unidad_parametrizacion_enum"]
+            | null
+          updated_at?: string
+          updated_by?: string | null
+          valor?: string
         }
         Relationships: []
       }
@@ -1196,6 +1301,10 @@ export type Database = {
         Returns: Json
       }
       registrar_machorra: { Args: { p_animal_id: string }; Returns: Json }
+      registrar_machorra_animales: {
+        Args: { p_animal_ids: string[] }
+        Returns: Json
+      }
       registrar_parto: {
         Args: {
           p_animal_id: string
@@ -1225,6 +1334,10 @@ export type Database = {
       }
     }
     Enums: {
+      categoria_parametrizacion_enum:
+        | "REPRODUCTIVO"
+        | "FINANCIERO"
+        | "OPERATIVO"
       especie_enum: "vacuno" | "porcino"
       estado_identificacion_enum: "pendiente" | "completa"
       estado_lote_enum: "activo" | "cerrado"
@@ -1251,6 +1364,18 @@ export type Database = {
       tipo_lote_enum: "camada" | "post_destete" | "engorde"
       tipo_parto_enum: "natural" | "asistido"
       tipo_tecnico_evento_enum: "STOCK" | "BIOLOGICO" | "OPERATIVO" | "SISTEMA"
+      tipo_valor_parametrizacion_enum:
+        | "INTEGER"
+        | "DECIMAL"
+        | "BOOLEAN"
+        | "TEXT"
+        | "DATE"
+      unidad_parametrizacion_enum:
+        | "DIAS"
+        | "EUROS"
+        | "PORCENTAJE"
+        | "KG"
+        | "UNIDADES"
       vinculo_materno_enum: "activo" | "finalizado"
     }
     CompositeTypes: {
@@ -1382,6 +1507,11 @@ export const Constants = {
   },
   public: {
     Enums: {
+      categoria_parametrizacion_enum: [
+        "REPRODUCTIVO",
+        "FINANCIERO",
+        "OPERATIVO",
+      ],
       especie_enum: ["vacuno", "porcino"],
       estado_identificacion_enum: ["pendiente", "completa"],
       estado_lote_enum: ["activo", "cerrado"],
@@ -1410,6 +1540,20 @@ export const Constants = {
       tipo_lote_enum: ["camada", "post_destete", "engorde"],
       tipo_parto_enum: ["natural", "asistido"],
       tipo_tecnico_evento_enum: ["STOCK", "BIOLOGICO", "OPERATIVO", "SISTEMA"],
+      tipo_valor_parametrizacion_enum: [
+        "INTEGER",
+        "DECIMAL",
+        "BOOLEAN",
+        "TEXT",
+        "DATE",
+      ],
+      unidad_parametrizacion_enum: [
+        "DIAS",
+        "EUROS",
+        "PORCENTAJE",
+        "KG",
+        "UNIDADES",
+      ],
       vinculo_materno_enum: ["activo", "finalizado"],
     },
   },
