@@ -96,7 +96,7 @@
           "189",
           "192"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -109,7 +109,7 @@
         "dependencies": [
           "192"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -122,7 +122,7 @@
         "dependencies": [
           "194"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -135,7 +135,7 @@
         "dependencies": [
           "195"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -148,7 +148,7 @@
         "dependencies": [
           "196"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -161,7 +161,7 @@
         "dependencies": [
           "197"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -174,7 +174,7 @@
         "dependencies": [
           "198"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -187,7 +187,7 @@
         "dependencies": [
           "199"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -200,7 +200,7 @@
         "dependencies": [
           "200"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -213,7 +213,7 @@
         "dependencies": [
           "201"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -226,7 +226,7 @@
         "dependencies": [
           "202"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -239,7 +239,7 @@
         "dependencies": [
           "203"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -252,7 +252,7 @@
         "dependencies": [
           "204"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -265,7 +265,7 @@
         "dependencies": [
           "205"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -278,7 +278,7 @@
         "dependencies": [
           "206"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -291,7 +291,7 @@
         "dependencies": [
           "207"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -304,7 +304,7 @@
         "dependencies": [
           "208"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -317,7 +317,7 @@
         "dependencies": [
           "209"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -330,7 +330,7 @@
         "dependencies": [
           "210"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -343,7 +343,7 @@
         "dependencies": [
           "211"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -356,7 +356,7 @@
         "dependencies": [
           "197"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -369,7 +369,7 @@
         "dependencies": [
           "204"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -383,7 +383,7 @@
           "202",
           "214"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -396,7 +396,7 @@
         "dependencies": [
           "215"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -409,7 +409,7 @@
         "dependencies": [
           "216"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -422,7 +422,7 @@
         "dependencies": [
           "217"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -435,7 +435,7 @@
         "dependencies": [
           "218"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -448,7 +448,7 @@
         "dependencies": [
           "219"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -461,7 +461,7 @@
         "dependencies": [
           "220"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -474,7 +474,7 @@
         "dependencies": [
           "221"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -487,7 +487,7 @@
         "dependencies": [
           "222"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -500,7 +500,7 @@
         "dependencies": [
           "223"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -513,7 +513,7 @@
         "dependencies": [
           "224"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -526,7 +526,7 @@
         "dependencies": [
           "225"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -539,7 +539,7 @@
         "dependencies": [
           "226"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -552,7 +552,7 @@
         "dependencies": [
           "227"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -565,7 +565,7 @@
         "dependencies": [
           "228"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -578,7 +578,7 @@
         "dependencies": [
           "229"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -591,7 +591,7 @@
         "dependencies": [
           "230"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -604,7 +604,7 @@
         "dependencies": [
           "231"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -617,7 +617,7 @@
         "dependencies": [
           "212"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -630,7 +630,7 @@
         "dependencies": [
           "233"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -643,7 +643,7 @@
         "dependencies": [
           "234"
         ],
-        "status": "pending",
+        "status": "cancelled",
         "subtasks": []
       },
       {
@@ -654,7 +654,7 @@
         "testStrategy": "Ejecutar en local con supabase db reset. Probar: (1) lote de 1 cría → mismo resultado que RPC unitario, (2) lote de 2+ crías → todas actualizadas en una transacción, (3) lote con una cría inválida → ninguna se aplica, (4) ciclo_id de cada evento DESTETE = parto_evento_id.ciclo_id de la cría, no el ciclo abierto de la madre.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -667,7 +667,7 @@
         "dependencies": [
           "236"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -680,7 +680,7 @@
         "dependencies": [
           "237"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -693,7 +693,7 @@
         "dependencies": [
           "238"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -706,7 +706,7 @@
         "dependencies": [
           "239"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -719,7 +719,7 @@
         "dependencies": [
           "240"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -893,7 +893,7 @@
           "251",
           "252"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -906,7 +906,7 @@
         "dependencies": [
           "252"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -920,7 +920,7 @@
           "252",
           "255"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -934,7 +934,7 @@
           "247",
           "252"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -948,7 +948,7 @@
           "252",
           "257"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -964,7 +964,7 @@
           "253",
           "257"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -979,7 +979,7 @@
           "252",
           "257"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -993,7 +993,7 @@
           "252",
           "253"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1023,7 +1023,7 @@
           "249",
           "250"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1049,7 +1049,7 @@
           "262",
           "263"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1062,7 +1062,7 @@
         "dependencies": [
           "264"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1073,7 +1073,7 @@
         "testStrategy": "Verificar que las rutas son accesibles, que la estructura de carpetas permite extensión futura, que los componentes se renderizan sin errores.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1086,14 +1086,14 @@
         "dependencies": [
           "266"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
         "id": "268",
         "title": "Implementar lógica de cálculo de umbral de revisión reproductiva",
         "description": "Crear la lógica que determina si un animal requiere revisión reproductiva basándose en el umbral configurable y el tiempo transcurrido en el ciclo.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "267",
           "292"
@@ -1113,7 +1113,7 @@
         "dependencies": [
           "268"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1126,7 +1126,7 @@
         "dependencies": [
           "266"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1139,7 +1139,7 @@
         "dependencies": [
           "270"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1152,7 +1152,7 @@
         "dependencies": [
           "271"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1165,7 +1165,7 @@
         "dependencies": [
           "272"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1178,7 +1178,7 @@
         "dependencies": [
           "273"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1191,7 +1191,7 @@
         "dependencies": [
           "274"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1204,7 +1204,7 @@
         "dependencies": [
           "275"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1218,7 +1218,7 @@
           "269",
           "276"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1231,7 +1231,7 @@
         "dependencies": [
           "277"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1245,7 +1245,7 @@
           "273",
           "278"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1259,7 +1259,7 @@
           "274",
           "279"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1273,7 +1273,7 @@
           "276",
           "280"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1286,7 +1286,7 @@
         "dependencies": [
           "267"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1299,7 +1299,7 @@
         "dependencies": [
           "282"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1313,7 +1313,7 @@
           "268",
           "283"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1326,7 +1326,7 @@
         "dependencies": [
           "284"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1342,7 +1342,7 @@
           "280",
           "281"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1356,7 +1356,7 @@
           "270",
           "286"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1370,7 +1370,7 @@
           "272",
           "287"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1384,7 +1384,7 @@
           "275",
           "288"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1398,7 +1398,7 @@
           "282",
           "289"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -1407,7 +1407,7 @@
         "description": "Crear components/ui/image-upload-cropper.tsx con subida a Supabase Storage y recorte de imagen.",
         "details": "Librería: añadir react-easy-crop al proyecto.\nProps: aspectRatio ('square' | 'round' | '16:9' | '4:3'), storageBucket (string), storagePath (string), currentUrl? (string), onUploadComplete(url: string), maxSizeMb? (default 5).\nEstados internos: idle, selecting, cropping, uploading, error.\nFlujo: input file → FileReader → blob URL como fuente para react-easy-crop → editor con zoom y pan → botón Recortar → canvas.toBlob() → upload a Supabase Storage → URL pública → onUploadComplete(url).\nVariante 'round': máscara CSS circular en preview.\nCrear bucket 'images' en Supabase Storage si no existe, con RLS adecuada (authenticated puede subir a su ruta).\nSeguir patrones de UI existentes del proyecto (border-divider, bg-canvas, botones con clases world).\nComponente en components/ui/image-upload-cropper.tsx.",
         "testStrategy": "",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
@@ -1443,7 +1443,7 @@
         "description": "Crear desde cero app/(main)/configuracion/explotacion/page.tsx con formulario de edición de la entidad explotacion.",
         "details": "Campos editables: nombre (obligatorio), nombre_comercial, email, telefono, direccion, codigo_postal, municipio, provincia, pais, latitud/longitud (via selector de mapa — mismo mecanismo que instalaciones: clic sobre mapa rellena coordenadas), logo (via ImageUploadCropper con aspectRatio='square' y storageBucket='images').\nLógica: Server Action con upsert en explotacion (SELECT * FROM explotacion LIMIT 1 para leer; upsert para guardar).\nArquitectura: Page → Server Action → Repository → Supabase. No acceder Supabase desde componente.\nUX: secciones Identidad / Contacto / Dirección / Ubicación / Identidad visual. Toast de confirmación (Sonner). Validación: nombre obligatorio.\nUnhide el nav item en navigation.ts una vez creada la página.",
         "testStrategy": "",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "292",
           "291"
@@ -1458,7 +1458,7 @@
         "description": "Crear app/(main)/configuracion/parametrizaciones/page.tsx para visualizar y editar valores de parametrizacion.",
         "details": "Listar todos los parámetros de la tabla parametrizacion agrupados por categoria (REPRODUCTIVO, FINANCIERO, OPERATIVO).\nPermitir editar el valor de cada parámetro. Mostrar: descripcion, valor editable, unidad (si existe), especie (si existe).\nNO permitir crear/eliminar parámetros ni cambiar codigo/tipo/categoria/unidad.\nValidación backend: Server Action actualizarParametrizacion(id, nuevoValor) valida que valor es compatible con tipo_valor antes de UPDATE.\nLayout: secciones por categoria con campo editable inline por parámetro. Toast de confirmación (Sonner).\nArquitectura: Page → Server Action → Application Use Case → Repository → Supabase.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "292"
         ],
