@@ -264,3 +264,23 @@ El caller pasa el array completo; si alguna falla, Postgres hace rollback de tod
 
 **Regla:** cuando el usuario realiza una acción sobre N elementos del mismo tipo en una misma
 pantalla, la atomicidad debe garantizarse en la capa de base de datos, no en la de aplicación.
+
+---
+
+## MIGRACIONES QUE REDEFINEN FUNCIONES EXISTENTES
+
+Error: al escribir una migration con `CREATE OR REPLACE FUNCTION` para una función ya existente,
+copiar la firma/body de la primera migración que definió esa función, sin comprobar si
+migraciones posteriores la redefinieron.
+
+**Caso real:** `registrar_parto` fue redefinida 4 veces:
+`20260804` (original) → `20260805` → `20260806` → `20260817` (eliminó `p_estado_reproductivo`
+y `'lactante'` del enum) → `20260829` (versión actual con validaciones TOCTOU).
+Copiar la firma de `20260804` en una nueva migration del 28-sep introdujo el parámetro
+`DEFAULT 'lactante'` que ya no era válido, rompiendo `db reset`.
+
+**Regla:** antes de escribir cualquier migration que redefina una función existente:
+1. `grep -r "CREATE OR REPLACE FUNCTION nombre_funcion" supabase/migrations/ | sort` para
+   encontrar TODAS las migraciones que la tocan, en orden cronológico.
+2. Leer la MÁS RECIENTE como base. Nunca la original.
+3. Añadir solo el cambio mínimo necesario sobre esa versión.
