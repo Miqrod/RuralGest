@@ -26,14 +26,14 @@ function MobileBackdrop() {
   )
 }
 
-function AppShell({ children }: { children: ReactNode }) {
+function AppShell({ children, logoUrl }: { children: ReactNode; logoUrl?: string }) {
   const { collapsed } = useSidebar()
 
   return (
     <div className="min-h-screen bg-surface-base">
       <WorldSync />
       <MobileBackdrop />
-      <Sidebar />
+      <Sidebar logoUrl={logoUrl} />
       <Header />
 
       <main
@@ -52,10 +52,10 @@ function AppShell({ children }: { children: ReactNode }) {
   )
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({ children, logoUrl }: { children: ReactNode; logoUrl?: string }) {
   return (
     <SidebarProvider>
-      <AppShell>{children}</AppShell>
+      <AppShell logoUrl={logoUrl}>{children}</AppShell>
     </SidebarProvider>
   )
 }

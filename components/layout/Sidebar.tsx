@@ -53,12 +53,17 @@ const WORLD_ARROW_HOVER: Record<WorldId, string> = {
 
 // ── Logo ────────────────────────────────────────────────────────────────────
 
-function SiteLogo({ collapsed }: { collapsed: boolean }) {
+function SiteLogo({ collapsed, logoUrl }: { collapsed: boolean; logoUrl?: string }) {
   const FallbackIcon = siteConfig.logoFallback
+  const resolvedUrl = logoUrl ?? siteConfig.logoUrl
 
-  const logoEl = siteConfig.logoUrl ? (
-    <Image
-      src={siteConfig.logoUrl}
+  const logoEl = resolvedUrl ? (
+    // <img> en lugar de <Image>: el logo ya está optimizado por el cropper (512px JPEG 85%).
+    // <Image> fetcha server-side a través del optimizador; en dev Docker puede no alcanzar
+    // la URL de Supabase local. El browser sí la alcanza directamente.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={resolvedUrl}
       alt={siteConfig.name}
       width={40}
       height={40}
@@ -263,7 +268,7 @@ function MobileCloseBtn({ closeMobile, mobileOpen }: { closeMobile: () => void; 
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 
-export function Sidebar() {
+export function Sidebar({ logoUrl }: { logoUrl?: string }) {
   const pathname = usePathname()
   const { collapsed, toggle, mobileOpen, closeMobile } = useSidebar()
 
@@ -290,7 +295,7 @@ export function Sidebar() {
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <SiteLogo collapsed={displayCollapsed} />
+        <SiteLogo collapsed={displayCollapsed} logoUrl={logoUrl} />
 
         <MobileCloseBtn closeMobile={closeMobile} mobileOpen={mobileOpen} />
 
