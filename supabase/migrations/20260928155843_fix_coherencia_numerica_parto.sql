@@ -5,8 +5,9 @@
 -- por lo que la incoherencia no puede originarse desde la UI. Esta validación
 -- protege contra llamadas directas al RPC con datos inconsistentes.
 --
--- Base: 20260829000002_robustez_registrar_parto.sql (versión actual).
--- Único cambio: bloque de validación añadido entre pasos 6 y 7.
+-- Base: 20260906172300_extend_registrar_parto_ubicacion.sql (versión actual).
+-- Único cambio: bloque de validación añadido entre pasos 6 y 7 (pasos 7-13
+-- son los anteriores 7-12 renumerados).
 -- =============================================================================
 CREATE OR REPLACE FUNCTION registrar_parto(
   p_animal_id      UUID,
@@ -21,17 +22,20 @@ CREATE OR REPLACE FUNCTION registrar_parto(
   p_observaciones  TEXT    DEFAULT NULL
 ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
-  v_animal          RECORD;
-  v_ciclo_animal_id UUID;
-  v_tipo_evento_id  UUID;
-  v_evento_id       UUID;
-  v_tp_id_cria      UUID;
-  v_cria_id         UUID;
-  v_crias_ids       UUID[] := '{}';
-  v_nuevo_ciclo_num INT;
+  v_animal               RECORD;
+  v_ciclo_animal_id      UUID;
+  v_tipo_evento_id       UUID;
+  v_tipo_cambio_ubic_id  UUID;
+  v_evento_id            UUID;
+  v_cambio_ubic_id       UUID;
+  v_tp_id_cria           UUID;
+  v_cria_id              UUID;
+  v_crias_ids            UUID[] := '{}';
+  v_nuevo_ciclo_num      INT;
 BEGIN
   -- ── 1. Cargar y bloquear el animal ────────────────────────────────────────
-  SELECT id, estado_vital, especie, crotal, es_reproductora, estado_reproductivo
+  SELECT id, estado_vital, especie, crotal, es_reproductora, estado_reproductivo,
+         ubicacion_actual_id
   INTO v_animal
   FROM animal
   WHERE id = p_animal_id
@@ -48,10 +52,7 @@ BEGIN
       v_animal.estado_vital;
   END IF;
 
-  -- ── 3. Revalidar estado reproductivo (TOCTOU) ────────────────────────────
-  -- El parto requiere que la gestación esté en curso: cubierta o gestante.
-  -- Este check protege contra TOCTOU: el estado podría haber cambiado
-  -- entre la lectura del Use Case y la ejecución del RPC.
+  -- ── 3. Revalidar estado reproductivo ─────────────────────────────────────
   IF v_animal.estado_reproductivo IS NULL OR
      v_animal.estado_reproductivo NOT IN ('cubierta', 'gestante') THEN
     RAISE EXCEPTION 'Estado reproductivo inválido para parto: %. Solo se permite desde cubierta o gestante.',
@@ -63,15 +64,18 @@ BEGIN
     RAISE EXCEPTION 'La fecha del parto no puede ser futura: %', p_fecha;
   END IF;
 
-  -- ── 5. Validar que el ciclo pertenece al animal y está abierto ────────────
+  -- ── 5. Validar que el ciclo pertenece al animal y está activo ────────────
+  -- resultado IS NULL: un ciclo con resultado='parto' y fecha_fin=NULL está
+  -- esperando destetes — no es válido para registrar un nuevo parto.
   SELECT animal_id INTO v_ciclo_animal_id
   FROM ciclo_reproductivo
-  WHERE id = p_ciclo_id
-    AND fecha_fin IS NULL
+  WHERE id         = p_ciclo_id
+    AND fecha_fin  IS NULL
+    AND resultado  IS NULL
   FOR UPDATE;
 
   IF v_ciclo_animal_id IS NULL THEN
-    RAISE EXCEPTION 'El ciclo % no existe o no está abierto', p_ciclo_id;
+    RAISE EXCEPTION 'El ciclo % no existe, no está abierto, o ya tiene resultado fijado', p_ciclo_id;
   END IF;
 
   IF v_ciclo_animal_id != p_animal_id THEN
@@ -101,7 +105,8 @@ BEGIN
   WHERE nombre = 'Cría' AND especie = v_animal.especie
   LIMIT 1;
 
-  v_tipo_evento_id := _resolve_tipo_evento_id('PARTO');
+  v_tipo_evento_id      := _resolve_tipo_evento_id('PARTO');
+  v_tipo_cambio_ubic_id := _resolve_tipo_evento_id('CAMBIO_UBICACION');
 
   -- ── 9. Crear evento PARTO ─────────────────────────────────────────────────
   INSERT INTO eventos (tipo_evento_id, especie, fecha, ciclo_id, metadata_json)
@@ -123,7 +128,7 @@ BEGIN
   INSERT INTO evento_animales (evento_id, animal_id, rol)
   VALUES (v_evento_id, p_animal_id, 'madre');
 
-  -- ── 10. Crear crías vivas ──────────────────────────────────────────────────
+  -- ── 10. Crear crías vivas ─────────────────────────────────────────────────
   FOR v_cria_id IN
     SELECT gen_random_uuid() FROM generate_series(1, p_numero_vivos)
   LOOP
@@ -145,11 +150,33 @@ BEGIN
     INSERT INTO evento_animales (evento_id, animal_id, rol)
     VALUES (v_evento_id, v_cria_id, 'cria');
 
+    -- CAMBIO_UBICACION inicial: NULL → ubicacion_madre (o NULL → NULL)
+    -- Se genera siempre, incluso cuando la madre no tiene ubicación asignada.
+    INSERT INTO eventos (
+      tipo_evento_id, especie, fecha,
+      ubicacion_origen_id, ubicacion_destino_id,
+      metadata_json
+    )
+    VALUES (
+      v_tipo_cambio_ubic_id, v_animal.especie, p_fecha,
+      NULL,                         -- origen siempre NULL: la cría acaba de nacer
+      v_animal.ubicacion_actual_id, -- destino = ubicación de la madre (puede ser NULL)
+      '{"contexto": "parto"}'
+    )
+    RETURNING id INTO v_cambio_ubic_id;
+
+    INSERT INTO evento_animales (evento_id, animal_id, rol)
+    VALUES (v_cambio_ubic_id, v_cria_id, 'self');
+
+    UPDATE animal
+    SET ubicacion_actual_id = v_animal.ubicacion_actual_id
+    WHERE id = v_cria_id;
+
     v_crias_ids := array_append(v_crias_ids, v_cria_id);
   END LOOP;
 
   -- ── 11. Crear crías nacidas muertas ───────────────────────────────────────
-  -- Sin identificación pendiente; vínculo 'finalizado' (nunca existió dependencia funcional).
+  -- Sin CAMBIO_UBICACION: las crías muertas no adquieren ubicación operativa.
   FOR v_cria_id IN
     SELECT gen_random_uuid() FROM generate_series(1, p_numero_muertos)
   LOOP
@@ -174,7 +201,6 @@ BEGIN
 
   -- ── 12. Fijar resultado del ciclo: 'parto' ────────────────────────────────
   -- fecha_fin se deja NULL: el ciclo sigue abierto hasta el último destete.
-  -- El destete del último vínculo activo establecerá fecha_fin (registrar_destete).
   UPDATE ciclo_reproductivo
   SET resultado = 'parto'
   WHERE id = p_ciclo_id;

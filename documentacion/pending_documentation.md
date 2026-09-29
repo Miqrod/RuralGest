@@ -17,14 +17,70 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 | PRD | Estado | Documentación pendiente |
 |-----|--------|-------------------------|
 | PRD008 | ⏳ | Corrección del flujo de Confirmación de Gestación sin Cubrición previa |
-| PRD009 | ⏳ | Parto, creación de crías, identificación, genealogía derivada, historial reproductivo y consolidación del nacimiento |
+| PRD009 | ⏳ | Parto, crías, identificación, genealogía, historial reproductivo — **⚠️ parto.md tiene 16 referencias a LACTANTE que son erróneas** |
 | PRD010 | ⏳ | Finalización del ciclo reproductivo, dependencia funcional madre-cría y flujo de Destete |
 | PRD011 | ⏳ | Flujo de Aborto, RPC registrar_aborto como patrón de referencia |
 | PRD012 | ⏳ | Machorra, invariante resultado='parto' AND fecha_fin IS NULL, validación temporal en DatePicker |
-| PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal |
+| PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal — **⚠️ modelo_reproductivo.md sigue listando LACTANTE como estado válido** |
 | PRD013 | ⏳ | Consolidación dominio reproductivo, inmutabilidad de resultado, arquitectura UI→Query→Repository |
 | PRD013-fix | ⏳ | Destete múltiple atómico, invariante ciclo_id histórico en DESTETE |
-| PRD014 | 📝 | Concepto de Instalación, `CAMBIO_UBICACION` como tipo de evento, ubicación como dimensión del animal, integración de ubicación en el ciclo de vida (parto, compra, salida) |
+| PRD014 | ⏳ | Concepto de Instalación, `CAMBIO_UBICACION` como tipo de evento, ubicación como dimensión del animal, integración de ubicación en el ciclo de vida (parto, compra, salida) |
+| PRD015 | ⏳ | Revisión reproductiva, Analítica reproductiva, parametrización de explotación |
+
+---
+
+## ⚠️ Documentación permanente desactualizada — prioridad alta
+
+Los siguientes documentos contienen información que fue correcta al escribirse pero que quedó obsoleta tras el PRD-CORRECTIVO (eliminación de `LACTANTE` como estado reproductivo):
+
+### `documentacion/base_conocimiento/modelo/modelo_reproductivo.md`
+
+- **Tabla de estados (sección "Estados definidos por el modelo")**: sigue listando `LACTANTE` como estado válido con la descripción "Existe un parto registrado y el ciclo reproductivo permanece abierto hasta el destete". Debe eliminarse y reemplazarse por una nota sobre la historia paralela de maternidad.
+- **Caso 4 "Registro de un parto"**: dice "el estado pasa a **LACTANTE**". Debe decir que el estado pasa a **VACÍA** y se crea un nuevo ciclo.
+- **Descripción del estado LACTANTE en sección conceptual** (línea 489): debe eliminarse.
+
+### `documentacion/flujos/reproductivos/parto.md`
+
+Contiene 16 referencias a `LACTANTE` como estado post-parto de la madre. Todo el documento asume que después del parto la madre entra en `LACTANTE` y el ciclo permanece abierto. El comportamiento real implementado es:
+
+```text
+PARTO
+  ↓
+ciclo actual: resultado = 'parto', fecha_fin = NULL (abierto hasta último destete)
+  ↓
+madre: estado_reproductivo = 'vacia'
+  ↓
+nuevo ciclo en VACÍA creado inmediatamente
+```
+
+El documento debe reescribirse para reflejar esta separación entre historia reproductiva (ciclos) e historia de maternidad (vínculos madre-cría). En particular:
+
+- Las invariantes que dicen `estado_reproductivo = LACTANTE` son incorrectas.
+- La tabla de consecuencias dice "Estado reproductivo → `LACTANTE`", debe decir "Estado reproductivo → `VACÍA` + nuevo ciclo".
+- El diagrama principal del flujo tiene `LACTANTE` como nodo de la madre.
+
+### `documentacion/base_conocimiento/dominios/reproductivo.md`
+
+- Sección "Estado actual del dominio" (línea 573): lista "estado reproductivo `LACTANTE`" como parte del dominio implementado. Debe eliminarse.
+
+### Origen del cambio
+
+El PRD-CORRECTIVO (previo a PRD011) redefinió el modelo:
+
+```text
+Modelo ANTIGUO (documentado, no implementado):
+  PARTO → madre = LACTANTE → ciclo abierto hasta destete
+
+Modelo REAL implementado (desde PRD-CORRECTIVO):
+  PARTO → ciclo actual resultado='parto' (abierto para destetes)
+         → madre = VACÍA (estado_reproductivo)
+         → nuevo ciclo VACÍA creado
+  LACTANTE eliminado de estado_reproductivo_enum (migration 20260817000000)
+```
+
+La lactación y los vínculos madre-cría son una **historia paralela de maternidad** que puede coexistir con ciclos reproductivos posteriores. No determinan el estado reproductivo de la madre.
+
+---
 
 ## PRD008 - Corrección del flujo "Confirmación de Gestación sin Cubrición previa"
 
@@ -1312,3 +1368,105 @@ Este patrón debe aplicarse a cualquier clase que empiece por `@` usada en el pr
 - `documentacion/base_conocimiento/modelo/eventos.md` — añadir `CAMBIO_UBICACION` con su esquema de metadata
 - `documentacion/base_conocimiento/implementacion/technology-stack.md` — patrón Leaflet con `dynamic({ ssr: false })`, container queries en Tailwind v4 + Turbopack
 - `documentacion/flujos/instalaciones/reubicacion.md` (nuevo) — flujo completo de reubicación, modos global/instalación, animalesEfectivos vs animalesNoOp
+
+---
+
+## PRD015 — Revisión reproductiva, Analítica Reproductiva y Parametrización
+
+> Implementado en septiembre 2026. Pendiente de incorporar a documentación permanente.
+
+### 1. Revisión reproductiva
+
+La revisión reproductiva es un mecanismo de detección de hembras cuyo ciclo reproductivo lleva demasiado tiempo sin progresar hacia una gestación.
+
+**Parámetro configurable:** `umbral_revision_reproductiva_dias` (valor inicial: 240 días).
+
+**Regla de detección:**
+```text
+animal.es_reproductora = true
+AND animal.estado_vital = 'vivo'
+AND ciclo abierto (fecha_fin IS NULL AND resultado IS NULL)
+AND estado_reproductivo ∈ {VACÍA, CUBIERTA}
+AND CURRENT_DATE - ciclo.fecha_inicio > umbral_revision_reproductiva_dias
+```
+
+La detección NO aplica desde `GESTANTE`: si hay una gestación confirmada, la hembra no requiere revisión reproductiva, independientemente del tiempo transcurrido.
+
+**Características:**
+- No genera eventos ni modifica estados.
+- Es una proyección de lectura pura sobre los datos existentes.
+- La alerta desaparece automáticamente cuando la condición deja de cumplirse: confirmación de gestación (estado pasa a GESTANTE, fuera del conjunto {VACÍA, CUBIERTA}), machorra o parto (cierran el ciclo). Una nueva cubrición **no** elimina la alerta porque CUBIERTA sigue siendo un estado de revisión.
+- Se muestra en el dashboard operativo y en la ficha del animal.
+- Desde la ficha facilita el acceso a la acción Machorra cuando corresponde.
+
+### 2. Analítica reproductiva
+
+Nueva sección global en `/analitica`, con módulo inicial `/analitica/reproduccion`.
+
+**Principio fundamental:**
+> El periodo define qué actividad histórica se estudia. Los eventos definen qué ocurrió. Las dimensiones solo se aplican cuando pueden explicar correctamente el acontecimiento. Las cohortes de crías se siguen hasta su evento natural de cierre (DESTETE).
+
+#### Situación actual (independiente del periodo)
+
+Siempre muestra el estado real en el momento de la consulta. No se modifica al cambiar el rango temporal:
+- Reproductoras activas
+- Por estado: vacías / cubiertas / gestantes
+- Animales que requieren revisión reproductiva
+
+#### Actividad histórica (filtrada por periodo)
+
+El periodo es el filtro principal y obligatorio. Se representa como `fecha_desde` / `fecha_hasta`. Los presets (últimos 30 días, 3 meses, 6 meses, 12 meses, año actual, año anterior, personalizado) son atajos de UX que modifican esas dos fechas; el backend nunca recibe un "preset", siempre recibe las fechas exactas.
+
+Métricas basadas en eventos dentro del periodo:
+- Cubriciones
+- Confirmaciones de gestación
+- Abortos
+- Partos (nacidos vivos / nacidos muertos separados)
+
+**Filtro por instalación:** cuando se filtra, se evalúa la ubicación histórica del animal **en la fecha del evento**, no la ubicación actual. Para el parto, se usa la ubicación histórica de la madre en la fecha del parto. Las crías del parto se atribuyen al contexto de instalación de su nacimiento.
+
+#### Seguimiento de crías
+
+Bloque diferenciado que sigue las crías nacidas vivas en los partos del periodo hasta su evento natural de cierre (DESTETE). El destete puede ocurrir fuera del rango temporal original del filtro.
+
+Distingue:
+- Crías destetadas
+- Crías muertas antes del destete
+- Crías con otro cierre de vínculo
+- Crías todavía pendientes (vínculo activo)
+
+**Restricción de instalación:** el seguimiento de crías NO se filtra por instalación porque una cría puede cambiar de instalación durante la lactancia. Atribuir el éxito del seguimiento a una instalación concreta sería semánticamente incorrecto.
+
+### 3. Parametrización de la explotación
+
+Nueva tabla `explotacion` como singleton (una sola fila por base de datos) que centraliza los parámetros configurables de la explotación.
+
+Parámetros iniciales:
+- `nombre` — nombre de la explotación
+- `umbral_revision_reproductiva_dias` (INT, default 240) — umbral para detección de revisión
+- Coordenadas base (`lat_base`, `lng_base`) — punto de centrado inicial de los mapas de instalaciones
+
+**Invariante:** siempre existe exactamente una fila. No se puede insertar una segunda fila ni borrar la existente. La fila se crea en seed.
+
+### 4. Machorra desde VACÍA (complemento a PRD012)
+
+PRD015 confirmó que la acción Machorra también debe estar disponible desde `VACÍA` (ciclo sin ninguna cubrición registrada). Esto amplía lo documentado en PRD012 que solo mencionaba `VACÍA | CUBIERTA` en la regla de dominio. La implementación ya lo soporta.
+
+Flujo completo actualizado:
+```text
+VACÍA | CUBIERTA  (NO desde GESTANTE)
+       ↓
+  resultado = 'machorra'
+  fecha_fin = CURRENT_DATE  (fecha de ejecución del sistema, sin input del usuario)
+       ↓
+  Si es_reproductora → nuevo ciclo VACÍA
+  Si no → estado_reproductivo = NULL
+```
+
+### Documentación permanente prevista
+
+- `documentacion/base_conocimiento/dominios/reproductivo.md` — añadir revisión reproductiva como capacidad del dominio, regla de detección
+- `documentacion/base_conocimiento/modelo/modelo_reproductivo.md` — añadir sección de analítica: principio de periodo, dimensiones, cohortes de crías, seguimiento hasta DESTETE
+- `documentacion/base_conocimiento/modelo/modelo_ganadero.md` — añadir parametrización de explotación como singleton
+- `documentacion/flujos/reproductivos/machorra.md` (nuevo) — flujo completo incluyendo desde VACÍA y regla de fecha automática
+- `documentacion/base_conocimiento/implementacion/technology-stack.md` — patrón de analítica: situación actual vs actividad histórica, presets como UX

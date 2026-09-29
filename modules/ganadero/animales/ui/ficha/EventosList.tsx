@@ -107,7 +107,11 @@ export function EventosList({ eventos }: { eventos: EventoEnHistorial[] }) {
             : evento.tipo_codigo === 'CAMBIO_UBICACION'
               ? evento.ubicacion_origen_nombre && evento.ubicacion_destino_nombre
                 ? `${evento.ubicacion_origen_nombre} → ${evento.ubicacion_destino_nombre}`
-                : evento.ubicacion_destino_nombre ?? null
+                : evento.ubicacion_origen_nombre
+                  ? `${evento.ubicacion_origen_nombre} → (Baja)`
+                  : evento.ubicacion_destino_nombre
+                    ? `(Alta) → ${evento.ubicacion_destino_nombre}`
+                    : null
               : EVENTO_DESCRIPCION[evento.tipo_codigo] ?? evento.motivo
 
         // Etiqueta de ciclo solo para eventos con badge Reproductivo.
