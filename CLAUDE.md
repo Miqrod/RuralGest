@@ -308,7 +308,38 @@ over convenience.
 
 ---
 
-# 11. Incremental Development Philosophy
+# 11. Migration Safety — Redefining Existing Functions
+
+Before writing any migration with `CREATE OR REPLACE FUNCTION` for a function that already exists:
+
+1. Run `./scripts/check-rpc.sh <function_name>` to list all migrations that define it.
+2. Read the **most recent** migration as the base. Never the first.
+3. Add only the minimum change needed on top of that version.
+
+This rule exists because functions are redefined multiple times across migrations.
+Basing on an old version silently loses all intermediate changes.
+
+After writing the migration, run `supabase db reset --local` to verify it applies cleanly.
+
+---
+
+# 12. Evals — Domain Regression Tests
+
+After closing a feature that touches RPC logic or domain rules, add or extend the corresponding eval in `evals/`.
+
+Evals are pure domain tests (no DB, no network). They run in ~1s with `npm run evals`.
+
+Critical invariants to protect with evals:
+- RPC argument coherence (e.g. nacidos = vivos + muertos)
+- Valid state transitions for each event
+- Metadata keys that drive UI rendering (cierre_por_cria, cierre_por_salida, contexto)
+- Conditions that guard CAMBIO_UBICACION generation
+
+See `evals/README.md` for the full list and conventions.
+
+---
+
+# 13. Incremental Development Philosophy
 
 This project is intentionally developed step-by-step.
 

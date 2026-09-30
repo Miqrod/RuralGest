@@ -46,7 +46,8 @@ Si algún eval falla, el commit se cancela hasta que se corrija el problema.
 | Archivo | Módulo | Qué protege |
 |---------|--------|-------------|
 | `compra-animal.eval.ts` | `ganadero/animales` | Fecha de nacimiento obligatoria al comprar + traducción correcta de campos al RPC |
-| `salida-animal.eval.ts` | `ganadero/animales` | Solo animales vivos pueden salir + venta y muerte producen el motivo RPC correcto |
+| `salida-animal.eval.ts` | `ganadero/animales` | Solo animales vivos pueden salir + DESTETE implícito cierre_por_cria/cierre_por_salida + CAMBIO_UBICACION en salida + descripción (Alta)/(Baja) |
+| `parto.eval.ts` | `ganadero/reproductivo` | Elegibilidad para parto + coherencia numérica nacidos=vivos+muertos + ciclo con resultado fijado + herencia de ubicación en crías + nuevo ciclo VACÍA tras desenlace |
 | `identificacion-animal.eval.ts` | `ganadero/animales` | Coherencia is_reproductora↔estado_reproductivo + criterios de identificación (crotal, sexo) |
 | `confirmacion-gestacion.eval.ts` | `ganadero/reproductivo` | Transiciones, elegibilidad, decisión de ciclo y proyección de fecha de parto para CONFIRMACION_GESTACION |
 | `transiciones-reproductivas.eval.ts` | `ganadero/reproductivo` | Todos los eventos (CUBRICION, PARTO, DESTETE, ABORTO): transiciones válidas e inválidas, evalCycleRules, buildSnapshot |

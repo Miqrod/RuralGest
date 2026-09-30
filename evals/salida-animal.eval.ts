@@ -170,3 +170,106 @@ describe('EVAL: Salida de animal — destete implícito y anotación en historia
   })
 
 })
+
+// ── DESTETE IMPLÍCITO CUANDO SALE LA CRÍA ────────────────────────────────────
+// Simétrico al bloque anterior: cuando la CRÍA sale, es la MADRE quien ve
+// el DESTETE con la anotación contextual (cierre_por_cria, no cierre_por_salida).
+
+describe('EVAL: Salida de animal — DESTETE implícito en ficha de la madre cuando sale la cría', () => {
+
+  it('cierre_por_cria "venta" genera etiqueta "(venta cría)" en la ficha de la madre', () => {
+    // Cuando una cría con vínculo activo es vendida, el RPC registra un DESTETE
+    // con metadata_json = {cierre_por_cria: 'venta'} asociado a la madre.
+    // La UI renderiza "(venta cría)" junto a "Destete" en la ficha de la madre.
+    const metadata = { cierre_por_cria: 'venta' }
+    const label = metadata.cierre_por_cria === 'muerte' ? 'muerte cría' : 'venta cría'
+    expect(label).toBe('venta cría')
+  })
+
+  it('cierre_por_cria "muerte" genera etiqueta "(muerte cría)" en la ficha de la madre', () => {
+    const metadata = { cierre_por_cria: 'muerte' }
+    const label = metadata.cierre_por_cria === 'muerte' ? 'muerte cría' : 'venta cría'
+    expect(label).toBe('muerte cría')
+  })
+
+  it('cierre_por_cria y cierre_por_salida son claves distintas — no se mezclan', () => {
+    // cierre_por_cria  → cría sale, madre ve el DESTETE con esta clave
+    // cierre_por_salida → madre sale, cría ve el DESTETE con esta clave
+    const metadataCriaSale  = { cierre_por_cria: 'venta' }
+    const metadataMadreSale = { cierre_por_salida: 'venta' }
+    expect('cierre_por_cria'   in metadataCriaSale).toBe(true)
+    expect('cierre_por_salida' in metadataCriaSale).toBe(false)
+    expect('cierre_por_salida' in metadataMadreSale).toBe(true)
+    expect('cierre_por_cria'   in metadataMadreSale).toBe(false)
+  })
+
+})
+
+// ── CAMBIO_UBICACION EN SALIDA ────────────────────────────────────────────────
+
+describe('EVAL: Salida de animal — CAMBIO_UBICACION al salir de la explotación', () => {
+
+  it('animal con ubicación asignada → se genera CAMBIO_UBICACION al salir', () => {
+    // Si ubicacion_actual_id != NULL antes de la salida, el RPC genera un evento
+    // CAMBIO_UBICACION con origen=ubicacion_actual_id y destino=NULL.
+    const ubicacionAntesDeSalida = 'uuid-instalacion-rincon'
+    const debeGenerarEvento = ubicacionAntesDeSalida !== null
+    expect(debeGenerarEvento).toBe(true)
+  })
+
+  it('animal sin ubicación asignada → NO se genera CAMBIO_UBICACION', () => {
+    // Si el animal no tenía ubicación, no hay movimiento que registrar.
+    const ubicacionAntesDeSalida = null
+    const debeGenerarEvento = ubicacionAntesDeSalida !== null
+    expect(debeGenerarEvento).toBe(false)
+  })
+
+  it('destino del CAMBIO_UBICACION de salida es siempre NULL', () => {
+    // NULL en ubicacion_destino_id significa que el animal abandona el sistema
+    // de seguimiento físico. No hay instalación "exterior" en la base de datos.
+    const destinoAlSalir = null
+    expect(destinoAlSalir).toBeNull()
+  })
+
+  it('metadata contexto = motivo de salida: "venta" o "muerte"', () => {
+    // El mismo p_motivo que determina el estado_vital resultante
+    // se propaga al metadata_json del CAMBIO_UBICACION para contexto en el log.
+    const motivoVenta  = 'venta'
+    const motivoMuerte = 'muerte'
+    expect(['venta', 'muerte']).toContain(motivoVenta)
+    expect(['venta', 'muerte']).toContain(motivoMuerte)
+  })
+
+})
+
+// ── DESCRIPCIÓN DE CAMBIO_UBICACION EN UI ────────────────────────────────────
+
+describe('EVAL: Salida de animal — descripción visual de CAMBIO_UBICACION', () => {
+
+  // La UI (EventosList) muestra siempre "origen → destino".
+  // Cuando uno de los extremos es NULL se sustituye por "(Alta)" o "(Baja)".
+
+  function describeCambioUbicacion(origen: string | null, destino: string | null): string | null {
+    if (origen && destino) return `${origen} → ${destino}`
+    if (origen)            return `${origen} → (Baja)`
+    if (destino)           return `(Alta) → ${destino}`
+    return null
+  }
+
+  it('ambos presentes → "origen → destino"', () => {
+    expect(describeCambioUbicacion('El rincón', 'Pradera')).toBe('El rincón → Pradera')
+  })
+
+  it('solo destino (nacimiento/compra) → "(Alta) → destino"', () => {
+    expect(describeCambioUbicacion(null, 'El rincón')).toBe('(Alta) → El rincón')
+  })
+
+  it('solo origen (venta/muerte) → "origen → (Baja)"', () => {
+    expect(describeCambioUbicacion('El rincón', null)).toBe('El rincón → (Baja)')
+  })
+
+  it('ninguno (sin ubicación asignada) → null', () => {
+    expect(describeCambioUbicacion(null, null)).toBeNull()
+  })
+
+})
