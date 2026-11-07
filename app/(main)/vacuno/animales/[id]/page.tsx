@@ -10,6 +10,7 @@ import { SeccionOrigen } from '@/modules/ganadero/animales/ui/ficha/SeccionOrige
 import { SeccionAcciones } from '@/modules/ganadero/animales/ui/ficha/SeccionAcciones'
 import { SeccionEventos } from '@/modules/ganadero/animales/ui/ficha/SeccionEventos'
 import { SeccionUsoProductivo } from '@/modules/ganadero/animales/ui/ficha/SeccionUsoProductivo'
+import { AccionIdentificar } from '@/modules/ganadero/animales/ui/identificacion/AccionIdentificar'
 import { SeccionHistorialReproductivo } from '@/modules/ganadero/reproductivo/ui/SeccionHistorialReproductivo'
 import { SeccionCriasDependientes } from '@/modules/ganadero/reproductivo/ui/SeccionCriasDependientes'
 import { getCicloAbiertoParaFicha } from '@/modules/ganadero/reproductivo/application/queries/getCicloAbiertoParaFicha'
@@ -103,6 +104,24 @@ export default async function AnimalDetailPage({ params }: Props) {
       </div>
       <AnimatedPageContent>
         <AnimalHeader animal={animal} fetchHistorial={fetchHistorialUbicacion} />
+        {/* Identificación desde la propia ficha. Necesaria para crías ya destetadas:
+            desaparecen de "Crías con vínculo activo" de la madre, que era la única vía.
+            Se monta para todo animal sujeto al workflow (no solo 'pendiente') para que el
+            banner de éxito del drawer siga visible tras el refresh; el aviso amarillo
+            solo se muestra cuando está pendiente. */}
+        {animal.estado_identificacion !== null && (
+          <AccionIdentificar
+            animalId={animal.id}
+            crotal={animal.crotal}
+            sexo={animal.sexo}
+            estado_identificacion={animal.estado_identificacion}
+            fecha_nacimiento={animal.fecha_nacimiento}
+            madre_crotal={animal.madre_crotal}
+            padre_crotal={animal.padre_crotal}
+            raza_nombre={animal.raza_nombre}
+            estado_vital={animal.estado_vital}
+          />
+        )}
         <SeccionAcciones
           animalId={animal.id}
           crotal={animal.crotal}

@@ -8,6 +8,8 @@ export interface AnimalPendienteIdentificacion {
   fecha_nacimiento: string | null
   madre_id: string | null
   madre_crotal: string | null
+  madre_nombre: string | null   // para que el widget muestre "Madre: Nombre (crotal)"
+  padre_crotal: string | null   // dato de solo lectura que muestra el drawer de identificación
   raza_nombre: string | null
 }
 
@@ -27,7 +29,7 @@ export async function getAnimalesPendientesIdentificacion(
 
   const { data, error } = await supabase
     .from('animal')
-    .select('id, crotal, nombre, sexo, fecha_nacimiento, madre_id, madre:madre_id(crotal), raza(nombre)')
+    .select('id, crotal, nombre, sexo, fecha_nacimiento, madre_id, madre:madre_id(crotal, nombre), padre:padre_id(crotal), raza(nombre)')
     .eq('especie', especie)
     .eq('estado_identificacion', 'pendiente')
     .eq('estado_vital', 'vivo')
@@ -45,7 +47,9 @@ export async function getAnimalesPendientesIdentificacion(
       sexo: a.sexo as 'macho' | 'hembra' | null,
       fecha_nacimiento: a.fecha_nacimiento,
       madre_id: a.madre_id ?? null,
-      madre_crotal: (a.madre as unknown as { crotal: string | null } | null)?.crotal ?? null,
+      madre_crotal: (a.madre as unknown as { crotal: string | null; nombre: string | null } | null)?.crotal ?? null,
+      madre_nombre: (a.madre as unknown as { crotal: string | null; nombre: string | null } | null)?.nombre ?? null,
+      padre_crotal: (a.padre as unknown as { crotal: string | null } | null)?.crotal ?? null,
       raza_nombre: (a.raza as { nombre: string } | null)?.nombre ?? null,
     })),
   }

@@ -712,3 +712,25 @@ los ámbitos (que es el comportamiento por defecto; limitar ámbitos es una func
 reserva `TZ` y Netlify tampoco la lista como reservada. Aun así hay informes en el foro de que no tuvo
 efecto, y la documentación de Netlify no menciona `instrumentation.ts`. Se verifica en el primer
 despliegue (ver `deferred.md`).
+
+## Identificación de animales — tres vías de acceso al mismo drawer (2026-11-07)
+
+**Problema:** una cría destetada sin identificar quedaba sin forma de identificarse. La única vía era
+"Crías con vínculo activo" en la ficha de la madre, y al destetarla desaparece de esa sección. El backend
+nunca lo impedía: `identificarAnimal` solo exige que el animal esté en el workflow de identificación, no
+que tenga vínculo activo.
+
+**Decisión (usuario):** mismo `DrawerIdentificacion` (sin cambios), accesible desde tres sitios:
+1. **Ficha de la madre → "Crías con vínculo activo" → Identificar**: se mantiene como estaba.
+2. **Widget "Pendientes de identificar" del dashboard**: al pulsar un animal se abre el drawer sin salir
+   del dashboard (antes navegaba a la ficha de la madre). Tras guardar, `router.refresh()` lo quita de la
+   lista. Cada fila muestra "Madre: Nombre (crotal)" y un enlace discreto (↗) a la ficha de la madre.
+3. **Ficha del propio animal**: `AccionIdentificar` (aviso "Identificación pendiente" + botón). Existía
+   desde PRD009/010 pero nunca se había conectado a ninguna página.
+
+**Detalle de `AccionIdentificar`:** se monta cuando `estado_identificacion !== null`, no solo cuando es
+`'pendiente'`. Si se desmontara al pasar a `'completa'`, el refresh cerraría el drawer antes de que se
+viera su banner de éxito. El aviso amarillo solo se muestra cuando está pendiente.
+
+**HTML:** en el widget, la fila es un `<button>` (abre el drawer) y el enlace a la madre es un elemento
+hermano, no anidado. Un enlace dentro de un botón no es HTML válido.
