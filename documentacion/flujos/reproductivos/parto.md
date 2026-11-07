@@ -17,23 +17,27 @@ Dentro del sistema, registrar un Parto no significa únicamente cambiar el estad
 Es un acontecimiento que puede modificar simultáneamente varias partes del modelo:
 
 ```text
-                         PARTO
-                           │
-            ┌──────────────┼──────────────┐
-            │              │              │
-            ▼              ▼              ▼
-          MADRE          CICLO          CRÍAS
-            │              │              │
-            ▼              ▼              ▼
-        LACTANTE        continúa       nacen como
-                         abierto         ANIMAL
-                                           │
-                              ┌────────────┼────────────┐
-                              │            │            │
-                              ▼            ▼            ▼
-                         madre_id     tipo_productivo  vínculo
-                                      = CRÍA           = ACTIVO
+                                PARTO
+                                  │
+           ┌──────────────────────┼──────────────────────┐
+           │                      │                      │
+           ▼                      ▼                      ▼
+         MADRE             CICLO DEL PARTO               CRÍAS
+           │                      │                      │
+           ▼                      ▼                      ▼
+     Nuevo ciclo actual   Ciclo histórico          Nuevas entidades
+        VACÍA*             asociado al                ANIMAL
+                            nacimiento                   │
+                                 │                 ┌─────┴──────┐
+                                 ▼                 │            │
+                          Permanece abierto      Vivas       Muertas
+                          mientras existan         │            │
+                          dependencias           CRÍA         MUERTO
+                          activas de origen      + vínculo
+                          en ese Parto           activo
 ```
+
+\* Si la madre continúa clasificada como `REPRODUCTORA` y corresponde iniciar un nuevo ciclo según las reglas generales del dominio.
 
 El Parto constituye, por tanto, un **evento reproductivo generador de nuevas entidades**.
 
@@ -108,41 +112,52 @@ No debe confundirse:
 evento = PARTO
 ```
 
-con:
+con un supuesto estado reproductivo de lactación.
 
-```text
-estado reproductivo de la madre = LACTANTE
-```
+La lactación y la dependencia madre-cría describen una situación funcional que puede coexistir con el estado reproductivo actual de la madre.
 
-El evento constituye la fuente de verdad.
+El modelo distingue:
 
-El estado `LACTANTE` es una consecuencia derivada del evento y del contexto reproductivo.
+- **Evento `PARTO`:** hecho reproductivo que registra el nacimiento.
+- **Ciclo histórico del Parto:** contexto reproductivo al que pertenece el nacimiento y al que se atribuyen los acontecimientos posteriores relacionados con ese Parto.
+- **Estado reproductivo actual:** estado derivado del ciclo reproductivo actual de la madre, que puede ser `VACÍA`, `CUBIERTA` o `GESTANTE`.
+- **Vínculo madre-cría:** dependencia funcional de cada cría respecto a su madre.
+
+El evento constituye la fuente de verdad. Los estados, ciclos y vínculos se mantienen conforme a las reglas del dominio y se proyectan a partir de los hechos registrados.
 
 ---
 
-## 2.4 El Parto no cierra el ciclo
+## 2.4 El Parto no cierra el ciclo histórico al que pertenece
 
-El Parto **no finaliza el ciclo reproductivo**.
+El Parto no finaliza automáticamente el ciclo reproductivo al que pertenece.
 
-El nacimiento inicia una nueva fase del mismo proceso:
+El ciclo histórico que contiene el Parto puede permanecer abierto mientras existan dependencias madre-cría activas originadas por ese nacimiento.
 
 ```text
-gestación
-   ↓
-PARTO
-   ↓
-dependencia madre-cría
-   ↓
-lactancia
-   ↓
-finalización de los vínculos
-   ↓
-fin del ciclo
+Ciclo histórico del Parto
+   │
+   ├── Cubrición, si existe
+   ├── Confirmación de gestación, si existe
+   ├── Parto
+   └── Acontecimientos posteriores de las crías
+           │
+           ▼
+   Finalización de las dependencias
+           │
+           ▼
+   Posible finalización del ciclo histórico
 ```
 
-La madre pasa a `LACTANTE`, pero el ciclo permanece abierto.
+La finalización de ese ciclo histórico no determina por sí misma el estado reproductivo actual de la madre.
 
-El cierre posterior dependerá de la existencia de vínculos maternos funcionales, según las reglas del dominio reproductivo.
+Si la madre continúa siendo `REPRODUCTORA`, el modelo establece un nuevo ciclo actual en `VACÍA` cuando corresponde, conforme a las reglas generales del dominio. Ese ciclo puede coexistir con el ciclo histórico del Parto mientras este último conserve dependencias pendientes.
+
+Por tanto, deben distinguirse dos conceptos:
+
+- **Ciclo histórico del Parto:** conserva la historia reproductiva y los acontecimientos vinculados a ese nacimiento.
+- **Ciclo reproductivo actual de la madre:** representa su situación reproductiva actual.
+
+El Destete puede contribuir a finalizar el ciclo histórico de origen, pero no crea por sí mismo un nuevo ciclo ni modifica automáticamente el estado reproductivo actual de la madre.
 
 ---
 
@@ -150,17 +165,17 @@ El cierre posterior dependerá de la existencia de vínculos maternos funcionale
 
 El flujo de Parto conecta varios conceptos que conviene mantener diferenciados.
 
-| Concepto                         | Significado                                                   |
-| -------------------------------- | ------------------------------------------------------------- |
-| `PARTO`                          | Hecho reproductivo registrado                                 |
-| `ciclo_reproductivo`             | Contexto al que pertenece el Parto                            |
-| `Animal`                         | Entidad que representa cada animal individual                 |
-| `madre_id`                       | Relación genealógica permanente                               |
-| `estado_vinculo_materno`         | Estado derivado de la dependencia funcional madre-cría        |
-| `tipo_productivo = CRÍA`         | Clasificación productiva inicial de una cría viva dependiente |
-| `estado_reproductivo = LACTANTE` | Estado reproductivo proyectado de la madre tras el Parto      |
-| `evento_parto`                   | Información estructurada específica del nacimiento            |
-| `estado_identificacion`          | Grado de completitud de la identificación administrativa      |
+| Concepto                         | Significado                                                              |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `PARTO`                          | Hecho reproductivo registrado                                            |
+| `ciclo_reproductivo`             | Contexto al que pertenece el Parto                                       |
+| `Animal`                         | Entidad que representa cada animal individual                            |
+| `madre_id`                       | Relación genealógica permanente                                          |
+| `tipo_productivo = CRÍA`         | Clasificación productiva inicial de una cría viva dependiente            |
+| `estado_reproductivo`            | Estado reproductivo actual de la madre: `VACÍA`, `CUBIERTA` o `GESTANTE` |
+| `estado_vinculo_materno`         | Estado derivado de la dependencia funcional madre-cría                   |
+| `evento_parto`                   | Información estructurada específica del nacimiento                       |
+| `estado_identificacion`          | Grado de completitud de la identificación administrativa                 |
 
 Es importante no mezclar estos conceptos.
 
@@ -274,10 +289,10 @@ Use Case
 RegistrarParto
         │
         ▼
-Reproductive Context
+Contexto reproductivo
         │
         ▼
-Reproductive Rules
+Reglas del dominio
         │
         ▼
 Validación
@@ -285,22 +300,31 @@ Validación
         ▼
 Evento PARTO
         │
-        ├───────────────┐
-        │               │
-        ▼               ▼
-     Madre            Crías
-        │               │
-        ▼               ▼
-   LACTANTE        nuevas entidades
-                        │
-                        ▼
-                vínculo materno
-                        │
-                        ▼
-                   Proyección
-                        │
-                        ▼
-                  Snapshots / UI
+        ├────────────────────┐
+        │                    │
+        ▼                    ▼
+   Ciclo histórico         Crías
+   que contiene PARTO         │
+        │                    ▼
+        │              Crear entidades
+        │                 ANIMAL
+        │                    │
+        │              ┌─────┴─────┐
+        │              │           │
+        │              ▼           ▼
+        │           Genealogía   Vínculo
+        │                       materno
+        │
+        ▼
+Si corresponde y la madre
+sigue siendo REPRODUCTORA:
+crear ciclo actual VACÍA
+        │
+        ▼
+Proyecciones y snapshots
+        │
+        ▼
+Historial reproductivo
 ```
 
 Toda la operación debe ejecutarse de forma atómica.
@@ -533,31 +557,40 @@ La genealogía permanece aunque la dependencia funcional haya terminado.
 
 # 13. Tipo productivo inicial
 
-Una cría viva nacida mediante Parto se crea inicialmente como:
+Una cría viva nacida mediante Parto se crea inicialmente con:
 
 ```text
 tipo_productivo = CRÍA
 ```
 
-`CRÍA` no significa simplemente "animal joven".
+`CRÍA` identifica la categoría productiva inicial del animal dentro del modelo ganadero.
 
-Representa un animal que se encuentra en la etapa lactante y mantiene un vínculo funcional activo con su madre.
+La dependencia funcional respecto a la madre se representa de forma independiente mediante `estado_vinculo_materno`.
 
-La evolución normal es:
+En el nacimiento de una cría viva dependiente:
+
+```text
+tipo_productivo = CRÍA
+estado_vinculo_materno = ACTIVO
+```
+
+La evolución productiva habitual es:
 
 ```text
 PARTO
   ↓
-CRÍA + ACTIVO
+CRÍA
   ↓
 DESTETE
   ↓
-RECRÍA + FINALIZADO
+RECRÍA
 ```
 
-El cambio a `RECRÍA` pertenece al flujo de Destete.
+El cambio de `CRÍA` a `RECRÍA` corresponde al flujo de Destete. No se realiza durante el Parto.
 
-No debe realizarse durante el Parto.
+La genealogía tampoco depende de la vigencia del vínculo: `madre_id` se conserva aunque la dependencia funcional finalice.
+
+Por tanto, no deben utilizarse indistintamente `tipo_productivo` y `estado_vinculo_materno` para representar la misma información.
 
 ---
 
@@ -786,82 +819,87 @@ La razón es que el proceso administrativo de identificación no debe generar un
 
 # 21. Estado reproductivo de la madre
 
-Después de registrar correctamente el Parto:
+Después de registrar correctamente el Parto, el sistema debe determinar el estado reproductivo actual de la madre conforme a las reglas generales del dominio.
+
+`LACTANTE` no es un estado reproductivo del modelo.
+
+La existencia de crías dependientes se representa mediante los vínculos madre-cría, independientemente del estado reproductivo actual de la madre.
+
+Por tanto, pueden coexistir:
 
 ```text
-estado_reproductivo = LACTANTE
+estado_reproductivo = VACÍA
 ```
 
-Esto indica que la madre se encuentra en la fase reproductiva asociada al nacimiento y a la dependencia de las crías.
-
-No significa que el ciclo haya terminado.
+y:
 
 ```text
-PARTO
-  ↓
-LACTANTE
-  ↓
-ciclo continúa
+existen vínculos madre-cría activos
 ```
+
+La existencia de esos vínculos no obliga a mantener un estado reproductivo especial ni impide que la madre inicie un nuevo ciclo.
 
 ---
 
 # 22. El ciclo reproductivo después del Parto
 
-El Parto pertenece al ciclo reproductivo actual.
+El evento `PARTO` pertenece al ciclo reproductivo en el que se registra el nacimiento.
 
-No crea un nuevo ciclo.
+Ese ciclo conserva la historia del proceso que condujo al Parto y puede permanecer abierto mientras existan dependencias madre-cría activas originadas por ese nacimiento.
+
+Si la madre continúa siendo `REPRODUCTORA`, se crea un nuevo ciclo reproductivo actual en estado `VACÍA` cuando corresponde, de acuerdo con las reglas generales del dominio.
 
 La secuencia conceptual es:
 
 ```text
-Ciclo
+Ciclo histórico
   │
-  ├── Cubrición
-  │
-  ├── Confirmación (si existe)
-  │
+  ├── Cubrición, si existe
+  ├── Confirmación, si existe
   └── Parto
           │
-          ▼
-       LACTANTE
+          └── dependencias madre-cría
+                  │
+                  └── acontecimientos históricos
+                      atribuidos a este ciclo
+
+
+Nuevo ciclo actual de la madre
+  │
+  └── VACÍA
           │
-          ▼
-     vínculos madre-cría
-          │
-          ▼
-       Destete /
-       Venta /
-       Muerte
-          │
-          ▼
-   evaluación de vínculos
+          ├── Cubrición
+          └── Confirmación de gestación
 ```
 
-El ciclo permanece abierto mientras exista dependencia funcional relevante.
+Ambos ciclos pueden coexistir en el sistema: uno conserva la historia del Parto y sus dependencias pendientes; el otro representa la situación reproductiva actual de la madre.
 
-El detalle de la finalización del ciclo pertenece al flujo de Destete y a las reglas generales de dependencia madre-cría.
+El Destete, la venta o la muerte de una cría pueden modificar los vínculos y contribuir a la finalización del ciclo histórico de origen. No deben cerrar ni modificar automáticamente el ciclo actual de la madre.
+
+La finalización del ciclo histórico se deriva de las reglas del dominio. No genera un evento artificial de cierre.
 
 ---
 
 # 23. Consecuencias sobre la madre y las crías
 
-Una forma útil de entender el Parto es separar sus consecuencias por entidad.
+Las consecuencias del Parto deben interpretarse por entidad.
 
-| Entidad        | Consecuencia                                |
-| -------------- | ------------------------------------------- |
-| Madre          | Estado reproductivo → `LACTANTE`            |
-| Ciclo          | Permanece abierto                           |
-| Cría viva      | Nueva entidad `Animal`                      |
-| Cría viva      | `tipo_productivo = CRÍA`                    |
-| Cría viva      | `estado_vinculo_materno = ACTIVO`           |
-| Cría viva      | `madre_id = madre`                          |
-| Cría muerta    | Nueva entidad `Animal`                      |
-| Cría muerta    | `estado_vital = MUERTO`                     |
-| Cría muerta    | `tipo_productivo = NULL`                    |
-| Cría muerta    | No crea dependencia funcional activa        |
-| Historial      | Se registra el evento Parto                 |
+| Entidad | Consecuencia |
+|---|---|
+| Madre | Su estado reproductivo actual se determina según las reglas generales del dominio |
+| Ciclo histórico del Parto | Conserva el evento y la historia reproductiva del nacimiento |
+| Ciclo histórico del Parto | Puede permanecer abierto mientras existan dependencias activas originadas por ese nacimiento |
+| Ciclo actual de la madre | Puede coexistir con el ciclo histórico del Parto |
+| Cría viva | Nueva entidad `Animal` |
+| Cría viva | `tipo_productivo = CRÍA` |
+| Cría viva dependiente | `estado_vinculo_materno = ACTIVO` |
+| Cría viva | `madre_id = madre` |
+| Cría nacida muerta | Nueva entidad histórica `Animal`, con `estado_vital = MUERTO` y `tipo_productivo = NULL` |
+| Cría nacida muerta | No crea una dependencia funcional activa |
+| Historial | Se registra el evento `PARTO` |
 | Identificación | Puede quedar pendiente para las crías vivas |
+
+El estado reproductivo actual de la madre no debe utilizarse para representar la lactación ni para inferir si quedan crías dependientes.
 
 ---
 
@@ -1089,11 +1127,14 @@ El usuario debe percibir que el Parto ha generado una nueva situación operativa
 
 La aplicación debería mostrar claramente:
 
-* que el Parto se ha registrado;
-* que las nuevas crías existen;
-* cuáles están pendientes de identificación;
-* que la madre se encuentra en `LACTANTE`;
-* qué acción puede realizarse a continuación.
+- que el Parto se ha registrado;
+- cuáles son las nuevas crías;
+- cuáles están pendientes de identificación;
+- el estado reproductivo actual de la madre, cuando corresponda;
+- las dependencias madre-cría que continúan activas;
+- qué acción puede realizarse a continuación.
+
+La lactación y la dependencia de las crías NO se representan mediante un estado reproductivo `LACTANTE`. Se muestran como información funcional derivada de los vínculos madre-cría.
 
 La interfaz no debe obligar al usuario a comprender las reglas internas del dominio.
 
@@ -1136,20 +1177,22 @@ La acción de identificación constituye un Use Case independiente.
 
 Esta separación debe mantenerse para evitar que el flujo crezca de forma indefinida.
 
-| Pertenece al Parto                         | No pertenece al Parto              |
-| ------------------------------------------ | ---------------------------------- |
-| Registrar el nacimiento                    | Destetar                           |
-| Crear las nuevas crías                     | Cambiar CRÍA → RECRÍA              |
-| Establecer `madre_id`                      | Finalizar vínculos posteriormente  |
-| Crear vínculo inicial                      | Cerrar el ciclo                    |
-| Calcular raza inicial                      | Crear el siguiente ciclo           |
-| Establecer estado vital inicial            | Venta posterior                    |
-| Estado productivo inicial                  | Muerte posterior                   |
-| Estado reproductivo de la madre            | Identificación completa            |
-| Registrar información específica del Parto | Gestión posterior de ubicación     |
-| Preparar la identificación                 | Decisiones productivas posteriores |
+| Pertenece al Parto                              | No pertenece al Parto                             |
+| ----------------------------------------------- | ------------------------------------------------- |
+| Registrar el nacimiento                         | Destetar                                          |
+| Crear las nuevas crías                          | Cambiar CRÍA → RECRÍA                             |
+| Establecer `madre_id`                           | Finalizar vínculos posteriormente                 |
+| Crear vínculo inicial                           | Finalizar dependencias madre-cría posteriores     |
+| Calcular raza inicial                           | Crear el ciclo actual cuando corresponda, según las reglas generales del dominio |
+| Establecer estado vital inicial                 | Venta posterior                                   |
+| Estado productivo inicial                       | Muerte posterior                                  |
+| Consecuencias reproductivas derivadas del Parto | Modificación directa de estados desde la interfaz |
+| Registrar información específica del Parto      | Gestión posterior de ubicación                    |
+| Preparar la identificación                      | Decisiones productivas posteriores                |
 
 Esta separación es importante porque una consecuencia del Parto puede ser el inicio de otro flujo sin formar parte de él.
+
+El registro del Parto sí puede desencadenar consecuencias reproductivas según las reglas generales. Lo que no debe hacer es imponer un estado artificial de lactación ni convertir la finalización de las dependencias en un evento de cierre de ciclo.
 
 ---
 
@@ -1180,27 +1223,31 @@ Esta distinción permite que el sistema represente correctamente la realidad:
 
 # 34. Relación con el flujo de Destete
 
-El Parto crea las condiciones para el futuro Destete.
-
-El flujo es:
+El Parto crea las condiciones para los futuros Destetes y establece el contexto histórico del nacimiento.
 
 ```text
-PARTO
-  ↓
-CRÍA + ACTIVO
-  ↓
-...
-  ↓
-DESTETE
-  ↓
-RECRÍA + FINALIZADO
+Ciclo histórico que contiene el Parto
+  │
+  └── PARTO
+        │
+        └── Cría + vínculo activo
+                 │
+                 ▼
+              DESTETE
+                 │
+                 ├── Finalizar el vínculo de la cría
+                 └── Cambiar CRÍA → RECRÍA
 ```
 
-El Parto no decide cuándo se produce el Destete.
+Cada Destete se atribuye al ciclo histórico que contiene el Parto que originó a la cría, no necesariamente al ciclo reproductivo actual de la madre.
 
-Tampoco decide cuándo finaliza el ciclo.
+El Destete no crea un ciclo nuevo ni modifica automáticamente el estado reproductivo actual de la madre.
 
-Su responsabilidad termina después de haber creado correctamente el nuevo estado de conocimiento derivado del nacimiento.
+Cuando se finaliza la última dependencia activa originada por ese Parto, puede finalizar también el ciclo histórico correspondiente, de acuerdo con las reglas del dominio.
+
+La finalización del ciclo histórico es una consecuencia derivada, no un evento adicional.
+
+El flujo de Parto no determina cuándo debe producirse el Destete. Su responsabilidad consiste en registrar el nacimiento y dejar consolidados los datos necesarios para gestionar posteriormente cada cría y su dependencia materna.
 
 ---
 
@@ -1210,14 +1257,15 @@ Su responsabilidad termina después de haber creado correctamente el nuevo estad
 
 ```text
 Parto
-↓
+  ↓
 1 nacimiento vivo
-↓
-1 Animal
-↓
-CRÍA + ACTIVO
-↓
-Madre = LACTANTE
+  ↓
+1 entidad Animal
+  ↓
+CRÍA + vínculo ACTIVO
+  ↓
+La madre conserva sus vínculos activos
+y tiene el estado reproductivo que corresponda
 ```
 
 Es el caso habitual.
@@ -1238,7 +1286,9 @@ CRÍA + ACTIVO
 
 La madre mantiene múltiples vínculos funcionales.
 
-El ciclo permanecerá abierto mientras exista al menos uno de ellos.
+El ciclo histórico que contiene el Parto puede permanecer abierto mientras exista al menos una dependencia activa originada por ese nacimiento.
+
+La madre puede tener simultáneamente un ciclo reproductivo actual y uno o varios ciclos históricos abiertos por dependencias pendientes.
 
 ---
 
@@ -1284,12 +1334,14 @@ GESTANTE
 ↓
 Parto
 ↓
-LACTANTE
+Ciclo histórico conserva el Parto
+↓
+Nuevo ciclo actual VACÍA, cuando corresponda
 ```
 
 El flujo es válido.
 
-La ausencia de Cubrición registrada no impide la continuidad posterior del ciclo.
+La ausencia de una Cubrición registrada no impide la continuidad del proceso si existe una Confirmación de Gestación válida. Las consecuencias posteriores sobre el ciclo se rigen por el modelo general.
 
 ---
 
@@ -1387,14 +1439,17 @@ estado_vinculo_materno = ACTIVO
 
 ---
 
-### Invariante 7 — El Parto no cierra el ciclo
+### Invariante 7. El Parto no finaliza automáticamente su ciclo histórico
 
-Después del Parto:
+El Parto no provoca por sí mismo el cierre inmediato del ciclo histórico al que pertenece.
 
-```text
-estado_reproductivo = LACTANTE
-ciclo = abierto
-```
+Si existen dependencias madre-cría activas originadas por ese nacimiento, el ciclo histórico puede permanecer abierto mientras esas dependencias sigan vigentes.
+
+Cuando no quedan dependencias activas originadas por ese Parto, el ciclo histórico puede finalizar según las reglas del dominio.
+
+Esta finalización no determina el estado reproductivo actual de la madre ni implica crear otro ciclo si ya existe uno actual.
+
+Si no se genera ninguna dependencia activa, por ejemplo, cuando todos los nacimientos son de crías muertas, el ciclo histórico puede finalizar inmediatamente si no quedan otros hechos pendientes que deban atribuirse a él.
 
 ---
 
@@ -1426,35 +1481,40 @@ El flujo completo puede resumirse mediante la siguiente cadena:
              │                   │
           ANIMAL              EVENTOS
              │                   │
-             │              PARTO
+             │                 PARTO
              │                   │
              └─────────┬─────────┘
-                       ↓
-              REPRODUCTIVE CONTEXT
-                       ↓
-              REPRODUCTIVE RULES
-                       ↓
-                Registrar Parto
-                       ↓
-          ┌────────────┴────────────┐
-          │                         │
-          ▼                         ▼
-        MADRE                    CRÍAS
-          │                         │
-          ▼                         ▼
-      LACTANTE              crear Animal
-                                    │
-                         ┌──────────┼──────────┐
-                         │          │          │
-                         ▼          ▼          ▼
-                     madre_id     CRÍA      vínculo
-                                  vivo       ACTIVO
-                         │
-                         ▼
-                    PROJECTION
-                         │
-                         ▼
-                 HISTORIAL REPRODUCTIVO
+                       ▼
+             Contexto reproductivo
+                       ▼
+               Reglas del dominio
+                       ▼
+                 Registrar Parto
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+             ▼                   ▼
+       Ciclo histórico          Crías
+       que contiene PARTO         │
+             │                   ▼
+             │              Crear Animal
+             │                   │
+             │             ┌─────┴─────┐
+             │             │           │
+             │             ▼           ▼
+             │         madre_id     CRÍA + vínculo
+             │                       ACTIVO
+             │
+             ▼
+       Nuevo ciclo actual
+       VACÍA, cuando
+       corresponda
+             │
+             ▼
+         Proyecciones
+             │
+             ▼
+      Historial reproductivo
 ```
 
 La clave es que el Parto **no crea una nueva arquitectura**.
@@ -1473,10 +1533,12 @@ Después de procesar el evento, el sistema puede conocer y proyectar:
 
 ### Sobre la madre
 
-* `estado_reproductivo = LACTANTE`;
-* ciclo reproductivo actual;
-* crías asociadas al Parto;
-* vínculos maternos activos.
+- Estado reproductivo actual derivado, cuando corresponda: `VACÍA`, `CUBIERTA` o `GESTANTE`.
+- Ciclo reproductivo actual, si existe.
+- Ciclos históricos que contienen Partos anteriores y que pueden continuar abiertos por dependencias pendientes.
+- Crías asociadas a cada Parto.
+- Vínculos madre-cría activos.
+- Información necesaria para consultar la historia reproductiva sin confundir el ciclo actual con los ciclos históricos.
 
 ### Sobre cada cría viva
 
@@ -1505,7 +1567,7 @@ Después de procesar el evento, el sistema puede conocer y proyectar:
 
 Aunque toda la arquitectura anterior exista internamente, la experiencia del usuario debe poder resumirse de forma mucho más sencilla:
 
-> **"He registrado que esta vaca ha parido. El sistema ha creado sus crías y las ha relacionado con ella. La vaca está ahora lactando. Las crías que están vivas y dependen de ella aparecen como crías y podrán identificarse y gestionarse posteriormente."**
+> **«He registrado que esta vaca ha parido. El sistema ha creado sus crías y las ha relacionado con ella. Las crías vivas que dependen de la madre aparecen como crías y podrán identificarse y gestionarse posteriormente. La situación reproductiva actual de la madre se mantiene separada de la lactación y de los vínculos con sus crías».**
 
 El usuario no necesita conocer:
 
@@ -1544,8 +1606,6 @@ El objetivo es que el Parto deje el dominio en un estado suficientemente rico pa
 No forman parte del flujo de Parto:
 
 * Destete;
-* cierre del ciclo;
-* creación del siguiente ciclo;
 * Venta;
 * Muerte posterior de las crías;
 * identificación administrativa completa;
@@ -1553,8 +1613,6 @@ No forman parte del flujo de Parto:
 * selección productiva;
 * selección de futuras reproductoras;
 * análisis genético avanzado;
-* detección de discontinuidad temporal;
-* `TIMEOUT`;
 * generación de eventos artificiales de cierre o inicio de ciclo.
 
 Estas operaciones utilizan información creada o consolidada por el Parto, pero pertenecen a otros flujos o capacidades.
@@ -1569,7 +1627,7 @@ El Parto puede resumirse así:
                     REGISTRAR PARTO
                            │
                            ▼
-                 validar contexto reproductivo
+              validar contexto reproductivo
                            │
                            ▼
                     registrar EVENTO
@@ -1580,24 +1638,28 @@ El Parto puede resumirse así:
              ┌─────────────┴─────────────┐
              │                           │
              ▼                           ▼
-           MADRE                       NACIMIENTOS
+      CICLO HISTÓRICO                NACIMIENTOS
+      que contiene PARTO                 │
+             │                           ▼
+             │                      crear ANIMAL
              │                           │
-             ▼                           ▼
-         LACTANTE                  crear ANIMAL
-                                         │
-                            ┌────────────┼────────────┐
-                            │            │            │
-                            ▼            ▼            ▼
-                         madre_id       CRÍA       vínculo
-                                      si vivo       ACTIVO
-                            │
-                            ▼
-                       proyectar
-                            │
-                            ▼
-                   historial reproductivo
+             │                 ┌─────────┴─────────┐
+             │                 │                   │
+             │                 ▼                   ▼
+             │              madre_id          CRÍA + vínculo
+             │                                  ACTIVO
+             │
+             ▼
+      crear ciclo actual VACÍA
+      cuando corresponda
+             │
+             ▼
+          proyectar
+             │
+             ▼
+      historial reproductivo
 ```
 
 El resultado fundamental es:
 
-> **El Parto convierte el conocimiento de una gestación en el conocimiento de una nueva generación de animales y abre la fase de dependencia madre-cría que continuará hasta que otros hechos del dominio modifiquen esa situación.**
+> **El Parto convierte el conocimiento de una gestación en el conocimiento de una nueva generación de animales y abre la fase de dependencia madre-cría que continuará hasta que otros hechos del dominio modifiquen esa situación. El ciclo histórico conserva la historia de ese nacimiento, mientras que la situación reproductiva actual de la madre evoluciona de forma independiente.**

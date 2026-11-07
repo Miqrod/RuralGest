@@ -38,26 +38,37 @@ Por tanto, el Destete se aplica individualmente sobre las crías aunque la acci�
 
 El principio central del flujo es:
 
-> **El ciclo reproductivo permanece abierto mientras exista al menos una dependencia funcional madre-cría activa derivada de él.**
+> **El ciclo histórico que contiene un Parto puede permanecer abierto mientras existan dependencias funcionales activas originadas por ese nacimiento.**
 
-Por tanto:
+El Destete es uno de los hechos que puede finalizar una de esas dependencias.
+
+La continuidad de cada ciclo histórico debe evaluarse exclusivamente a partir de las dependencias y de los hechos que pertenecen a su propia historia.
 
 ```text
-                         CICLO REPRODUCTIVO
-                                  │
-                                  ▼
-                         ¿Existen vínculos
-                         maternos activos?
-                           /             \
-                         SÍ               NO
-                         │                │
-                         ▼                ▼
-                    ciclo abierto    ciclo finaliza
+Ciclo histórico que contiene PARTO
+                 │
+                 ▼
+      ¿Quedan dependencias activas
+       originadas por ese Parto?
+             /             \
+           SÍ               NO
+           │                 │
+           ▼                 ▼
+    ciclo histórico     puede finalizar
+      continúa          históricamente
 ```
 
-El Destete es uno de los hechos que puede hacer desaparecer un vínculo.
+Esta regla no significa que la madre carezca de otro ciclo reproductivo actual.
 
-No es, por sí mismo, la definición del cierre del ciclo.
+Si la madre continúa siendo `REPRODUCTORA`, puede coexistir un ciclo actual en estado `VACÍA`, `CUBIERTA` o `GESTANTE` con uno o varios ciclos históricos que permanezcan abiertos por dependencias pendientes.
+
+Por tanto, deben distinguirse:
+
+- **Dependencia funcional:** relación activa entre una madre y una cría.
+- **Ciclo histórico:** contexto reproductivo al que pertenece el Parto que originó esa cría.
+- **Ciclo actual:** ciclo que representa la situación reproductiva actual de la madre.
+
+El Destete finaliza el vínculo de la cría afectada. No crea un ciclo nuevo ni modifica automáticamente el estado reproductivo actual de la madre.
 
 ---
 
@@ -77,11 +88,21 @@ Funciona aparentemente bien cuando existe una única cría:
 Madre
 └── Cría A
       ↓
-   Destete
+    Destete
       ↓
-0 vínculos
+0 dependencias activas originadas
+por el Parto correspondiente
       ↓
-fin del ciclo
+Evaluar las demás condiciones
+de cierre del ciclo histórico
+      ↓
+¿Puede finalizar?
+    /       \
+  SÍ         NO
+  │           │
+  ▼           ▼
+Cierre      Permanece
+derivado    abierto
 ```
 
 Pero deja de funcionar cuando existen varias crías:
@@ -116,15 +137,27 @@ La regla correcta es:
 
 ```text
 Finalización individual del vínculo
-                    ↓
-       evaluación de todos los vínculos
-                    ↓
-        ¿queda alguno ACTIVO?
-             /              \
-           SÍ                NO
-           │                 │
-           ▼                 ▼
-    ciclo continúa       ciclo finaliza
+             ↓
+ Identificar el ciclo histórico de origen
+             ↓
+Evaluar las dependencias de ese ciclo
+             ↓
+¿Quedan dependencias activas
+originadas por ese Parto?
+         /          \
+       SÍ            NO
+       │              │
+       ▼              ▼
+Ciclo histórico   Evaluar las demás
+permanece abierto condiciones de cierre
+                       │
+                       ▼
+              ¿Puede finalizar?
+                  /       \
+                SÍ         NO
+                │           │
+                ▼           ▼
+        Cierre derivado   Permanece abierto
 ```
 
 ---
@@ -141,7 +174,7 @@ El flujo utiliza varios conceptos que deben permanecer diferenciados.
 | `RECRÍA`                 | Tipo productivo posterior al Destete                                             |
 | Destete                  | Hecho que finaliza la dependencia funcional de una cría                          |
 | Ciclo reproductivo       | Unidad que agrupa la historia reproductiva de la madre                           |
-| Cierre del ciclo         | Consecuencia derivada de que desaparezcan todos los vínculos funcionales activos |
+| Cierre del ciclo         | Consecuencia derivada de la evaluación de las dependencias y demás condiciones de cierre del ciclo histórico correspondiente |
 | Historial de eventos     | Registro puro de hechos ocurridos                                                |
 | Historial reproductivo   | Proyección agregada que interpreta la evolución del ciclo                        |
 
@@ -288,6 +321,12 @@ CRÍA + VIVO + ACTIVO
 
 representa una dependencia funcional relevante para la continuidad del ciclo.
 
+La combinación anterior identifica las dependencias funcionales que pueden mantener abierto el ciclo histórico del Parto que originó a la cría.
+
+Para evaluar un ciclo concreto, no basta con contar las crías activas de la madre. Es necesario determinar qué crías y dependencias pertenecen históricamente a ese ciclo.
+
+La relación entre la cría y el ciclo de origen se obtiene a partir del Parto que la originó. El Destete debe atribuirse a ese mismo ciclo histórico, aunque la madre tenga otro ciclo reproductivo actual.
+
 ---
 
 # 9. Qué animales NO mantienen abierto el ciclo
@@ -429,32 +468,35 @@ RECRÍA + VIVO + FINALIZADO
 no mantienen abierto el ciclo
 ```
 
+Que una cría deje de mantener una dependencia activa no significa que todos los ciclos de su madre puedan finalizar.
+
+La consecuencia afecta al ciclo histórico al que pertenece la dependencia. La continuidad de los demás ciclos se evalúa de forma independiente.
+
 ---
 
 # 10. Regla central de continuidad
 
-La regla puede expresarse así:
+Para determinar si una dependencia mantiene abierto un ciclo histórico, se consideran las crías que cumplen simultáneamente:
 
 ```text
-Vínculo relevante =
-    tipo_productivo = CRÍA
-    AND estado_vital = VIVO
-    AND estado_vinculo_materno = ACTIVO
+tipo_productivo = CRÍA
+AND estado_vital = VIVO
+AND estado_vinculo_materno = ACTIVO
 ```
 
-Y:
+Además, la dependencia debe estar originada por el Parto que pertenece al ciclo evaluado.
+
+Por tanto:
 
 ```text
-ciclo continúa
-    si existe al menos un vínculo relevante
+ciclo histórico continúa
+    si existe al menos una dependencia activa
+    originada por el Parto de ese ciclo
 ```
 
-Mientras que:
+Cuando ya no quedan dependencias activas originadas por ese Parto, el ciclo histórico puede finalizar si no quedan otros hechos pendientes que deban registrarse en él.
 
-```text
-ciclo finaliza
-    si existen 0 vínculos relevantes
-```
+Esta regla no modifica automáticamente el ciclo reproductivo actual de la madre ni implica crear otro ciclo.
 
 ---
 
@@ -463,38 +505,42 @@ ciclo finaliza
 Este esquema resume la relación entre el modelo ganadero, el contexto reproductivo y la decisión sobre el ciclo:
 
 ```text
-                    MODELO GANADERO
-                          │
-             ┌────────────┴────────────┐
-             │                         │
-         madre_id              estado_vinculo_materno
-         genealogía              dependencia funcional
-             │                         │
-             └────────────┬────────────┘
-                          ↓
-                 REPRODUCTIVE CONTEXT
-                          ↓
-                  REPRODUCTIVE RULES
-                          ↓
-              ¿quedan vínculos activos?
-                    │             │
-                   SÍ             NO
-                    │              │
-                    ▼              ▼
-             continúa ciclo    finaliza ciclo
-                                   ↓
-                       ¿sigue siendo reproductora?
-                              │             │
-                             SÍ             NO
-                              │              │
-                              ▼              ▼
-                      nuevo ciclo        termina
-                         VACÍA
+             PARTO DE ORIGEN
+                    │
+                    ▼
+           CICLO HISTÓRICO
+                    │
+                    ▼
+       Dependencias madre-cría
+                    │
+                    ▼
+        ¿Quedan dependencias
+        activas de ese Parto?
+             │             │
+            SÍ             NO
+             │              │
+             ▼              ▼
+       Ciclo histórico   Evaluar si quedan
+         continúa        otros hechos pendientes
+                              │
+                              ▼
+                     Puede finalizar el
+                     ciclo histórico
+
+
+       CICLO REPRODUCTIVO ACTUAL
+                    │
+                    ▼
+         VACÍA / CUBIERTA /
+              GESTANTE
 ```
 
-Este diagrama no representa una secuencia de eventos.
+El diagrama representa dos dimensiones independientes:
 
-Representa **cómo el dominio obtiene conocimiento suficiente para determinar la continuidad del ciclo**.
+- El ciclo histórico conserva el Parto y los acontecimientos posteriores que le pertenecen.
+- El ciclo actual representa la situación reproductiva vigente de la madre.
+
+La finalización de un ciclo histórico por desaparición de sus dependencias no implica crear un nuevo ciclo actual ni modificar el estado reproductivo de la madre.
 
 ---
 
@@ -719,10 +765,10 @@ BEGIN TRANSACTION
         │
         ├── determinar continuidad o finalización del ciclo
         │
-        ├── crear nuevo ciclo VACÍA si corresponde
+        ├── preservar el ciclo reproductivo actual de la madre
         │
-        └── actualizar proyecciones/snapshots
-        │
+        └── persistir los cambios y proyecciones correspondientes
+
 COMMIT
 ```
 
@@ -836,6 +882,8 @@ El ciclo continúa.
 
 La misma operación puede afectar a varias crías.
 
+Cuando se seleccionan todas las crías elegibles para Destete, el dominio procesa individualmente cada cría y finaliza sus dependencias funcionales.
+
 Por ejemplo:
 
 ```text
@@ -867,40 +915,29 @@ El ciclo continúa porque queda un vínculo activo.
 
 # 17. Destete total
 
-Cuando se seleccionan todas las crías elegibles:
+Cuando se seleccionan todas las crías elegibles para Destete, el dominio procesa individualmente cada cría y finaliza sus dependencias funcionales.
 
 ```text
 Madre
-├── Cría A → FINALIZADO
-├── Cría B → FINALIZADO
-└── Cría C → FINALIZADO
+├── Cría A → FINALIZADO / RECRÍA
+├── Cría B → FINALIZADO / RECRÍA
+└── Cría C → FINALIZADO / RECRÍA
 ```
 
-el dominio vuelve a evaluar el conjunto:
+Después de procesar todas las crías seleccionadas, se evalúan exclusivamente las dependencias funcionales originadas por el Parto del ciclo histórico afectado.
 
 ```text
-¿Existe alguna cría CRÍA + VIVA + ACTIVA?
+¿Queda alguna dependencia funcional activa
+originada por ese Parto?
 ```
 
-Resultado:
+Si la respuesta es afirmativa, el ciclo histórico permanece abierto.
 
-```text
-NO
-```
+Si la respuesta es negativa, el dominio evalúa las demás condiciones necesarias para determinar si el ciclo histórico puede finalizar.
 
-Por tanto:
+Esta evaluación no modifica automáticamente el ciclo reproductivo actual de la madre ni crea un nuevo ciclo.
 
-```text
-último vínculo finalizado
-        ↓
-0 vínculos activos
-        ↓
-finaliza ciclo
-```
-
-El cierre se deduce.
-
-No se registra como evento independiente.
+El Destete no crea un nuevo ciclo reproductivo ni modifica automáticamente el estado reproductivo actual de la madre.
 
 ---
 
@@ -912,9 +949,9 @@ El caso más habitual será probablemente una madre con una sola cría.
 Madre
 └── Cría A
       │
-      ├── CRÍA
-      ├── VIVO
-      └── ACTIVO
+      ├── tipo_productivo = CRÍA
+      ├── estado_vital = VIVO
+      └── estado_vinculo_materno = ACTIVO
 ```
 
 Se registra el Destete.
@@ -928,7 +965,7 @@ Cría A
 └── estado_vital = VIVO
 ```
 
-Después:
+Después, al ser esta la última dependencia activa originada por el Parto:
 
 ```text
 0 vínculos activos
@@ -937,16 +974,14 @@ Después:
 Por tanto:
 
 ```text
-ciclo actual
-     ↓
-finaliza
-     ↓
-madre = VACÍA
-     ↓
-si continúa siendo REPRODUCTORA
-     ↓
-nuevo ciclo = VACÍA
+0 dependencias activas de ese Parto
+                 │
+                 ▼
+Evaluar la finalización del
+ciclo histórico correspondiente
 ```
+
+La madre puede tener ya otro ciclo reproductivo actual. El Destete no debe cerrarlo ni crear un ciclo adicional.
 
 ---
 
@@ -972,140 +1007,126 @@ Por ejemplo:
 
 ```text
 Cubrición
-Confirmación
+Confirmación de gestación
 Parto
 Destete
 ```
 
-Después del Destete, el dominio puede determinar:
+Después del Destete, si finalizan las dependencias originadas por un Parto, el dominio puede determinar que su ciclo histórico ha terminado.
 
-```text
-ciclo anterior = finalizado
-nuevo ciclo = VACÍA
-```
+Esta conclusión NO añade eventos artificiales al historial.
 
-pero no añade:
-
-```text
-Cierre de ciclo
-Inicio de ciclo
-```
-
-al historial.
+La finalización histórica es una consecuencia derivada del conjunto de hechos y dependencias conocidos.
 
 ---
 
 # 20. Por qué no registrar el cierre
 
-Registrar "cierre de ciclo" sería redundante.
-
-El usuario puede deducir el cambio mediante:
-
-* el último hecho del ciclo;
-* el estado reproductivo actual;
-* el nuevo ciclo mostrado en el historial reproductivo;
-* la siguiente Cubrición cuando llegue.
-
-Además, el cierre no es un hecho independiente ocurrido en la explotación.
-
-Es una **interpretación del estado de conocimiento del sistema**.
+Registrar un evento de cierre de ciclo sería redundante cuando la finalización puede deducirse de los hechos registrados y de las reglas del dominio.
 
 Por tanto:
 
-```text
 Destete
-   ↓
-hecho real
+   │
+   ▼
+Finalización del vínculo afectado
+   │
+   ▼
+Evaluación de las dependencias del
+ciclo histórico de origen
+   │
+   ▼
+Posible finalización histórica
 
-Cierre del ciclo
-   ↓
-consecuencia derivada
-```
+ La aplicación debe distinguir esta conclusión de la situación reproductiva actual de la madre.
 
----
+Un ciclo histórico puede finalizar mientras otro ciclo de la misma madre continúa abierto.
 
-# 21. Creación del siguiente ciclo
-
-Cuando un ciclo finaliza, el dominio determina si la madre continúa siendo elegible para participar en un nuevo ciclo.
-
-Si continúa siendo `REPRODUCTORA`:
-
-```text
-ciclo actual
-    ↓
-finaliza
-    ↓
-nuevo ciclo
-    ↓
-estado = VACÍA
-```
-
-El nuevo ciclo se crea inmediatamente.
-
-Esto permite mantener una representación sencilla y continua de la situación reproductiva de la madre.
+No deben modificarse eventos históricos ni generar hechos artificiales para simplificar su representación.
 
 ---
 
-# 22. Por qué se crea el nuevo ciclo
+# 21. Creación del ciclo reproductivo actual
 
-El nuevo ciclo no pretende representar:
+El Destete no crea el siguiente ciclo reproductivo de la madre.
 
-* ovulación;
-* ciclo menstrual;
-* actividad hormonal;
-* fertilidad;
-* momento óptimo de inseminación;
-* ninguna otra realidad biológica no registrada.
+La creación de un ciclo actual se rige por las reglas generales del dominio reproductivo, no por la finalización de las dependencias madre-cría.
 
-Representa únicamente una nueva unidad operativa de seguimiento reproductivo.
+Si la madre continúa siendo REPRODUCTORA, el ciclo actual que corresponda puede coexistir con el ciclo histórico del Parto:
 
-Su significado es:
+Ciclo histórico del Parto
+└── PARTO
+    └── dependencias pendientes
+        └── DESTETE
 
-> "La madre ha dejado de estar vinculada funcionalmente a las crías del ciclo anterior y continúa siendo una reproductora disponible para un nuevo proceso reproductivo."
+Ciclo reproductivo actual
+└── VACÍA / CUBIERTA / GESTANTE
+
+Si ya existe un ciclo actual, el Destete no debe crear otro.
+
+La finalización del último vínculo materno tampoco debe modificar automáticamente el estado reproductivo actual.
+
+---
+
+# 22. Por qué existe un ciclo reproductivo actual independiente
+
+El ciclo actual representa la situación reproductiva de la madre, no la duración de su dependencia funcional respecto a las crías.
+
+No pretende representar por sí mismo:
+
+ovulación;
+
+ciclo menstrual;
+
+actividad hormonal;
+
+fertilidad;
+
+momento óptimo de inseminación;
+
+ninguna otra realidad biológica no registrada.
+
+Su función es representar la oportunidad reproductiva vigente conforme a los hechos registrados y las reglas del dominio.
+
+La dependencia madre-cría tiene su propia evolución y puede prolongarse durante uno o varios ciclos reproductivos posteriores de la madre.
 
 ---
 
 # 23. Estado `VACÍA`
 
-Cuando se crea el nuevo ciclo:
+Cuando las reglas generales del dominio determinan la creación de un ciclo reproductivo actual, este comienza en el estado que corresponda según dichas reglas. Cuando procede iniciar un ciclo vacío:
 
 ```text
 estado_reproductivo = VACÍA
 ```
 
-Esto significa que el sistema no conoce actualmente una gestación o dependencia materna activa para la nueva unidad reproductiva.
+VACÍA representa el estado reproductivo de un ciclo actual cuando no existe una gestación conocida ni una cubrición vigente que determine otro estado.
 
-No significa que el sistema esté afirmando ninguna situación biológica concreta.
+No significa que no existan crías dependientes de la madre.
 
-Es un estado de conocimiento operativo.
+Por tanto, es válido que coexistan:
+
+* estado_reproductivo = VACÍA 
+y:
+* existen dependencias madre-cría activas
+
+También es válido que el ciclo histórico de un Parto anterior permanezca abierto mientras la madre se encuentra en CUBIERTA o GESTANTE dentro de otro ciclo.
+
+La lactación no se representa mediante un estado reproductivo independiente.
 
 ---
 
 # 24. Si la madre deja de ser reproductora
 
-El cierre del ciclo no implica siempre la creación de otro.
+La finalización de las dependencias madre-cría no determina por sí misma la clasificación productiva de la madre.
 
-Después de finalizar el ciclo:
+Si la madre deja de ser REPRODUCTORA, no se crea un nuevo ciclo reproductivo actual por esa circunstancia mientras no vuelva a cumplirse la condición general de elegibilidad.
 
-```text
-¿sigue siendo REPRODUCTORA?
-```
+Esta regla no modifica la historia de los ciclos anteriores.
 
-Si:
+Un ciclo histórico del Parto puede finalizar al desaparecer sus dependencias, independientemente de que la madre siga siendo reproductora.
 
-```text
-NO
-```
-
-entonces:
-
-```text
-ciclo finaliza
-↓
-no se crea nuevo ciclo
-```
-
-Esto permite que la continuidad del historial reproductivo respete la clasificación productiva vigente de la madre.
+La venta o muerte de la madre, además, debe gestionarse conforme a sus propios hechos y reglas de dominio. No debe confundirse con el Destete de las crías.
 
 ---
 
@@ -1169,11 +1190,18 @@ Cría A
 
 entonces:
 
-```text
-0 vínculos activos
-```
-
-El dominio puede determinar que el ciclo ha finalizado.
+0 dependencias activas originadas
+por el Parto correspondiente
+          ↓
+Evaluar las demás condiciones
+de cierre del ciclo histórico
+          ↓
+     ¿Puede finalizar?
+        /         \
+      SÍ           NO
+      │             │
+      ▼             ▼
+Cierre derivado  Permanece abierto
 
 Esto no convierte la Muerte en un Destete.
 
@@ -1483,17 +1511,15 @@ Cría B → Destete → 15/05
 Cría C → Destete → 28/05
 ```
 
-En este caso el ciclo permanece abierto hasta:
+La posibilidad de finalizar el ciclo histórico no se determina por el primer Destete ni depende exclusivamente de la desaparición del último vínculo relevante. Debe evaluarse cuando dejan de existir dependencias funcionales activas originadas por el Parto correspondiente, teniendo en cuenta las demás condiciones de cierre definidas por el dominio.
 
-```text
-28/05
-```
+En este caso, el ciclo histórico que contiene el Parto permanece abierto mientras la cría C mantenga una dependencia funcional activa originada por ese Parto.
 
-si C era el último vínculo activo.
+Si C es la última cría con esa dependencia activa, su Destete puede permitir la finalización del ciclo histórico correspondiente.
 
-La duración del ciclo no se determina por el primer Destete.
+La fecha del primer Destete no determina la finalización del ciclo histórico si todavía quedan dependencias activas originadas por el mismo Parto.
 
-Se determina por la desaparición del último vínculo relevante.
+La evaluación se realiza sobre las dependencias del ciclo de origen, no sobre el conjunto indiscriminado de crías de la madre.
 
 ---
 
@@ -1518,9 +1544,13 @@ Cría B → Muerte
 Cría C → Destete
 ```
 
-El ciclo termina cuando C deja de estar vinculada.
+La historia de cada vínculo aporta información diferente.
 
-Pero la historia completa es:
+El ciclo histórico que contiene el Parto puede finalizar cuando C deja de mantener una dependencia funcional activa originada por ese Parto y no quedan otras dependencias pendientes que deban mantener abierto ese ciclo.
+
+La historia completa debe conservar los distintos desenlaces de las crías. El resultado histórico no debe reducirse a un único motivo que oculte las muertes, ventas o Destetes que se hayan producido.
+
+La historia completa es:
 
 ```text
 3 crías nacidas
@@ -1529,13 +1559,7 @@ Pero la historia completa es:
 └── 1 destetada
 ```
 
-Por eso no debe resumirse el ciclo únicamente como:
-
-```text
-resultado = Destete
-```
-
-La historia de cada vínculo aporta información diferente.
+La finalización de este ciclo histórico no implica que haya finalizado el ciclo reproductivo actual de la madre.
 
 ---
 
@@ -1619,37 +1643,35 @@ La información necesaria debe proceder del modelo y de los eventos.
 
 ---
 
-# 39. No existe un "resultado único" obligatorio
+# 39. El resultado del ciclo no sustituye a la historia de las crías
 
-El ciclo no debe depender de un único campo que diga:
+El campo `resultado` del ciclo reproductivo y la historia de las dependencias madre-cría representan información diferente.
 
-```text
-resultado = parto
-```
+El resultado del ciclo conserva el desenlace reproductivo definido por las reglas del dominio. La historia de las crías permite conocer qué ocurrió individualmente después del Parto.
 
-o:
+Por ejemplo:
 
 ```text
-resultado = destete
+Ciclo histórico
+└── PARTO
+    ├── Cría A → DESTETE
+    ├── Cría B → MUERTE antes del Destete
+    └── Cría C → DESTETE
 ```
 
-si ese valor obliga a perder información.
+La proyección debe conservar tanto el resultado reproductivo del ciclo como los hechos individuales de las crías.
 
-La proyección puede determinar que el ciclo finalizó, pero la explicación de por qué terminó debe construirse a partir de la historia de los vínculos.
-
-Esto evita que:
+No debe sustituirse la historia por una conclusión genérica como:
 
 ```text
-última cría murió
+ciclo terminado por Destete
 ```
 
-se convierta artificialmente en:
+si esa frase oculta otros hechos relevantes.
 
-```text
-ciclo terminado por muerte
-```
+El campo `resultado` no debe modificarse para simplificar la lectura analítica. Su asignación y su inmutabilidad se rigen por las reglas generales del modelo reproductivo.
 
-como si esa muerte explicara por sí sola toda la historia.
+La explicación agregada del ciclo se construye a partir del resultado registrado, los eventos y las dependencias que pertenecen a su historia.
 
 ---
 
@@ -1720,19 +1742,17 @@ No es:
 * una entidad;
 * una decisión manual.
 
-Es la consecuencia de esta condición:
+El cierre de un ciclo histórico requiere evaluar las dependencias funcionales y las demás condiciones de cierre que correspondan a ese ciclo.
 
-```text
-0 vínculos maternos funcionalmente activos
-```
+La evaluación debe limitarse al ciclo histórico afectado y a las dependencias originadas por el Parto que pertenece a su historia.
 
 Por tanto:
 
-```text
-cierre del ciclo
-=
-resultado de evaluar el contexto después de procesar un hecho
-```
+- La ausencia de dependencias activas originadas por ese Parto permite evaluar el cierre del ciclo histórico.
+- La existencia de dependencias activas de otros ciclos no impide automáticamente cerrar el ciclo histórico evaluado.
+- La ausencia de dependencias activas no modifica automáticamente el estado reproductivo actual de la madre ni crea un nuevo ciclo.
+
+El cierre es una conclusión derivada del dominio, no un hecho registrado por el usuario.
 
 ---
 
@@ -1754,59 +1774,44 @@ El dominio:
 2. actualiza el vínculo afectado;
 3. actualiza las consecuencias sobre el animal;
 4. evalúa los vínculos restantes;
-5. determina si el ciclo continúa o finaliza;
-6. si corresponde, crea el siguiente ciclo.
+5. evalúa las dependencias restantes del ciclo histórico afectado;
+6. determina si el ciclo histórico afectado puede finalizar, sin crear automáticamente otro ciclo ni modificar el estado reproductivo actual de la madre.
 
 No se necesita un proceso periódico para determinar el cierre.
 
 ---
 
-# 43. No existe un cron de cierre
+# 43. El tiempo no cierra automáticamente los ciclos
 
-El sistema no debe ejecutar un proceso periódico para cerrar ciclos simplemente porque haya pasado tiempo.
+El sistema no utiliza un proceso periódico ni un evento `TIMEOUT` para cerrar ciclos reproductivos.
 
-No existe actualmente:
+La ausencia prolongada de acontecimientos no constituye por sí misma un hecho reproductivo ni permite concluir automáticamente que un ciclo ha finalizado.
 
-```text
-cron
- ↓
-buscar ciclos antiguos
- ↓
-cerrarlos
-```
+Cuando se supera el umbral de revisión reproductiva parametrizado para la especie, el sistema puede generar una alerta o propuesta de revisión.
 
-Tampoco existe:
+Esta revisión no cierra el ciclo ni modifica automáticamente el estado reproductivo del animal.
 
-```text
-EVENTO = TIMEOUT
-```
-
-La detección de discontinuidades temporales queda fuera de este flujo.
+La finalización de los ciclos históricos continúa dependiendo de los hechos registrados y de las reglas funcionales del dominio.
 
 ---
 
-# 44. Discontinuidad temporal como evolución futura
+# 44. Revisión reproductiva y continuidad histórica
 
-En el futuro podría detectarse una situación como:
+La revisión reproductiva y la finalización histórica de un ciclo son conceptos diferentes.
 
-```text
-Cubrición
-      ↓
-mucho tiempo sin hechos
-      ↓
-nueva Cubrición
-```
+La revisión permite señalar que un animal lleva más tiempo del umbral configurado sin una evolución reproductiva que requiera atención.
 
-El dominio podría determinar que existe una discontinuidad temporal suficiente para considerar que la historia anterior pertenece a otro ciclo.
+El umbral se obtiene de la configuración de negocio de la explotación para la especie correspondiente. No debe codificarse como una constante fija.
 
-Pero esa capacidad:
+La revisión:
 
-* no forma parte del Destete;
-* no se implementa mediante cron;
-* no genera actualmente un evento `TIMEOUT`;
-* no forma parte del PRD010.
+- no genera un evento reproductivo por sí misma;
+- no equivale a un Aborto;
+- no finaliza automáticamente un ciclo;
+- no crea un nuevo ciclo;
+- no sustituye el registro de los hechos reales.
 
-Se conserva como evolución futura del dominio.
+La continuidad y finalización histórica de un ciclo se determinan conforme a las reglas del dominio y a los acontecimientos que realmente se han registrado.
 
 ---
 
@@ -1859,17 +1864,21 @@ el dominio utiliza:
 ```text
 Hecho que puede modificar una dependencia
               ↓
-actualizar vínculo
+        actualizar vínculo
               ↓
-evaluar dependencias restantes
+ identificar el ciclo histórico afectado
               ↓
-¿queda alguna?
-       │              │
-      sí              no
-       │              │
-       ▼              ▼
-   continúa        finaliza
+ evaluar sus dependencias y condiciones
+              ↓
+¿Puede finalizar el ciclo histórico?
+         │                 │
+        SÍ                 NO
+         │                  │
+         ▼                  ▼
+  cierre derivado    permanece abierto
 ```
+
+La evaluación se limita al ciclo histórico afectado. La finalización de sus dependencias no modifica automáticamente el ciclo reproductivo actual de la madre ni crea otro ciclo.
 
 Esta regla puede ser reutilizada por otros hechos sin modificar el concepto central del ciclo.
 
@@ -1881,18 +1890,20 @@ El procesamiento del Destete puede producir consecuencias que no son eventos int
 
 Conviene diferenciarlas.
 
-| Tipo                    | Ejemplo                                |
-| ----------------------- | -------------------------------------- |
-| Evento                  | Destete                                |
-| Estado                  | vínculo → `FINALIZADO`                 |
-| Estado                  | `CRÍA → RECRÍA`                        |
-| Estado                  | madre → `VACÍA`                        |
-| Consecuencia de dominio | finalización del ciclo                 |
-| Consecuencia de dominio | creación del siguiente ciclo           |
-| Proyección              | nuevo slide del historial reproductivo |
-| Acción derivada futura  | posible tarea o recomendación          |
+| Tipo                        | Ejemplo                                    |
+| --------------------------- | ------------------------------------------ |
+| Evento                      | Destete                                    |
+| Estado derivado             | Vínculo materno → `FINALIZADO`             |
+| Estado derivado             | `CRÍA` → `RECRÍA`                          |
+| Consecuencia de dominio     | Evaluación de las dependencias del ciclo   |
+| Consecuencia de dominio     | Posible finalización del ciclo             |
+| Ciclo reproductivo actual   | No cambia automáticamente por el Destete   |
+| Proyección                  | Historia agregada del ciclo y de sus crías |
+| Acción derivada futura      | Posible tarea o recomendación              |
 
 Estas categorías no deben mezclarse.
+
+El Destete modifica la dependencia funcional de la cría afectada. La finalización del ciclo histórico se determina conforme a las reglas del dominio. El ciclo reproductivo actual de la madre conserva su propia evolución.
 
 ---
 
@@ -1933,18 +1944,20 @@ estado_vinculo_materno = FINALIZADO
 ni:
 
 ```text
-0 vínculos activos
+0 dependencias activas originadas por el Parto
 ```
 
 La aplicación debe traducir esas conclusiones a lenguaje operativo.
 
 Por ejemplo:
 
-> "Todas las crías de este ciclo ya no dependen de la madre. La vaca está disponible para iniciar un nuevo ciclo reproductivo."
+> "Todas las crías vinculadas a este nacimiento han dejado de depender de la madre."
 
-La terminología interna pertenece al dominio.
+Si corresponde, la interfaz puede indicar que el ciclo histórico del Parto ha finalizado.
 
-La interfaz debe expresar la consecuencia de forma comprensible.
+La situación reproductiva actual de la madre debe mostrarse por separado. El Destete no implica automáticamente que la madre esté VACÍA, que esté disponible para una nueva cubrición ni que deba crearse otro ciclo.
+
+La información presentada debe proceder del modelo y de sus proyecciones, sin inferir estados reproductivos a partir de la ausencia de dependencias madre-cría.
 
 ---
 
@@ -2092,24 +2105,22 @@ Una corrección no debe resolverse mediante ediciones arbitrarias de snapshots.
 
 ```text
 Madre
-├── ciclo = 4
-├── estado_reproductivo = LACTANTE
+├── ciclo histórico 4
+│   └── PARTO
+│       └── Cría A
+│           ├── tipo_productivo = CRÍA
+│           ├── estado_vital = VIVO
+│           └── estado_vinculo_materno = ACTIVO
 │
-└── Cría A
-    ├── tipo_productivo = CRÍA
-    ├── estado_vital = VIVO
-    └── estado_vinculo_materno = ACTIVO
+└── ciclo reproductivo actual
+    └── estado_reproductivo = VACÍA
 ```
+
+La coexistencia de ambos ciclos es válida: el ciclo histórico conserva el Parto y la dependencia de la cría, mientras que el ciclo actual representa la situación reproductiva vigente de la madre.
 
 ### Registrar Destete
 
-```text
-Destete
-   ↓
-Cría A
-```
-
-### Resultado
+Se registra el Destete de la cría A.
 
 ```text
 Cría A
@@ -2118,26 +2129,29 @@ Cría A
 └── estado_vinculo_materno = FINALIZADO
 ```
 
+El evento `DESTETE` se atribuye al ciclo histórico que contiene el Parto que originó a la cría.
+
 ### Evaluación
 
 ```text
-vínculos activos = 0
+Dependencias activas originadas por el Parto = 0
 ```
+
+El dominio evalúa si el ciclo histórico puede finalizar conforme a sus reglas.
 
 ### Consecuencia
 
 ```text
-ciclo 4 → finalizado
-madre → VACÍA
-nuevo ciclo → VACÍA
+Ciclo histórico 4
+└── puede finalizar
+
+Ciclo reproductivo actual
+└── conserva su estado anterior
 ```
 
-No se genera:
+No se genera un evento artificial de cierre ni de inicio de ciclo.
 
-```text
-EVENTO CIERRE_CICLO
-EVENTO INICIO_CICLO
-```
+El Destete no crea un ciclo reproductivo nuevo ni modifica automáticamente el estado actual de la madre.
 
 ---
 
@@ -2146,12 +2160,14 @@ EVENTO INICIO_CICLO
 ### Situación inicial
 
 ```text
-Madre
-│
-├── A → CRÍA + VIVO + ACTIVO
-├── B → CRÍA + VIVO + ACTIVO
-└── C → CRÍA + VIVO + ACTIVO
+Ciclo histórico 4
+└── PARTO
+    ├── A → CRÍA + VIVO + ACTIVO
+    ├── B → CRÍA + VIVO + ACTIVO
+    └── C → CRÍA + VIVO + ACTIVO
 ```
+
+La madre puede tener, además, otro ciclo reproductivo actual.
 
 ### Operación
 
@@ -2165,20 +2181,17 @@ B → RECRÍA + FINALIZADO
 C → CRÍA + VIVO + ACTIVO
 ```
 
-### Evaluación
+### Evaluación del ciclo histórico
 
 ```text
-vínculos activos = 1
+Dependencias activas originadas por el Parto = 1
 ```
 
-Por tanto:
+El ciclo histórico 4 permanece abierto porque C sigue manteniendo una dependencia funcional activa originada por ese Parto.
 
-```text
-ciclo continúa
-madre = LACTANTE
-```
+La madre conserva, de forma independiente, el estado de su ciclo reproductivo actual.
 
-La acción de Destete continúa disponible para C.
+Cuando posteriormente finalice la dependencia de C, se volverá a evaluar el ciclo histórico 4. Esta evaluación no debe cerrar ni modificar automáticamente el ciclo actual de la madre.
 
 ---
 
@@ -2227,9 +2240,18 @@ C → RECRÍA + FINALIZADO
 Resultado:
 
 ```text
-0 vínculos activos
-↓
-finalización del ciclo
+0 dependencias activas originadas
+por el Parto correspondiente
+              ↓
+Evaluar las demás condiciones
+de cierre del ciclo histórico
+              ↓
+       ¿Puede finalizar?
+          /         \
+        SÍ           NO
+        │             │
+        ▼             ▼
+Cierre derivado   Permanece abierto
 ```
 
 La historia completa conserva:
@@ -2272,9 +2294,18 @@ B → RECRÍA + FINALIZADO
 Ahora:
 
 ```text
-0 vínculos activos
-↓
-ciclo finaliza
+0 dependencias activas originadas
+por el Parto correspondiente
+              ↓
+Evaluar las demás condiciones
+de cierre del ciclo histórico
+              ↓
+       ¿Puede finalizar?
+          /         \
+        SÍ           NO
+        │             │
+        ▼             ▼
+Cierre derivado   Permanece abierto
 ```
 
 La historia del ciclo conserva correctamente:
@@ -2400,41 +2431,36 @@ La proyección los combina.
 
 El flujo puede resumirse mediante:
 
-```text
                     EVENTO
                       │
                       ▼
-              REPRODUCTIVE CONTEXT
+             CONTEXTO REPRODUCTIVO
                       │
                       ▼
-              REPRODUCTIVE RULES
-                      │
-            ┌─────────┴─────────┐
-            │                   │
-            ▼                   ▼
-     actualizar vínculo     mantener vínculo
-            │                   │
-            └─────────┬─────────┘
-                      ▼
-             evaluar dependencias
+               REGLAS DEL DOMINIO
                       │
                       ▼
-              ¿queda alguna activa?
-                 │            │
-                SÍ            NO
-                 │             │
-                 ▼             ▼
-          mantener ciclo   finalizar ciclo
-                               │
-                               ▼
-                     ¿sigue siendo reproductora?
-                          │             │
-                         SÍ             NO
-                          │              │
-                          ▼              ▼
-                    nuevo ciclo       terminar
-                       VACÍA
-```
+             ACTUALIZAR DEPENDENCIA
+                      │
+                      ▼
+        IDENTIFICAR EL CICLO HISTÓRICO
+               DE ORIGEN
+                      │
+                      ▼
+         EVALUAR SUS DEPENDENCIAS
+           Y CONDICIONES DE CIERRE
+                      │
+                      ▼
+            ¿PUEDE FINALIZAR?
+                │          │
+               SÍ          NO
+                │           │
+                ▼           ▼
+         CIERRE DERIVADO   CONTINÚA
+                │
+                ▼
+      CONSERVAR INDEPENDIENTE
+       EL CICLO ACTUAL DE LA MADRE
 
 El patrón es reutilizable porque no depende exclusivamente del evento Destete.
 
@@ -2442,7 +2468,7 @@ El patrón es reutilizable porque no depende exclusivamente del evento Destete.
 
 # 63. Qué pertenece al Use Case
 
-El Use Case `RegistrarDestete` debe encargarse de orquestar la operación.
+El Use Case `RegistrarDestete` debe encargarse de orquestar la operación y garantizar que todas sus consecuencias se persistan de forma atómica.
 
 Conceptualmente:
 
@@ -2451,15 +2477,32 @@ RegistrarDestete
 │
 ├── construir contexto
 ├── validar crías seleccionadas
-├── registrar hecho
-├── aplicar reglas de vínculo
-├── actualizar tipo productivo
-├── evaluar continuidad
-├── crear siguiente ciclo si corresponde
-└── persistir atómicamente
+├── resolver el ciclo histórico de cada cría
+├── registrar los eventos DESTETE
+├── finalizar los vínculos correspondientes
+├── actualizar el tipo productivo de las crías
+├── evaluar la continuidad de cada ciclo histórico afectado
+├── cerrar los ciclos históricos que cumplan las condiciones de cierre
+└── persistir todos los cambios atómicamente
 ```
 
-Pero las decisiones de negocio no deben quedar codificadas directamente dentro del Use Case.
+El ciclo histórico de cada cría debe resolverse a partir de su Parto de origen:
+
+```text
+cria.parto_evento_id
+        ↓
+eventos.ciclo_id
+        ↓
+ciclo histórico al que pertenece el DESTETE
+```
+
+La evaluación de continuidad debe realizarse después de procesar todas las crías incluidas en la operación, para que el resultado tenga en cuenta el conjunto completo de cambios.
+
+El cierre de un ciclo histórico solo podrá producirse cuando se cumplan las condiciones de cierre definidas por el dominio. En particular, no debe cerrarse un ciclo que todavía tenga dependencias funcionales activas originadas en su Parto.
+
+El Use Case no debe crear automáticamente otro ciclo ni modificar el estado reproductivo actual de la madre como consecuencia del Destete.
+
+Las decisiones de negocio no deben quedar codificadas directamente dentro del Use Case.
 
 El Use Case orquesta.
 
@@ -2469,50 +2512,64 @@ Las reglas deciden.
 
 # 64. Qué pertenece a las Rules
 
-Las Rules deben poder responder preguntas como:
+Las Rules deben centralizar las decisiones de negocio relacionadas con el Destete y la continuidad de los ciclos históricos.
+
+Deben poder responder preguntas como:
 
 > ¿Esta cría puede ser destetada?
 
-> ¿Debe finalizar su vínculo?
+> ¿Qué ciclo histórico corresponde a la cría seleccionada?
 
-> ¿Sigue existiendo alguna dependencia funcional?
+> ¿Debe finalizar su vínculo materno como consecuencia del Destete?
 
-> ¿Debe finalizar el ciclo?
+> ¿Qué dependencias funcionales activas siguen asociadas al ciclo histórico de origen?
 
-> ¿La madre puede iniciar otro ciclo?
+> ¿Puede finalizar el ciclo histórico afectado?
 
-Estas preguntas no deben resolverse mediante condicionales dispersos por:
+> ¿Se cumplen todas las condiciones necesarias para determinar y aplicar el cierre derivado de ese ciclo histórico?
+
+Estas preguntas deben resolverse teniendo en cuenta que una misma madre puede tener varios ciclos abiertos simultáneamente. El ciclo histórico del Parto y el ciclo reproductivo actual de la madre son conceptos distintos.
+
+Por tanto, las Rules no deben identificar automáticamente el ciclo afectado con el ciclo reproductivo actual de la madre.
+
+Tampoco deben inferir, a partir de la finalización de las dependencias maternas, que la madre deba pasar a `VACÍA` o que deba crearse un nuevo ciclo.
+
+La elegibilidad reproductiva y el inicio de un nuevo ciclo pertenecen a sus propias reglas de dominio, no son consecuencias automáticas del Destete.
+
+Estas decisiones no deben resolverse mediante condicionales dispersos por:
 
 * formularios;
 * componentes;
-* RPC independientes;
+* RPC independientes que dupliquen las reglas;
 * consultas de UI.
+
+La lógica de dominio debe permanecer centralizada y ser coherente con el modelo reproductivo canónico.
 
 ---
 
 # 65. Qué pertenece a Projection
 
-La Projection debe convertir las consecuencias del dominio en información útil para lectura.
+La Projection debe convertir los hechos, estados y vínculos del dominio en información útil para la lectura del historial reproductivo.
 
-Por ejemplo:
+Debe distinguir entre el ciclo histórico que contiene el Parto y el ciclo reproductivo actual de la madre.
 
-```text
-0 vínculos activos
-```
-
-puede proyectarse como:
+Por ejemplo, cuando ya no quedan dependencias funcionales activas originadas en un Parto y se cumplen las condiciones de cierre del dominio, la Projection puede representar:
 
 ```text
-Ciclo finalizado
-Madre VACÍA
+Ciclo histórico del Parto
+    → finalizado
 ```
 
-Y:
+Esto no implica que el estado reproductivo actual de la madre haya cambiado ni que se haya creado otro ciclo.
+
+La situación actual de la madre debe obtenerse de su propio estado y de su ciclo reproductivo actual, no inferirse a partir de la finalización de las dependencias maternas de un ciclo histórico.
+
+Por otro lado:
 
 ```text
 3 crías
-1 muerte
-2 destetes
+1 muerte antes del Destete
+2 Destetes
 ```
 
 puede proyectarse como:
@@ -2524,9 +2581,11 @@ Historia de descendencia
 2 destetadas
 ```
 
-La Projection no decide cuándo termina el ciclo.
+La Projection puede presentar conjuntamente los resultados históricos de un ciclo y la situación reproductiva actual de la madre, siempre que mantenga clara la diferencia entre ambos.
 
-Solo representa la decisión ya determinada por el dominio.
+La Projection no decide cuándo termina el ciclo ni modifica los estados del dominio.
+
+Representa las decisiones ya determinadas por las reglas de negocio.
 
 ---
 
@@ -2587,22 +2646,33 @@ La complejidad no debe trasladarse al usuario.
 
 # 68. Resumen de reglas
 
-| Regla                             | Resultado                       |
-| --------------------------------- | ------------------------------- |
-| Nace cría viva                    | `CRÍA + ACTIVO`                 |
-| Destetar cría                     | `RECRÍA + FINALIZADO`           |
-| Muerte de cría activa             | vínculo → `FINALIZADO`          |
-| Venta de cría activa              | vínculo → `FINALIZADO`          |
-| Venta/muerte de cría ya destetada | no afecta a madre               |
-| Queda ≥1 vínculo activo           | ciclo continúa                  |
-| Quedan 0 vínculos activos         | ciclo finaliza                  |
-| Madre sigue siendo reproductora   | crear nuevo ciclo `VACÍA`       |
-| Madre deja de ser reproductora    | no crear nuevo ciclo            |
-| Cierre del ciclo                  | no es evento                    |
-| Inicio del nuevo ciclo            | no es evento                    |
-| TIMEOUT                           | fuera de alcance                |
-| Historial                         | conserva hechos reales          |
-| Carrusel                          | interpreta la historia agregada |
+| Regla                                                     | Resultado                                                |
+| --------------------------------------------------------- | -------------------------------------------------------- |
+| Nace cría viva                                            | `CRÍA + ACTIVO`                                          |
+| Destetar cría                                             | `RECRÍA + FINALIZADO`                                    |
+| Muerte de cría con vínculo activo                         | vínculo → `FINALIZADO`                                   |
+| Venta de cría con vínculo activo                          | vínculo → `FINALIZADO`                                   |
+| Venta/muerte de cría ya destetada                         | No afecta a la continuidad del ciclo histórico de origen |
+| Queda al menos un vínculo activo originado en el Parto    | El ciclo histórico permanece abierto                     |
+| No quedan vínculos activos originados en el Parto         | Evaluar el cierre del ciclo histórico según las reglas del dominio |
+| Cierre del ciclo histórico                                | No es un evento                                          |
+| Estado reproductivo actual de la madre                    | No cambia automáticamente por el Destete                 |
+| Creación de un nuevo ciclo                                | No es una consecuencia automática del Destete            |
+| TIMEOUT                                                   | No implementado; no existe cierre automático por paso del tiempo |
+| Historial                                                 | Conserva los hechos reales registrados                   |
+| Carrusel                                                  | Presenta e interpreta la historia sin confundir ciclos históricos y actuales |
+
+El ciclo histórico afectado por un Destete se identifica a partir del Parto que originó a la cría:
+
+```text
+cria.parto_evento_id
+        ↓
+eventos.ciclo_id
+        ↓
+ciclo histórico de origen
+```
+
+La evaluación de continuidad se realiza sobre ese ciclo, no sobre el ciclo reproductivo actual de la madre.
 
 ---
 
@@ -2646,17 +2716,17 @@ Una cría vendida o muerta después del Destete no afecta al ciclo de la madre.
 
 ## Invariante 7
 
-El ciclo permanece abierto mientras exista al menos un vínculo:
+El ciclo histórico que contiene un Parto permanece abierto mientras exista al menos una dependencia funcional activa originada en ese Parto.
 
-```text
-CRÍA + VIVO + ACTIVO
-```
+La evaluación debe limitarse a las crías vinculadas a ese ciclo histórico y no debe confundirse con el estado del ciclo reproductivo actual de la madre.
 
 ---
 
 ## Invariante 8
 
-El ciclo finaliza cuando existen cero vínculos de ese tipo.
+Cuando ya no existen dependencias funcionales activas originadas en un Parto, el dominio evalúa si puede cerrar el ciclo histórico correspondiente.
+
+La ausencia de vínculos activos no implica por sí sola que la madre deba pasar a VACÍA ni que deba crearse un nuevo ciclo.
 
 ---
 
@@ -2684,6 +2754,22 @@ La operación de Destete debe ser atómica.
 
 ---
 
+## Invariante 13
+
+El evento DESTETE debe atribuirse al ciclo histórico del Parto que originó a la cría, mediante:
+
+cria.parto_evento_id → eventos.ciclo_id
+
+Nunca debe asignarse automáticamente al ciclo reproductivo actual de la madre por el mero hecho de que el Destete se registre desde su ficha.
+
+Invariante 14
+
+Pueden coexistir varios ciclos abiertos para una misma madre, incluido un ciclo histórico pendiente de finalizar por sus dependencias funcionales y un ciclo reproductivo actual.
+
+Esta coexistencia es válida y no debe corregirse creando cierres o ciclos adicionales de forma automática.
+
+---
+
 # 70. Qué no representa este flujo
 
 Este flujo no pretende representar:
@@ -2706,7 +2792,7 @@ El modelo representa una realidad operativa conocida.
 
 Quedan fuera de este flujo:
 
-* implementación de `TIMEOUT`;
+* Cierre automático de ciclos por el paso del tiempo (TIMEOUT, cron o mecanismos equivalentes). El modelo vigente no utiliza este mecanismo. La revisión reproductiva se gestiona mediante una alerta basada en un umbral configurable por especie, sin cerrar ciclos ni modificar automáticamente el estado reproductivo;
 * detección de discontinuidad temporal;
 * flujo completo de Aborto;
 * flujo completo de Venta;
@@ -2796,108 +2882,124 @@ Tiene una lógica reproductiva diferente y deberá documentarse en su propio flu
 
 # 74. Historia completa de un ciclo
 
-Una representación conceptual completa puede ser:
+Una representación conceptual debe distinguir la historia del ciclo que originó las crías de la situación reproductiva actual de la madre.
 
 ```text
-                    CICLO 4
-                       │
-                       ▼
-                   CUBRICIÓN
-                       │
-                       ▼
-              CONFIRMACIÓN
-                       │
-                       ▼
-                     PARTO
-                       │
-              ┌────────┼────────┐
-              │        │        │
-              ▼        ▼        ▼
-             A        B        C
-           CRÍA      CRÍA      CRÍA
-          ACTIVO    ACTIVO    ACTIVO
-              │        │        │
-              ▼        X        ▼
-          DESTETE    MUERTE   DESTETE
-              │        │        │
-              ▼        ▼        ▼
-           RECRÍA   FINALIZADO RECRÍA
+              CICLO HISTÓRICO 4
+                      │
+                      ▼
+                  CUBRICIÓN
+                      │
+                      ▼
+                CONFIRMACIÓN
+                      │
+                      ▼
+                    PARTO
+                      │
+              ┌───────┼───────┐
+              │       │       │
+              ▼       ▼       ▼
+              A       B       C
+             CRÍA    CRÍA    CRÍA
+            ACTIVO  ACTIVO  ACTIVO
+              │       │       │
+              ▼       X       ▼
+           DESTETE  MUERTE  DESTETE
+              │       │       │
+              ▼       ▼       ▼
+           RECRÍA  FINALIZADO RECRÍA
+                      │
+                      ▼
+       EVALUAR DEPENDENCIAS DEL CICLO 4
+                      │
+                      ▼
+             ¿QUEDAN ACTIVAS?
+                 │         │
+                SÍ         NO
+                 │         │
+                 ▼         ▼
+          CICLO HISTÓRICO  EVALUAR CIERRE
+          PERMANECE ABIERTO DEL CICLO 4
+```
+
+El resultado del ciclo histórico corresponde al hecho reproductivo que lo determina, en este caso el Parto. El Destete no sustituye ese resultado: finaliza la dependencia funcional de cada cría afectada y puede permitir el cierre posterior del ciclo histórico.
+
+La evaluación debe considerar todas las dependencias funcionales originadas en ese Parto. El cierre se deriva de las reglas del dominio y no genera un evento reproductivo adicional.
+
+En paralelo, la madre puede disponer de un ciclo reproductivo actual:
+
+```text
+CICLO HISTÓRICO 4
+resultado = PARTO
+fecha_fin = NULL mientras corresponda
+dependencias maternas pendientes
               │
-              └────────┬────────┘
-                       ▼
-                0 VÍNCULOS ACTIVOS
-                       │
-                       ▼
-                 CICLO FINALIZA
-                       │
-                       ▼
-                MADRE = VACÍA
-                       │
-                       ▼
-              NUEVO CICLO = VACÍA
+              │ coexistencia válida
+              ▼
+CICLO REPRODUCTIVO ACTUAL
+estado = VACÍA / CUBIERTA / GESTANTE
 ```
 
-La historia completa permite entender mucho más que un simple:
-
-```text
-resultado = parto
-```
-
-o:
-
-```text
-resultado = destete
-```
-
----
+Ambos ciclos pueden coexistir abiertos. Cuando el ciclo histórico termina, no se modifica automáticamente el estado reproductivo actual de la madre ni se crea otro ciclo por efecto del Destete.
 
 # 75. Lectura para el usuario
 
-La aplicación debería ser capaz de transformar esta complejidad:
+La aplicación debe transformar la complejidad del dominio en una explicación clara, sin confundir el historial de maternidad con la situación reproductiva actual.
+
+Por ejemplo, ante estos hechos:
 
 ```text
-3 crías
+3 crías originadas en un mismo Parto
 1 vínculo finalizado por muerte
 2 vínculos finalizados por Destete
-0 vínculos activos
-ciclo finalizado
-nuevo ciclo creado
+0 vínculos activos originados en ese Parto
 ```
 
-en una lectura sencilla:
+la aplicación puede presentar:
 
-> **"Las 3 crías de este ciclo ya no dependen de la madre. Una falleció antes del destete y las otras dos fueron destetadas. El ciclo reproductivo ha finalizado y la madre está disponible para un nuevo ciclo."**
+> **Las tres crías de este parto ya no mantienen una dependencia materna activa. Una falleció antes del Destete y las otras dos fueron destetadas. Se han finalizado los vínculos correspondientes y se ha evaluado el cierre del ciclo histórico.**
 
-Esta es la función principal de la proyección del historial reproductivo.
+Si el ciclo histórico se ha cerrado, la aplicación puede indicarlo expresamente.
+
+La situación reproductiva actual de la madre debe mostrarse por separado, utilizando su estado y su ciclo actual. No debe afirmarse que está `VACÍA`, que está disponible para una nueva cubrición o que se ha creado otro ciclo únicamente porque ya no queden dependencias activas.
+
+Esta separación permite que la aplicación explique tanto lo ocurrido en el pasado como la situación presente del animal, sin inferir hechos que no se hayan producido.
 
 ---
 
 # 76. Principio final
 
-El flujo de Destete consolida una idea más general del modelo reproductivo:
+El flujo de Destete consolida una idea fundamental del modelo reproductivo:
 
-> **Los eventos registran hechos. Los estados representan conocimiento derivado. Los vínculos representan dependencias funcionales. El ciclo agrupa la historia. La proyección cuenta esa historia al usuario.**
+> **Los eventos registran hechos. Los estados representan conocimiento derivado. Los vínculos representan dependencias funcionales. Los ciclos agrupan la historia reproductiva. Las proyecciones presentan esa historia de forma comprensible.**
 
-Por tanto:
+El flujo puede representarse así:
 
 ```text
 EVENTOS
    ↓
-HECHOS
+HECHOS REGISTRADOS
    ↓
 REGLAS DEL DOMINIO
    ↓
 ESTADOS + VÍNCULOS
    ↓
-CONTINUIDAD DEL CICLO
+EVALUACIÓN DE CONTINUIDAD
+DEL CICLO HISTÓRICO AFECTADO
+   ↓
+CIERRE DERIVADO, SI CORRESPONDE
    ↓
 PROYECCIÓN
    ↓
 HISTORIA COMPRENSIBLE PARA EL GANADERO
 ```
 
-El Destete no es, por tanto, "el evento que cierra el ciclo".
+El Destete no es el evento que cierra automáticamente el ciclo reproductivo actual de la madre.
 
-Es el hecho que puede finalizar una o varias dependencias madre-cría.
+Es un hecho que finaliza una dependencia funcional madre-cría y que puede contribuir al cierre del ciclo histórico del Parto que originó a esa cría.
 
-**El ciclo termina cuando ya no existe ninguna dependencia funcional derivada de él que deba mantenerlo abierto.**
+El ciclo histórico se cierra cuando se cumplen las condiciones de cierre establecidas por el dominio y ya no quedan dependencias funcionales que deban mantenerlo abierto.
+
+Ese cierre no implica por sí mismo cambiar el estado reproductivo actual de la madre ni crear un nuevo ciclo.
+
+**La historia del ciclo de origen, las dependencias maternas y la situación reproductiva actual son dimensiones relacionadas, pero distintas.**

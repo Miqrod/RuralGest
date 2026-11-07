@@ -348,6 +348,10 @@ Por este motivo el estado reproductivo nunca se modifica directamente.
 
 Siempre constituye una consecuencia de los eventos registrados.
 
+El estado reproductivo representa la situación del ciclo reproductivo actual del animal.
+
+La existencia de otros ciclos reproductivos históricos que permanezcan abiertos por dependencias funcionales pendientes no implica que esos ciclos definan el estado reproductivo actual de la madre. Una madre puede tener un ciclo reproductivo actual vacío, pero tener una cría a la que amamantar.
+
 ---
 
 ## Ciclo reproductivo
@@ -486,15 +490,13 @@ Por ejemplo, un estado **GESTANTE** no significa necesariamente que la gestació
 
 Significa que, a partir de la información registrada, el sistema ya puede afirmar que el animal está gestante.
 
-Del mismo modo, un estado **LACTANTE** no describe únicamente una fase biológica.
+Del mismo modo, un estado **VACÍA** no significa que el animal nunca haya estado gestante ni que no pueda iniciar un nuevo proceso reproductivo. Significa ausencia de gestación activa conocida (puede estar gestante sin que el sistema lo sepa).
 
-Representa que existe un parto registrado y que dicho ciclo continúa abierto hasta la finalización de la lactancia mediante el destete.
-
-Esta diferencia puede parecer sutil, pero condiciona toda la interpretación del modelo.
+Representa que, según el conocimiento actualmente disponible y el ciclo reproductivo vigente, no existe una gestación activa conocida.
 
 Los estados nunca intentan reconstruir acontecimientos desconocidos.
 
-Únicamente resumen el conocimiento disponible.
+Únicamente resumen el conocimiento reproductivo disponible en cada momento.
 
 ---
 
@@ -507,15 +509,19 @@ Actualmente el dominio reproductivo contempla los siguientes estados:
 | **VACÍA** | No existe conocimiento de una gestación activa. El animal puede iniciar un nuevo proceso reproductivo. |
 | **CUBIERTA** | Existe una cubrición registrada. La gestación todavía no ha sido confirmada, aunque puede llegar a producirse un parto directamente desde este estado. |
 | **GESTANTE** | La gestación ha sido confirmada y forma parte del conocimiento conocido por la explotación. |
-| **LACTANTE** | Existe un parto registrado y el ciclo reproductivo permanece abierto hasta el destete. |
 
-Cada uno de estos estados constituye una fotografía del conocimiento actual del sistema.
+Estos son los únicos estados que forman parte de `estado_reproductivo`.
 
-No representan etapas obligatorias de un proceso biológico.
+Cada uno de ellos constituye una fotografía del conocimiento actual del sistema.
 
-Tampoco todos los ciclos recorrerán necesariamente todos los estados.
+No representan etapas obligatorias de un proceso biológico ni implican que cada ciclo tenga que pasar necesariamente por todos los estados ni seguir una secuencia fija.
 
-Lo importante no es seguir una secuencia fija, sino representar correctamente aquello que la explotación conoce en cada momento.
+El modelo representa el conocimiento disponible en cada momento y permite, por ejemplo, que un ciclo se inicie directamente mediante una confirmación de gestación sin que exista una cubrición previamente registrada.
+
+IMPORTANTE: la relación madre cría, no se refleja en el estado reproductivo de la madre:
+* La situación de las crías respecto de su madre no se representa mediante un estado reproductivo adicional de la madre, como por ejemplo LACTANTE (NO es un estado reproductivo real y por tanto NO debe usarse en ningún caso).
+* La dependencia funcional madre-cría se representa mediante el vínculo materno y su estado correspondiente, mientras que la continuidad de ese vínculo determina la evolución del ciclo reproductivo que contiene el Parto que originó las crías
+* Por tanto, el estado reproductivo de la madre y la existencia de una dependencia funcional madre-cría representan dimensiones diferentes del conocimiento del animal.
 
 ---
 
@@ -586,15 +592,22 @@ Una cubrición deja de ser simplemente una cubrición.
 
 Pasa a ser el inicio de un determinado ciclo.
 
+Una confirmación de gestación permite consolidar el conocimiento sobre ese mismo proceso.
+
 Un parto deja de ser únicamente un parto.
 
-Pasa a formar parte del mismo proceso reproductivo iniciado meses atrás.
+Un parto pasa a formar parte del ciclo reproductivo que originó la gestación y, al mismo tiempo, puede dar lugar a un nuevo ciclo reproductivo actual para la madre (si la madre sigue teniendo tipo productivo = reproductora, tras el parto iniciará un nuevo ciclo con estado "vacía").
 
-Un destete deja de interpretarse como un evento aislado para convertirse en un acontecimiento que modifica la dependencia funcional entre la madre y una de sus crías.
+Un destete deja de interpretarse como un evento aislado para convertirse en un acontecimiento que modifica la dependencia funcional entre la madre y una de sus crías. El destete pertenece al ciclo reproductivo cuyo parto originó dicha cría.
 
-El ciclo no se cierra necesariamente con ese evento.
+Por tanto, un animal puede tener simultáneamente:
 
-El ciclo continúa mientras exista alguna cría que mantenga un vínculo materno activo y finaliza únicamente cuando desaparece toda dependencia funcional derivada de dicho ciclo.
+* un **ciclo actual**, que representa el contexto reproductivo disponible para nuevas operaciones reproductivas;
+* uno o más **ciclos históricos abiertos**, que permanecen abiertos porque todavía existen dependencias funcionales derivadas de acontecimientos ocurridos durante esos ciclos.
+
+La existencia de un ciclo actual no implica que todos los ciclos anteriores estén necesariamente cerrados.
+
+Del mismo modo, la existencia de un ciclo histórico abierto no impide que la madre pueda haber iniciado posteriormente un nuevo proceso reproductivo.
 
 El ciclo reproductivo aporta, por tanto, el contexto necesario para interpretar correctamente cada evento.
 
@@ -610,7 +623,7 @@ Cada ciclo reproductivo agrupa exclusivamente los acontecimientos que pertenecen
 
 Cuando dicho proceso finaliza, también finaliza el ciclo.
 
-Si posteriormente el animal vuelve a iniciar una nueva reproducción, comenzará un nuevo ciclo completamente independiente del anterior.
+Si posteriormente el animal inicia una nueva reproducción, esta se desarrolla en un nuevo ciclo independiente del anterior.
 
 Esta separación permite conservar la historia completa del animal sin mezclar acontecimientos que pertenecen a reproducciones distintas.
 
@@ -622,16 +635,27 @@ Representa un proceso concreto que comienza, evoluciona y finaliza.
 
 Un mismo animal puede completar numerosos ciclos reproductivos a lo largo de su vida.
 
+La existencia de varios ciclos abiertos de forma simultánea no contradice esta regla.
+
+Los ciclos abiertos simultáneamente corresponden a procesos reproductivos diferentes que todavía conservan alguna consecuencia funcional pendiente.
+
+En particular, después de un Parto puede coexistir:
+
+* el ciclo que contiene el Parto y que permanece abierto mientras existan dependencias maternas derivadas de las crías nacidas en él;
+* un nuevo ciclo actual de la madre, disponible para una nueva reproducción.
+
+Cada uno de estos ciclos mantiene su propia historia y sus propias reglas de continuidad.
+
 ### El ciclo no se cierra por un evento concreto
 
 El cierre del ciclo no debe interpretarse como una consecuencia directa de un evento reproductivo concreto.
 
 En particular:
 
-* el Parto NO cierra el ciclo;
-* un Destete individual NO cierra necesariamente el ciclo;
-* la existencia de varias crías puede prolongar el proceso de lactancia aunque alguna de ellas ya haya sido destetada;
-* el ciclo finaliza cuando deja de existir cualquier dependencia funcional activa entre la madre y las crías nacidas dentro de ese ciclo.
+* el Parto no cierra necesariamente el ciclo que lo contiene;
+* un Destete individual no cierra necesariamente el ciclo que originó la cría;
+* la existencia de varias crías puede prolongar la dependencia funcional derivada del Parto aunque alguna de ellas ya haya finalizado su vínculo o haya sido destetada;
+* el ciclo que contiene el Parto finaliza cuando desaparece toda dependencia funcional activa derivada de las crías nacidas en dicho ciclo.
 
 Por tanto, el dominio no pregunta:
 
@@ -639,7 +663,7 @@ Por tanto, el dominio no pregunta:
 
 Pregunta:
 
-> ¿Queda alguna cría viva que continúe dependiendo funcionalmente de la madre?
+> ¿Queda alguna dependencia funcional activa derivada de las crías originadas por este ciclo? ¿Queda alguna cría viva que continúe dependiendo funcionalmente de la madre?
 
 Mientras la respuesta sea sí, el ciclo continúa abierto.
 
@@ -653,7 +677,7 @@ El cierre del ciclo es, por tanto, una consecuencia derivada del estado de los v
 
 Cuando un ciclo finaliza, el dominio determina si la reproductora continúa siendo elegible para un nuevo ciclo.
 
-Si continúa siéndolo, se crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+Si continúa siéndolo y no existe ya un ciclo actual que represente el proceso reproductivo vigente de la madre, se crea el siguiente ciclo en estado `VACÍA`.
 
 La creación del nuevo ciclo no constituye un evento del historial del animal.
 
@@ -680,7 +704,13 @@ Lo mismo ocurre con una confirmación de gestación o con un destete.
 
 Por este motivo cada evento reproductivo queda asociado al ciclo al que pertenece.
 
-Es el ciclo quien proporciona el contexto necesario para interpretar correctamente su significado.
+La asociación no se determina simplemente buscando un ciclo abierto.
+
+Cuando existen varios ciclos abiertos, el dominio debe identificar el ciclo funcionalmente correspondiente al evento.
+
+Para las nuevas operaciones reproductivas de la madre se utiliza el ciclo actual.
+
+Los acontecimientos relacionados con una dependencia materna histórica, como el Destete de una cría, deben asociarse al ciclo reproductivo que originó dicha dependencia.
 
 ---
 
@@ -714,13 +744,15 @@ La finalización del ciclo no depende de una duración determinada ni del paso d
 
 Tampoco depende directamente de un evento concreto como el Destete.
 
-El ciclo permanece abierto mientras exista una dependencia funcional activa entre la madre y alguna de las crías nacidas dentro de dicho ciclo.
+Para los ciclos que generan una dependencia funcional madre-cría, el ciclo permanece abierto mientras exista alguna dependencia activa derivada de las crías originadas por dicho ciclo.
 
 La regla de cierre es:
 
-> **Un ciclo reproductivo finaliza cuando deja de existir cualquier vínculo materno activo derivado de ese ciclo.**
+> **Un ciclo reproductivo que mantiene dependencias funcionales madre-cría finaliza cuando deja de existir cualquier vínculo materno activo derivado de ese ciclo.**
 
-Esta condición se evalúa a partir de las crías que continúan siendo funcionalmente dependientes de la madre.
+Esta condición se evalúa específicamente sobre las dependencias originadas por ese ciclo y no sobre el estado reproductivo actual de la madre.
+
+El hecho de que la madre haya iniciado posteriormente un nuevo ciclo no modifica la continuidad ni la atribución histórica de las dependencias pertenecientes al ciclo anterior.
 
 El sistema no necesita registrar un evento específico de "cierre de ciclo".
 
@@ -747,38 +779,64 @@ El ciclo solo puede finalizar cuando ya no queda ninguna cría viva y funcionalm
 ### Creación del ciclo siguiente
 
 Cuando el último vínculo activo desaparece, el ciclo actual finaliza.
+El cierre del ciclo histórico no implica necesariamente la creación de un nuevo ciclo.
 
-Si la madre continúa siendo `REPRODUCTORA` y, por tanto, continúa siendo elegible para participar en el dominio reproductivo, el dominio crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+Si la madre ya dispone de un ciclo actual iniciado posteriormente, ese ciclo continúa siendo el contexto reproductivo vigente para las nuevas operaciones.
 
-Este nuevo ciclo representa el contexto reproductivo disponible para la siguiente reproducción.
+Si no existe un ciclo actual y la madre continúa siendo `REPRODUCTORA` y elegible para participar en el dominio reproductivo, el dominio puede crear un nuevo ciclo en estado `VACÍA`.
+
+La creación del nuevo ciclo no constituye un evento del historial del animal.
 
 No se genera ningún evento de historial para representar su creación.
 
 El siguiente evento reproductivo registrado por el usuario, como una Cubrición o una Confirmación de Gestación, será el primer hecho visible que permitirá comprender la evolución de ese nuevo ciclo.
 
-### TIMEOUT
+El historial conserva los hechos ganaderos reales y los ciclos se utilizan como estructura de contexto para agrupar e interpretar esos hechos.
 
-El cierre por discontinuidad temporal queda fuera del alcance actual del modelo implementado.
+### Cierre por discontinuidad temporal
 
-No existe un cierre automático por tiempo ni un evento `TIMEOUT`.
+El modelo no utiliza un cierre automático del ciclo basado exclusivamente en el paso del tiempo.
 
-La detección de posibles discontinuidades temporales entre acontecimientos reproductivos se conserva únicamente como una posible evolución futura del dominio y deberá evaluarse cuando exista un nuevo evento reproductivo que proporcione contexto suficiente para tomar dicha decisión.
+La ausencia prolongada de nuevos acontecimientos reproductivos no constituye por sí misma un evento reproductivo ni provoca automáticamente el cierre de un ciclo.
+
+Cuando un ciclo cumple las condiciones establecidas para la revisión reproductiva, el sistema puede generar una alerta o propuesta de revisión conforme al umbral de días parametrizado para la especie.
+
+La revisión reproductiva permite gestionar explícitamente situaciones en las que existe una discontinuidad temporal sin introducir un cierre automático que podría modificar incorrectamente la historia reproductiva.
+
+El concepto de `TIMEOUT`, utilizado en etapas anteriores del diseño, queda descartado como regla operativa del modelo actual.
 
 ---
 
-## Un único ciclo abierto por animal
+## Coexistencia de ciclos abiertos
 
-Aunque un animal puede completar numerosos ciclos reproductivos a lo largo de su vida, únicamente puede existir un ciclo abierto en cada momento.
+Un animal puede tener más de un ciclo reproductivo abierto de forma simultánea.
 
-Esta constituye una de las principales invariantes del modelo.
+Esta situación no constituye una anomalía.
 
-La existencia de un único ciclo activo simplifica considerablemente la interpretación del historial reproductivo y evita situaciones ambiguas en las que un mismo evento pudiera pertenecer simultáneamente a procesos distintos.
+Puede producirse, especialmente, cuando un Parto mantiene abierto el ciclo que lo originó debido a la existencia de dependencias funcionales madre-cría, mientras la madre ya ha iniciado un nuevo ciclo reproductivo.
 
-Cada nuevo evento reproductivo se incorpora siempre al ciclo abierto.
+Por tanto, debe distinguirse entre:
 
-Si no existe ninguno, el sistema determinará si dicho evento debe iniciar un nuevo ciclo de acuerdo con las reglas del dominio.
+* **ciclo actual**: ciclo que representa el contexto reproductivo vigente de la madre y al que se asociarán las nuevas operaciones reproductivas;
+* **ciclo histórico abierto**: ciclo anterior que todavía no ha finalizado porque mantiene dependencias funcionales derivadas de acontecimientos ocurridos durante ese proceso.
 
-Una vez cerrado, ese ciclo pasa a formar parte del historial del animal y nunca volverá a modificarse.
+La existencia de varios ciclos abiertos no implica que un evento pueda pertenecer simultáneamente a varios ciclos.
+
+Cada evento reproductivo pertenece a un único ciclo.
+
+La asignación debe determinarse según la naturaleza y el contexto del evento.
+
+Las nuevas operaciones reproductivas de la madre se asocian al ciclo actual.
+
+Los eventos relacionados con dependencias históricas, como el Destete de una cría, se asocian al ciclo que originó dicha dependencia.
+
+Por tanto, el dominio no debe utilizar la existencia de un único ciclo abierto como mecanismo para determinar automáticamente el ciclo de un evento.
+
+El ciclo actual debe identificarse explícitamente como el contexto reproductivo vigente para nuevas operaciones.
+
+Los ciclos históricos conservan su propia identidad, eventos y reglas de cierre hasta que desaparezcan las dependencias que los mantienen abiertos.
+
+Una vez cerrado un ciclo, deja de participar en nuevas operaciones reproductivas, pero permanece disponible como parte del historial reproductivo del animal.
 
 ---
 
@@ -859,7 +917,7 @@ Una vez finalizado, `madre_id` continúa conservando la relación histórica ent
 
 ### Regla para determinar la continuidad del ciclo
 
-El ciclo reproductivo permanece abierto mientras exista al menos una cría que cumpla simultáneamente:
+Un ciclo reproductivo que contiene un Parto permanece abierto mientras exista al menos una cría originada por ese Parto que cumpla simultáneamente:
 
 ```text
 tipo_productivo = CRÍA
@@ -868,6 +926,10 @@ estado_vital = VIVO
 ```
 
 Estas son las únicas crías que mantienen actualmente una dependencia funcional relevante para la continuidad del ciclo.
+
+La comprobación debe realizarse sobre las crías originadas por el Parto perteneciente al ciclo evaluado.
+
+No debe utilizarse el conjunto global de crías dependientes de la madre ni el estado del ciclo actual de la madre para determinar la continuidad de un ciclo histórico.
 
 Una cría que ya ha pasado a `RECRÍA` no debe volver a participar en esta comprobación.
 
@@ -939,9 +1001,13 @@ No todos los ciclos reproductivos comienzan con el mismo nivel de información.
 
 En una explotación con un seguimiento muy exhaustivo es habitual registrar la cubrición desde el primer momento.
 
-Sin embargo, en otras situaciones el primer hecho conocido puede ser una confirmación de gestación o incluso un parto.
+Sin embargo, en otras situaciones el primer hecho conocido puede ser una confirmación de gestación sin que exista una Cubrición registrada previamente.
 
-El modelo admite estas diferencias porque todas ellas representan conocimiento válido.
+El modelo admite esta situación porque representa conocimiento válido sobre un proceso reproductivo que ya está en curso.
+
+El Parto, en cambio, no constituye por sí mismo el inicio de un ciclo reproductivo.
+
+El Parto presupone que existe un proceso reproductivo previo. Por este motivo, si no existe ninguna Cubrición ni ninguna Confirmación de gestación registrada que permita justificarlo, deberá registrarse previamente una Confirmación de gestación.
 
 Lo importante no es que todos los ciclos recorran exactamente el mismo camino, sino que el sistema sea capaz de representar correctamente la información que realmente conoce.
 
@@ -973,7 +1039,7 @@ Esta posibilidad no pretende ampliar artificialmente la flexibilidad del sistema
 
 Simplemente permite representar correctamente una situación habitual en explotaciones donde la cubrición no siempre se registra.
 
-Una vez iniciado el seguimiento del ciclo, el modelo vuelve a comportarse exactamente igual que en cualquier otro proceso reproductivo.
+Una vez iniciado el seguimiento del ciclo, el modelo continúa aplicando las mismas reglas de evolución y atribución de eventos que en cualquier otro proceso reproductivo.
 
 De este modo se evita que las excepciones terminen convirtiéndose en nuevos flujos de trabajo.
 
@@ -989,6 +1055,10 @@ Esta reconstrucción se realizará exclusivamente durante el procesamiento del e
 - edad gestacional estimada.
 
 A partir de dicha información el dominio calculará internamente una fecha aproximada de inicio de la gestación.
+
+Esta reconstrucción temporal no crea una Cubrición ficticia ni modifica el historial de eventos.
+
+La ausencia de una Cubrición registrada debe conservarse como ausencia de ese hecho conocido.
 
 Esta fecha no constituye un hecho histórico.
 
@@ -1014,9 +1084,19 @@ Ambas situaciones representan el inicio de un nuevo ciclo porque, a partir de es
 
 En cambio, otros acontecimientos no pueden iniciar un ciclo por sí mismos.
 
-Un parto, por ejemplo, presupone necesariamente la existencia de una gestación previa.
+Un Parto, por ejemplo, presupone la existencia de un proceso reproductivo previo.
 
-Si el sistema no dispone todavía de conocimiento suficiente para justificar ese proceso reproductivo, primero deberá registrarse una confirmación de gestación.
+El Parto puede registrarse cuando el animal se encuentra en estado `CUBIERTA` o `GESTANTE`.
+
+En el estado `CUBIERTA` existe una Cubrición registrada, aunque la gestación no haya sido confirmada.
+
+En el estado `GESTANTE` existe además una Confirmación de gestación.
+
+Si no existe ni una Cubrición ni una Confirmación de gestación que permitan justificar el proceso reproductivo, primero deberá registrarse una Confirmación de gestación antes de poder registrar el Parto.
+
+El modelo no crea retrospectivamente una Cubrición para justificar un Parto.
+
+Cuando la Cubrición no fue registrada, la ausencia de ese evento forma parte de la historia conocida y la Confirmación de gestación constituye el primer hecho reproductivo conocido del ciclo.
 
 Esta decisión mantiene la coherencia del modelo sin obligar a reconstruir retrospectivamente acontecimientos desconocidos.
 
@@ -1024,25 +1104,64 @@ Esta decisión mantiene la coherencia del modelo sin obligar a reconstruir retro
 
 # Finalización del ciclo reproductivo
 
-Un ciclo reproductivo permanece abierto mientras exista un proceso reproductivo activo asociado a él.
+Un ciclo reproductivo finaliza cuando deja de existir cualquier circunstancia que, de acuerdo con las reglas del dominio, requiera mantener abierto ese proceso reproductivo.
 
-Su finalización no depende únicamente del último evento registrado, sino del significado que dicho evento tiene dentro del proceso reproductivo.
+La condición de finalización depende del tipo de ciclo y de los acontecimientos que hayan tenido lugar durante él.
 
-En condiciones normales, el ciclo concluye con el destete de la última cría vinculada al ciclo.
+En los ciclos que han originado una dependencia funcional madre-cría mediante un Parto, el ciclo permanece abierto mientras exista al menos una dependencia materna activa derivada de las crías originadas por dicho Parto.
 
-Ese momento marca el final del proceso reproductivo y deja al animal preparado para iniciar uno nuevo cuando corresponda.
+El Destete de la última cría que mantiene ese vínculo permite finalizar el ciclo histórico que contiene el Parto.
 
-No obstante, existen otras circunstancias capaces de finalizar anticipadamente un ciclo.
+El Destete no implica necesariamente que finalice el ciclo reproductivo actual de la madre.
 
-Por ejemplo, un aborto pone fin al proceso reproductivo iniciado, aunque no llegue a producirse un parto.
+La madre puede haber iniciado un nuevo ciclo después del Parto y, en ese caso, ambos ciclos pueden coexistir:
 
-Del mismo modo, acontecimientos ajenos a la reproducción, como la venta o la muerte del animal, también provocan el cierre del ciclo activo, ya que dejan de existir las condiciones necesarias para continuar su seguimiento dentro de la explotación.
+```text
+Ciclo histórico
+PARTO
+  ↓
+dependencias madre-cría
+  ↓
+DESTETE de las últimas crías
+  ↓
+cierre del ciclo histórico
 
-En todos los casos el principio es el mismo.
 
-Cada ciclo representa un único proceso reproductivo.
+Ciclo actual de la madre
+VACÍA
+  ↓
+nueva Cubrición
+  ↓
+nueva Gestación
+  ↓
+...
 
-Cuando ese proceso termina, el ciclo también finaliza.
+```
+
+
+Por tanto, el cierre de un ciclo histórico no debe interpretarse como una transición del estado reproductivo actual de la madre.
+
+El estado reproductivo de la madre pertenece a su ciclo actual.
+
+Existen también acontecimientos que pueden finalizar un ciclo sin que se produzca un Parto.
+
+Un Aborto pone fin al proceso reproductivo afectado y cierra el ciclo correspondiente con resultado ABORTO.
+
+La finalización por Machorra cierra el ciclo correspondiente con resultado MACHORRA.
+
+Del mismo modo, la Venta o la Muerte del animal pueden provocar el cierre del ciclo reproductivo que corresponda porque el proceso deja de poder continuar dentro de la explotación.
+
+En estos casos, el cierre se produce como consecuencia del acontecimiento que impide continuar el seguimiento del proceso.
+
+La Venta o Muerte de una cría dependiente también puede afectar a la continuidad del ciclo histórico que originó dicha cría, al finalizar su vínculo materno y permitir reevaluar si quedan otras dependencias activas.
+
+El cierre del ciclo es una consecuencia derivada del conocimiento disponible.
+
+No se registra como un evento independiente.
+
+Cada ciclo mantiene su propia historia y su propia fecha de finalización, independientemente de que el animal continúe posteriormente con nuevos procesos reproductivos.
+
+---
 
 # Evolución del conocimiento durante el ciclo reproductivo
 
@@ -1066,6 +1185,7 @@ Como consecuencia:
 
 - se crea un nuevo ciclo reproductivo;
 - el evento queda asociado a dicho ciclo;
+- el ciclo pasa a ser el ciclo actual del animal;
 - el estado reproductivo pasa a **CUBIERTA**;
 - se generan las primeras proyecciones derivadas, como la fecha prevista de parto.
 
@@ -1074,6 +1194,10 @@ En este momento el sistema todavía no sabe si la gestación llegará a producir
 Únicamente conoce que ha existido una cubrición.
 
 Por ese motivo el estado continúa siendo **CUBIERTA**.
+
+La existencia de otros ciclos históricos que permanezcan abiertos por dependencias funcionales pendientes no altera esta situación.
+
+El nuevo ciclo es el contexto utilizado para las siguientes operaciones reproductivas de la madre.
 
 ---
 
@@ -1088,7 +1212,8 @@ Ahora puede afirmarla.
 Como consecuencia:
 
 - el estado reproductivo pasa a **GESTANTE**;
-- el ciclo reproductivo continúa siendo el mismo;
+- la Confirmación queda asociada al mismo ciclo reproductivo;
+- el ciclo continúa siendo el ciclo actual del animal;
 - las proyecciones pueden recalcularse utilizando la nueva información disponible.
 
 No comienza un nuevo ciclo.
@@ -1110,42 +1235,76 @@ El modelo admite esta situación porque representa un conocimiento perfectamente
 En este caso:
 
 - la confirmación inicia un nuevo ciclo reproductivo;
+- el ciclo pasa a ser el ciclo actual del animal;
 - el estado pasa directamente a **GESTANTE**;
 - las proyecciones se calculan utilizando la edad gestacional conocida o estimada.
 
-La cubrición puede haber existido realmente o no.
+La cubrición puede haber existido realmente o no, pero no forma parte del conocimiento disponible y, por tanto, no forma parte de la historia registrada.
 
 Desde el punto de vista del modelo resulta irrelevante.
 
-No forma parte del conocimiento disponible y, por tanto, no forma parte de la historia registrada.
+Por tanto, el modelo no crea retrospectivamente una Cubrición para completar la historia.
 
-A partir de este momento el ciclo continúa exactamente igual que cualquier otro.
+A partir de este momento el ciclo continúa exactamente igual que cualquier otro ciclo iniciado mediante Cubrición.
 
 No será posible registrar posteriormente una cubrición perteneciente al mismo proceso reproductivo.
 
-Esta decisión mantiene un flujo de trabajo sencillo y evita reconstrucciones retrospectivas de la historia.
+Esta decisión mantiene un flujo de trabajo sencillo y evita reconstrucciones retrospectivas de la historia ni de hechos que no fueron registrados.
 
 ---
 
 ## Caso 4. Registro de un parto
 
-El parto representa un nuevo aumento del conocimiento.
+El Parto representa un nuevo aumento del conocimiento.
 
-El sistema ya conoce que la gestación ha llegado a término y que ha comenzado una nueva fase del proceso reproductivo.
+El sistema ya conoce que el proceso reproductivo ha llegado al nacimiento de una o varias crías y puede consolidar la relación genealógica y la dependencia funcional madre-cría.
 
-Como consecuencia:
+El Parto puede registrarse tanto desde el estado **CUBIERTA** como desde **GESTANTE**.
 
-- el estado pasa a **LACTANTE**;
-- el ciclo continúa abierto;
-- podrán registrarse posteriormente todos los acontecimientos relacionados con la lactancia hasta el destete.
-
-El parto puede registrarse tanto desde el estado **CUBIERTA** como desde **GESTANTE**.
-
-En el primer caso nunca llegó a registrarse una confirmación de gestación.
+En el primer caso nunca llegó a registrarse una Confirmación de gestación.
 
 En el segundo sí.
 
-Ambos escenarios son válidos porque representan historias diferentes que conducen al mismo conocimiento final.
+Ambos escenarios son válidos porque representan historias diferentes que conducen al mismo hecho conocido: se ha producido un Parto.
+
+Como consecuencia:
+
+- se registra el evento `PARTO`;
+- se consolidan las crías nacidas y su relación genealógica con la madre;
+- se crean las dependencias funcionales madre-cría que correspondan;
+- las crías pasan a `tipo_productivo = CRÍA`;
+- el ciclo que contiene el Parto permanece abierto mientras existan dependencias funcionales activas derivadas de dicho Parto;
+- la madre inicia un nuevo ciclo reproductivo actual en estado **VACÍA**, siempre que continúe siendo `REPRODUCTORA`.
+
+El ciclo que contiene el Parto y el nuevo ciclo actual de la madre son procesos diferentes y pueden coexistir.
+
+Por tanto, después de un Parto pueden existir simultáneamente:
+
+```text
+Ciclo histórico del Parto
+PARTO
+  ↓
+dependencias madre-cría
+  ↓
+DESTETE / Venta / Muerte de las crías
+  ↓
+cierre del ciclo cuando no queden dependencias activas
+
+
+Ciclo actual de la madre
+VACÍA
+  ↓
+nueva Cubrición
+  ↓
+Confirmación de gestación
+  ↓
+nuevo Parto
+
+```
+
+El Parto no modifica el estado reproductivo actual de la madre a LACTANTE, porque LACTANTE no forma parte del modelo de estados reproductivos.
+
+La situación de dependencia respecto de las crías se representa mediante el vínculo materno y su estado funcional, independientemente del estado reproductivo actual de la madre.
 
 ---
 
@@ -1153,15 +1312,24 @@ Ambos escenarios son válidos porque representan historias diferentes que conduc
 
 Un aborto finaliza el proceso reproductivo iniciado sin que llegue a producirse un parto.
 
+El Aborto se registra sobre un ciclo reproductivo abierto cuyo estado reproductivo es **CUBIERTA** o **GESTANTE**.
+
+No puede registrarse un aborto sobre un ciclo que ya ha finalizado por otro motivo.
+
 En consecuencia:
 
-- el ciclo reproductivo activo se cierra;
-- el estado vuelve a **VACÍA**;
-- el animal queda preparado para iniciar un nuevo ciclo cuando corresponda.
+- se registra el evento `ABORTO`;
+- el ciclo afectado se cierra con resultado `ABORTO`;
+- el evento queda asociado al ciclo que contenía el proceso reproductivo interrumpido;
+- el resultado del ciclo queda consolidado como **ABORTO**.
+
+Si el animal continúa siendo `REPRODUCTORA`, el dominio crea o mantiene un nuevo ciclo reproductivo actual en estado **VACÍA**, preparado para futuras operaciones reproductivas.
 
 El aborto no elimina la historia previa.
 
 Forma parte permanente del ciclo que acaba de finalizar y permite conservar toda la trazabilidad del proceso.
+
+No se crea ningún ciclo histórico adicional como consecuencia del cierre del ciclo abortado. El nuevo ciclo, cuando corresponda, representa un proceso reproductivo diferente.
 
 ---
 
@@ -1175,13 +1343,18 @@ Una misma madre puede tener varias crías vinculadas y cada una puede ser destet
 
 Por tanto, el Destete puede ser parcial.
 
+El evento `DESTETE` pertenece al ciclo reproductivo histórico cuyo Parto originó la cría afectada.
+
+Esta atribución es importante porque la madre puede haber iniciado entretanto un nuevo ciclo reproductivo actual.
+
 Cuando se registra el Destete de una cría:
 
 * se registra el evento `DESTETE` asociado a la madre;
 * se registra el mismo evento asociado a la cría;
+* ambos eventos quedan contextualizados en el ciclo que corresponde al proceso reproductivo que originó la dependencia;
 * el vínculo materno de esa cría pasa de `ACTIVO` a `FINALIZADO`;
 * el tipo productivo de la cría pasa de `CRÍA` a `RECRÍA`;
-* la cría deja de contribuir a la continuidad del ciclo reproductivo.
+* la cría deja de contribuir a la continuidad del ciclo histórico que contiene el Parto que la originó.
 
 El evento se registra sobre ambos animales porque el hecho tiene significado operativo tanto para la madre como para la cría.
 
@@ -1198,7 +1371,7 @@ Madre
 └── Cría C → ACTIVA
 ```
 
-El ciclo continúa abierto porque todavía existen vínculos maternos activos.
+El ciclo histórico continúa abierto porque todavía existen vínculos maternos activos.
 
 Si posteriormente se desteta la Cría B:
 
@@ -1209,7 +1382,7 @@ Madre
 └── Cría C → ACTIVA
 ```
 
-El ciclo continúa abierto.
+El ciclo histórico continúa abierto.
 
 Finalmente:
 
@@ -1222,21 +1395,27 @@ Madre
 
 Ya no existe ninguna dependencia funcional activa.
 
-En ese momento el dominio finaliza el ciclo.
+En ese momento el dominio puede finalizar el ciclo histórico que contiene el Parto.
 
 ### Finalización del ciclo tras el Destete
 
 El Destete de una cría no es equivalente al cierre del ciclo.
 
-El cierre únicamente se produce cuando el Destete afecta a la última cría que mantenía un vínculo activo con la madre.
+El cierre únicamente se produce cuando el Destete afecta a la última cría que mantenía un vínculo activo con la madre, dentro del proceso reproductivo originado por ese Parto.
 
 Cuando desaparece el último vínculo:
 
-* el ciclo actual se considera finalizado;
-* el estado reproductivo de la madre pasa a `VACÍA`;
-* si la madre continúa siendo `REPRODUCTORA`, el dominio crea inmediatamente el siguiente ciclo en estado `VACÍA`.
+* el ciclo histórico del Parto se considera finalizado;
+* se establece su fecha de finalización;
+* la proyección del ciclo refleja que ya no existen dependencias funcionales pendientes.
 
-No se registra ningún evento adicional para representar el cierre o la apertura del ciclo.
+Este cierre no modifica automáticamente el estado reproductivo actual de la madre.
+
+Si la madre ya dispone de un ciclo reproductivo actual, dicho ciclo continúa siendo el contexto de sus nuevas operaciones reproductivas.
+
+Si por cualquier circunstancia no existe un ciclo actual y la madre continúa siendo REPRODUCTORA, el dominio podrá crear uno en estado VACÍA conforme a las reglas de creación del ciclo.
+
+No se registra ningún evento adicional para representar el cierre del ciclo o la creación del nuevo ciclo.
 
 La historia de eventos permanece formada únicamente por los hechos ocurridos en la explotación.
 
@@ -1257,13 +1436,17 @@ El cierre del ciclo no sustituye esta información ni intenta resumirla en un ú
 
 La historia detallada permanece en los eventos y la interpretación agregada pertenece a la proyección del ciclo.
 
+La existencia de un nuevo ciclo reproductivo de la madre no modifica ni absorbe la historia del ciclo anterior.
+
+Cada ciclo conserva los eventos que pertenecen al proceso reproductivo que representa.
+
 ---
 
 ## Caso 7. Venta o muerte de la madre o de una cría
 
 La Venta y la Muerte son eventos de gestión o de causa mayor, no eventos reproductivos.
 
-Sin embargo, mientras exista una dependencia funcional activa entre una madre y una cría, estos acontecimientos pueden provocar la finalización del vínculo materno.
+Sin embargo, mientras exista una dependencia funcional activa entre una madre y una cría, estos acontecimientos pueden modificar dicha dependencia y afectar a la continuidad del ciclo histórico que contiene el Parto que originó la relación.
 
 ### Venta o muerte de una cría
 
@@ -1278,26 +1461,34 @@ y se registra su Venta o Muerte antes del Destete:
 
 * el evento de Venta o Muerte se registra sobre la propia cría;
 * el vínculo materno pasa a `FINALIZADO`;
-* la cría deja de contribuir a la continuidad del ciclo;
+* la cría deja de contribuir a la continuidad del ciclo histórico que originó dicha dependencia;
 * el dominio vuelve a evaluar si existen otras crías que mantengan vínculos activos.
 
-Si todavía existe alguna otra cría dependiente, el ciclo continúa abierto.
+Si todavía existe alguna otra cría dependiente, el ciclo histórico continúa abierto.
 
-Si no queda ninguna, el ciclo finaliza.
+Si no queda ninguna, el ciclo histórico finaliza.
 
-Una vez finalizado el vínculo, los acontecimientos posteriores que afecten a esa cría ya no tienen repercusión sobre el contexto reproductivo de la madre.
+Una vez finalizado el vínculo, los acontecimientos posteriores que afecten a esa cría ya no tienen repercusión el ciclo reproductivo histórico de la madre.
 
-En particular, si una cría fue destetada previamente y posteriormente se vende o muere cuando ya es `RECRÍA`, ese evento pertenece únicamente a la historia de la propia cría y no afecta al ciclo reproductivo de la madre.
+En particular, si una cría fue destetada previamente y posteriormente se vende o muere cuando ya es `RECRÍA`, ese evento pertenece únicamente a la historia de la propia cría y no afecta al ciclo reproductivo histórico de la madre.
+
+La Venta o Muerte de una cría tampoco modifica el ciclo reproductivo actual de la madre, salvo por las consecuencias que correspondan a la dependencia funcional del ciclo histórico al que pertenecía.
 
 ### Venta o muerte de la madre
 
 La Venta o Muerte de la madre provoca la finalización de todos los vínculos maternos que continúen activos.
 
-El ciclo reproductivo deja de tener continuidad porque la madre ya no puede continuar participando en él dentro de la explotación.
+El ciclo reproductivo histórico y/o las dependencias funcionales dejan de poder continuar porque la madre ya no puede participar en ellas dentro de la explotación.
 
-No se crea un nuevo ciclo.
+Como consecuencia:
+- los vínculos maternos activos pasan a FINALIZADO;
+- los ciclos históricos que dependan de esas relaciones se reevalúan y pueden quedar finalizados si ya no existen otras dependencias activas;
+- los ciclos reproductivos de la madre que ya no puedan continuar dentro de la explotación se cierran conforme a las reglas del dominio;
+- no se crea ningún nuevo ciclo para la madre.
 
 La relación genealógica `madre_id` de las crías se conserva íntegramente.
+
+La Venta o Muerte no elimina la historia reproductiva ni la genealogía.
 
 ### Regla general
 
@@ -1309,7 +1500,11 @@ La Venta o Muerte no generan un evento artificial de "fin de vínculo" ni un eve
 
 Los hechos reales permanecen registrados como eventos de Venta o Muerte.
 
-El estado `estado_vinculo_materno` y la proyección del ciclo permiten interpretar sus consecuencias sobre la dependencia madre-cría y sobre la continuidad del ciclo reproductivo.
+El estado `estado_vinculo_materno` y la proyección de los ciclos permiten interpretar sus consecuencias sobre la dependencia madre-cría y sobre la continuidad de cada ciclo afectado.
+
+Las consecuencias se evalúan sobre el ciclo al que pertenece cada dependencia o proceso, sin asumir que existe un único ciclo abierto para el animal.
+
+---
 
 # Decisiones de diseño del modelo
 
@@ -1333,27 +1528,62 @@ Permitir modificarlo directamente implicaría romper la coherencia entre el esta
 
 Por este motivo el estado reproductivo siempre se obtiene a partir de los eventos registrados y nunca puede modificarse de forma independiente.
 
+El estado reproductivo representa exclusivamente la situación del ciclo reproductivo actual del animal.
+
+La existencia de ciclos históricos que permanezcan abiertos por dependencias funcionales pendientes no modifica este estado.
+
+Por tanto, un animal puede tener ciclos reproductivos históricos abiertos y, al mismo tiempo, encontrarse en estado `VACÍA`, `CUBIERTA` o `GESTANTE` dentro de su ciclo actual.
+
 ---
 
 ## El ciclo reproductivo tampoco se gestiona manualmente
 
 Del mismo modo que ocurre con el estado reproductivo, el usuario nunca crea ni cierra un ciclo de forma explícita.
 
-Los ciclos aparecen y desaparecen automáticamente conforme evoluciona el conocimiento sobre el proceso reproductivo.
+Los ciclos se crean como consecuencia de acontecimientos reproductivos que justifican el inicio de un nuevo proceso y se consideran finalizados cuando dejan de existir las condiciones que obligan a mantenerlos abiertos.
 
-Esta decisión garantiza que todos los eventos pertenecen siempre a un único ciclo y evita inconsistencias difíciles de detectar posteriormente.
+El cierre del ciclo es una consecuencia derivada de los eventos y de las dependencias funcionales existentes.
+
+No existe un evento independiente de "cierre de ciclo".
+
+Un animal puede tener simultáneamente:
+
+- un ciclo reproductivo actual, utilizado para sus nuevas operaciones reproductivas;
+- uno o varios ciclos históricos abiertos, cuando todavía existen dependencias funcionales pendientes derivadas de procesos reproductivos anteriores.
+
+Esta coexistencia no representa una inconsistencia.
+
+Cada ciclo representa un proceso reproductivo diferente y mantiene su propia historia.
+
+Cada evento reproductivo se asigna a un único ciclo, pero un mismo animal puede tener eventos pertenecientes a distintos ciclos abiertos.
+
+Esta separación permite conservar correctamente la historia de un Parto anterior mientras la madre continúa desarrollando un nuevo ciclo reproductivo.
 
 ---
 
 ## Los estados representan conocimiento, no fases biológicas
 
-Una de las primeras decisiones adoptadas durante el diseño del modelo consistió en abandonar la idea de representar directamente las fases biológicas de la reproducción.
+Una de las decisiones fundamentales del modelo consiste en no representar directamente las fases biológicas de la reproducción.
 
-En su lugar, los estados describen aquello que la explotación sabe sobre el animal en cada momento.
+En su lugar, los estados describen aquello que la explotación sabe sobre el proceso reproductivo actual del animal.
 
-Esto explica por qué dos animales pueden encontrarse en el mismo estado reproductivo aun habiendo seguido recorridos diferentes.
+Los estados reproductivos son únicamente:
+
+- `VACÍA`
+- `CUBIERTA`
+- `GESTANTE`
+
+No existe el estado reproductivo `LACTANTE`.
+
+La existencia de una cría dependiente después de un Parto no constituye un estado reproductivo de la madre.
+
+Esta situación se representa mediante la relación funcional madre-cría y mediante el estado del vínculo materno.
+
+Por este motivo, dos animales pueden encontrarse en el mismo estado reproductivo aun habiendo seguido recorridos diferentes.
 
 Lo importante no es reconstruir exactamente la biología, sino representar correctamente el conocimiento disponible.
+
+La separación entre estado reproductivo y dependencia materna permite además que una madre pueda encontrarse en `VACÍA`, `CUBIERTA` o `GESTANTE` dentro de su ciclo actual mientras un ciclo histórico anterior continúa abierto por dependencias madre-cría pendientes.
 
 ---
 
@@ -1368,6 +1598,14 @@ Ambos conceptos cumplen responsabilidades distintas y nunca deben confundirse.
 Modificar una proyección no altera la historia.
 
 Del mismo modo, registrar un nuevo evento no modifica los acontecimientos anteriores, sino que amplía el conocimiento disponible para construir nuevas proyecciones.
+
+El ciclo reproductivo y su estado de finalización forman parte de esta interpretación derivada.
+
+El sistema no registra un evento artificial para indicar que un ciclo se ha cerrado.
+
+El cierre se determina a partir de los eventos existentes y de las reglas del dominio.
+
+Por tanto, la historia conserva los hechos reales y las proyecciones permiten interpretar qué ciclo corresponde a cada proceso, cuál es su situación y si todavía existen dependencias funcionales que impiden considerarlo finalizado.
 
 ---
 
@@ -1395,7 +1633,101 @@ Cuando el conocimiento disponible resulta suficiente para continuar un proceso r
 
 Cuando una reconstrucción retrospectiva únicamente añadiría complejidad sin aportar información relevante para la gestión, el modelo decide no incorporarla.
 
-Esta filosofía explica decisiones como permitir iniciar un ciclo mediante una confirmación de gestación y, al mismo tiempo, impedir registrar posteriormente una cubrición perteneciente a ese mismo proceso reproductivo.
+Esta filosofía explica decisiones como permitir iniciar un ciclo mediante una Confirmación de gestación y, al mismo tiempo, impedir registrar posteriormente una Cubrición perteneciente a ese mismo proceso reproductivo.
+
+El modelo tampoco utiliza el paso del tiempo como mecanismo automático para cerrar ciclos.
+
+Una ausencia prolongada de acontecimientos reproductivos puede justificar una revisión reproductiva, pero no constituye por sí misma un evento ni provoca un cierre automático.
+
+Cuando corresponde, la revisión reproductiva se determina mediante el umbral de días parametrizado para la especie.
+
+De esta forma el modelo diferencia entre:
+
+- hechos reproductivos registrados;
+- interpretación derivada de esos hechos;
+- alertas o propuestas de gestión;
+- decisiones explícitas del usuario que generan nuevos eventos.
+
+Cada uno de estos elementos mantiene una responsabilidad diferente dentro del dominio.
+
+---
+
+## El ciclo actual y los ciclos históricos son conceptos diferentes
+
+El modelo distingue entre el ciclo reproductivo actual del animal y los ciclos históricos que todavía permanecen abiertos por circunstancias pendientes.
+
+El ciclo actual representa el proceso reproductivo sobre el que se realizan las nuevas operaciones reproductivas de la madre.
+
+Los ciclos históricos abiertos representan procesos anteriores que todavía requieren seguimiento debido a dependencias funcionales que no han finalizado.
+
+Un ciclo histórico abierto no se convierte en el ciclo actual por el mero hecho de permanecer abierto.
+
+Del mismo modo, la creación de un nuevo ciclo actual no implica el cierre automático de los ciclos históricos anteriores.
+
+Esta distinción es especialmente importante después de un Parto.
+
+El ciclo que contiene el Parto puede permanecer abierto mientras existan crías dependientes, mientras la madre ya dispone de un nuevo ciclo actual en estado `VACÍA`.
+
+Las nuevas Cubriciones y Confirmaciones de gestación pertenecen al ciclo actual.
+
+Los Destetes y otros acontecimientos relacionados con las dependencias originadas por el Parto pertenecen al ciclo histórico correspondiente.
+
+De esta forma, cada proceso reproductivo conserva su propia historia y puede evolucionar independientemente de los procesos posteriores del mismo animal.
+
+---
+
+## Los eventos se atribuyen al ciclo por contexto funcional
+
+Cada evento reproductivo pertenece a un único ciclo reproductivo.
+
+Sin embargo, la atribución del evento no debe realizarse suponiendo que existe un único ciclo abierto para el animal.
+
+Cuando existen varios ciclos abiertos, el sistema determina el ciclo correspondiente atendiendo al significado funcional del evento.
+
+Las nuevas operaciones reproductivas de la madre se asignan a su ciclo actual.
+
+Los acontecimientos relacionados con una dependencia madre-cría se asignan al ciclo histórico que originó dicha dependencia.
+
+Por ejemplo, una nueva Cubrición de la madre pertenece a su ciclo actual, mientras que el Destete de una cría pertenece al ciclo que contiene el Parto que originó dicha cría.
+
+Esta regla evita mezclar acontecimientos pertenecientes a procesos reproductivos diferentes y permite conservar la trazabilidad completa de cada ciclo.
+
+---
+
+## El cierre del ciclo es una consecuencia, no un acontecimiento
+
+El cierre de un ciclo reproductivo no constituye un hecho independiente que deba registrarse como evento.
+
+El sistema determina que un ciclo ha finalizado cuando los acontecimientos registrados y las reglas del dominio permiten concluir que ya no existe ninguna circunstancia que obligue a mantenerlo abierto.
+
+Por ejemplo, el ciclo histórico que contiene un Parto puede permanecer abierto mientras existan dependencias maternas activas.
+
+Cuando desaparece la última dependencia correspondiente, el ciclo puede considerarse finalizado.
+
+La fecha y el resultado del ciclo forman parte de la proyección derivada del proceso.
+
+Los eventos originales permanecen inmutables y constituyen la historia que permite reconstruir dicha proyección.
+
+---
+
+## La dependencia materna y la genealogía son conceptos diferentes
+
+La relación genealógica entre una madre y una cría es permanente.
+
+El campo `madre_id` identifica quién es la madre de la cría y no desaparece cuando finaliza la dependencia funcional.
+
+La dependencia madre-cría, en cambio, es temporal.
+
+Su estado se representa mediante `estado_vinculo_materno` y permite determinar si la cría continúa dependiendo funcionalmente de la madre para los efectos del dominio reproductivo.
+
+Por tanto:
+
+- la finalización del vínculo materno no elimina la genealogía;
+- el Destete no modifica `madre_id`;
+- la Venta o Muerte de una cría no elimina su relación genealógica;
+- una cría puede conservar su madre histórica aunque ya no exista dependencia funcional.
+
+Esta separación permite conservar una genealogía permanente sin utilizarla como mecanismo para determinar si una dependencia reproductiva continúa activa.
 
 ---
 
@@ -1405,6 +1737,31 @@ El modelo reproductivo constituye el lenguaje común sobre el que se construyen 
 
 Su propósito no consiste únicamente en almacenar eventos ni en describir el estado biológico de los animales.
 
-Su verdadera responsabilidad es representar de forma coherente el conocimiento reproductivo que posee la explotación y proporcionar una base sólida sobre la que puedan construirse nuevas funcionalidades sin perder consistencia.
+Su responsabilidad es representar de forma coherente el conocimiento reproductivo que posee la explotación y proporcionar una base sólida sobre la que puedan construirse nuevas funcionalidades sin perder consistencia.
 
-Esta visión permite que eventos, estados, ciclos y proyecciones evolucionen conjuntamente manteniendo siempre una misma filosofía: representar únicamente el conocimiento confirmado, preservar la historia registrada y ofrecer una gestión reproductiva comprensible para el usuario.
+El modelo distingue claramente entre:
+
+- los hechos registrados mediante eventos;
+- el estado reproductivo actual del animal;
+- los ciclos reproductivos que representan procesos independientes;
+- las proyecciones derivadas de dichos eventos;
+- las dependencias funcionales madre-cría;
+- y la genealogía permanente entre madre y cría.
+
+Un animal puede tener un ciclo reproductivo actual y, al mismo tiempo, ciclos históricos abiertos por dependencias funcionales pendientes.
+
+Esta coexistencia no representa una anomalía, sino una consecuencia natural de separar los distintos procesos reproductivos que pueden solaparse en el tiempo.
+
+El modelo tampoco intenta reconstruir hechos que nunca fueron registrados ni utiliza el paso del tiempo para inventar acontecimientos o cerrar automáticamente procesos.
+
+Cuando la información disponible resulta incompleta, el sistema representa explícitamente ese nivel de conocimiento.
+
+Cuando una situación requiere una decisión de gestión, como una revisión reproductiva o el registro de una Machorra, dicha decisión se expresa mediante las reglas y eventos correspondientes.
+
+Esta visión permite mantener una historia reproductiva trazable, conservar la genealogía, gestionar correctamente las dependencias madre-cría y proporcionar una interpretación coherente de la situación actual.
+
+En definitiva, el modelo persigue un principio sencillo:
+
+> **Los eventos representan lo que ocurrió, las proyecciones representan lo que el sistema puede interpretar y el estado reproductivo representa la situación actual conocida del proceso reproductivo.**
+
+Esta separación permite que el dominio evolucione sin perder la trazabilidad de la historia ni introducir contradicciones entre procesos reproductivos diferentes.
