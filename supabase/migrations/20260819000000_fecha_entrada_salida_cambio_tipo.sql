@@ -444,7 +444,9 @@ $$;
 --   c) Si el animal deja de ser reproductora con ciclo en vacía/cubierta:
 --      se cierra el ciclo con resultado='cierre_manual'.
 --   d) Si el animal deja de ser reproductora con ciclo en gestante:
---      el ciclo NO se toca (la gestación continúa hasta su desenlace).
+--      el cambio se BLOQUEA (RAISE EXCEPTION, rollback completo). La gestación
+--      en curso debe resolverse antes con un parto o un aborto. La UI ya lo
+--      impide; esta excepción es la red de seguridad a nivel DB.
 --   e) Si el animal vuelve a ser reproductora: se crea SIEMPRE un nuevo ciclo
 --      en estado VACÍA, independientemente de ciclos anteriores.
 -- ─────────────────────────────────────────────────────────────────────────────

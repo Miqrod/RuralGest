@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+
+import { validateRegistrarReubicacion } from '@/modules/ganadero/instalaciones/application/actions/registrarReubicacionAnimales'
 
 import {
   mapHistorialRow,
@@ -293,6 +295,40 @@ describe('EVAL: Instalaciones — mapReubicacionInputToRpcArgs', () => {
     const result = mapReubicacionInputToRpcArgs({ ...input, animal_ids: ['uuid-solo'] })
     expect(result.p_animal_ids).toHaveLength(1)
     expect(result.p_animal_ids[0]).toBe('uuid-solo')
+  })
+
+})
+
+// ── validateRegistrarReubicacion — "hoy" es el día local, no el UTC ──────────
+//
+// Regresión: la validación usaba toISOString() (día UTC). Entre la medianoche de
+// Madrid y la UTC rechazaba la fecha de hoy como "futura".
+// Se fuerza TZ=Europe/Madrid (Node aplica el cambio en caliente) para que el caso
+// falle con el código antiguo también en CI, que corre en UTC.
+
+describe('EVAL: Instalaciones — fecha no futura usa el día local', () => {
+
+  const tzOriginal = process.env.TZ
+  const input = (fecha: string) => ({ animal_ids: ['a1'], ubicacion_destino_id: 'i1', fecha })
+
+  beforeAll(() => {
+    process.env.TZ = 'Europe/Madrid'
+    vi.useFakeTimers()
+    // 7 nov 2026 a las 00:30 hora de Madrid = 6 nov 23:30 UTC
+    vi.setSystemTime(new Date('2026-11-06T23:30:00Z'))
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+    process.env.TZ = tzOriginal
+  })
+
+  it('acepta la fecha de hoy a las 00:30 hora local', () => {
+    expect(() => validateRegistrarReubicacion(input('2026-11-07'))).not.toThrow()
+  })
+
+  it('rechaza mañana como futura', () => {
+    expect(() => validateRegistrarReubicacion(input('2026-11-08'))).toThrow(/no puede ser futura/)
   })
 
 })

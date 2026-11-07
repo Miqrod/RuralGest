@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import { getAnimalById } from '../../../animales/infrastructure/repository'
 import { getCicloAbierto } from '../../infrastructure/repository'
 import { checkEligibility } from '../../domain/rules/ReproductiveEligibilityRules'
@@ -33,7 +34,8 @@ export async function registrarMachorra(input: RegistrarMachorraInput): Promise<
   // La fecha del evento es la del día de ejecución; el RPC la genera internamente
   // con CURRENT_DATE. Se pasa aquí solo para que EligibilityRules pueda evaluar
   // el contexto temporal si fuera necesario en el futuro.
-  const fechaHoy = new Date().toISOString().split('T')[0] as `${number}-${number}-${number}`
+  // Fecha local (zona garantizada por instrumentation.ts), no toISOString(), que da el día UTC.
+  const fechaHoy = format(new Date(), 'yyyy-MM-dd') as `${number}-${number}-${number}`
 
   const ctx: ReproductiveContext = {
     animal: {

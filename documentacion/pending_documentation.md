@@ -957,7 +957,7 @@ Implementación en dos capas:
 
 ### 5. `DrawerCambioTipoProductivo` — lógica de mensajes y confirmación
 
-`getMensajeContextual()` devuelve `{ texto, tipo: 'bloqueo' | 'aviso' } | null` según la combinación de tipo actual, tipo nuevo y estado reproductivo:
+`getMensajeContextual()` (desde 2026-11-06: `getMensajeCambioTipoProductivo` en `animales/domain/rules.ts`) devuelve `{ texto, tipo: 'bloqueo' | 'aviso' } | null` según la combinación de tipo actual, tipo nuevo y estado reproductivo:
 
 - `gestante` → `bloqueo`: mensaje rojo, sin formulario, solo "Cerrar".
 - `cubierta` saliendo de Reproductora → `aviso` + checkbox obligatorio de confirmación.
@@ -1152,7 +1152,7 @@ La anotación solo aparece cuando `evento.rol !== 'madre'` (desde la ficha de la
 Cuando el modelo reproductivo esté consolidado, trasladar principalmente a:
 
 - `documentacion/modelo/modelo_reproductivo.md` — regla de bloqueo en gestante, ciclos coexistentes, `cambiar_tipo_productivo`, señal resultado=NULL para salida
-- `documentacion/flujos/reproductivo/cambio_tipo_productivo.md` — flujo completo con matriz de estados
+- ~~`documentacion/flujos/reproductivo/cambio_tipo_productivo.md` — flujo completo con matriz de estados~~ ✅ HECHO (2026-11-06) en `documentacion/flujos/reproductivos/cambio_tipo_productivo.md`, incluida la validación del tipo destino en backend y la zona horaria. Las secciones 2–5 de este bloque quedan trasladadas allí.
 - `documentacion/flujos/reproductivo/salida_animal.md` — consecuencias reproductivas de venta/muerte, destete implícito
 - `documentacion/arquitectura/` — patrón de compatibilidad hacia atrás en eventos del carrusel, `EntradaCiclo` union type
 

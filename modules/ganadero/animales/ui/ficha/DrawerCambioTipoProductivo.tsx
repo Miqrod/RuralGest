@@ -21,11 +21,13 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { submitCambiarTipoProductivo } from '@/app/(main)/vacuno/animales/[id]/actions'
 import type { TipoProductivoOption } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
-import type { EstadoReproductivo } from '@/modules/ganadero/shared/domain/types'
+import type { EstadoReproductivo, Sexo } from '@/modules/ganadero/shared/domain/types'
 import type { UUID } from '@/modules/shared/types'
+import { validarTipoProductivoDestino, getMensajeCambioTipoProductivo } from '@/modules/ganadero/animales/domain/rules'
 
 interface Props {
   animalId:           UUID
+  sexo:               Sexo
   tipoActualNombre:   string | null
   estadoReproductivo: EstadoReproductivo | null
   tiposDisponibles:   TipoProductivoOption[]
@@ -33,49 +35,9 @@ interface Props {
   onOpenChange:       (open: boolean) => void
 }
 
-// Mensajes contextuales según el estado reproductivo al salir de Reproductora.
-//
-//   gestante → bloqueo total: el cambio no está permitido. El mensaje explica por qué.
-//   cubierta → advertencia + confirmación obligatoria: el ciclo se cerrará.
-//   vacia    → advertencia informativa: el ciclo se cerrará.
-//
-// El caller usa `estadoReproductivo === 'gestante'` para decidir si mostrar
-// el formulario o solo el mensaje de bloqueo con un único botón de cerrar.
-function getMensajeContextual(
-  tipoNuevoNombre: string | undefined,
-  tipoActualNombre: string | null,
-  estadoReproductivo: EstadoReproductivo | null,
-): { texto: string; tipo: 'bloqueo' | 'aviso' } | null {
-  const esSalidaDeReproductora =
-    tipoActualNombre === 'Reproductora' && tipoNuevoNombre !== 'Reproductora'
-
-  // Gestante se muestra aunque no haya tipo seleccionado aún: el bloqueo es absoluto.
-  if (tipoActualNombre === 'Reproductora' && estadoReproductivo === 'gestante') {
-    return {
-      tipo: 'bloqueo',
-      texto: 'No es posible cambiar el tipo productivo durante una gestación en curso. Registra el parto o aborto del ciclo actual para poder realizar este cambio.',
-    }
-  }
-
-  if (!esSalidaDeReproductora || !estadoReproductivo) return null
-
-  if (estadoReproductivo === 'cubierta') {
-    return {
-      tipo: 'aviso',
-      texto: 'Este animal tiene una cubrición registrada. Al cambiar de tipo, el ciclo se cerrará y la cubrición quedará sin desenlace.',
-    }
-  }
-  if (estadoReproductivo === 'vacia') {
-    return {
-      tipo: 'aviso',
-      texto: 'Este animal tiene un ciclo abierto en estado vacía. Al cambiar de tipo, el ciclo se cerrará.',
-    }
-  }
-  return null
-}
-
 export function DrawerCambioTipoProductivo({
   animalId,
+  sexo,
   tipoActualNombre,
   estadoReproductivo,
   tiposDisponibles,
@@ -90,8 +52,12 @@ export function DrawerCambioTipoProductivo({
   const [confirmadoCierre, setConfirmadoCierre] = useState(false)
 
   const tipoNuevoNombre   = tiposDisponibles.find(t => t.id === nuevoTipoId)?.nombre
-  const mensaje           = getMensajeContextual(tipoNuevoNombre, tipoActualNombre, estadoReproductivo)
+  const mensaje           = getMensajeCambioTipoProductivo(tipoNuevoNombre, tipoActualNombre, estadoReproductivo)
   const bloqueado         = mensaje?.tipo === 'bloqueo'
+  // Destino incompatible con el animal (p.ej. sexo sin identificar → Reproductora).
+  // A diferencia del bloqueo por gestante, el formulario sigue visible: el usuario
+  // puede elegir otro tipo. El RPC aplica la misma regla como red de seguridad.
+  const errorDestino      = tipoNuevoNombre ? validarTipoProductivoDestino(sexo, tipoNuevoNombre) : null
 
   const esSalidaDeReproductora = tipoActualNombre === 'Reproductora' && tipoNuevoNombre !== 'Reproductora'
   const requiereConfirmacion   = esSalidaDeReproductora && estadoReproductivo === 'cubierta'
@@ -163,15 +129,22 @@ export function DrawerCambioTipoProductivo({
                 </Select>
               </Field>
 
+              {/* Destino no válido para este animal: impide confirmar */}
+              {errorDestino && (
+                <p className="text-sm text-alert bg-alert-soft rounded-md px-3 py-2.5">
+                  {errorDestino}
+                </p>
+              )}
+
               {/* Aviso contextual: vacía o cubierta */}
-              {mensaje && (
+              {mensaje && !errorDestino && (
                 <p className="text-sm text-warning bg-warning-soft rounded-md px-3 py-2.5">
                   {mensaje.texto}
                 </p>
               )}
 
               {/* Confirmación obligatoria cuando el animal está cubierta */}
-              {requiereConfirmacion && (
+              {requiereConfirmacion && !errorDestino && (
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -201,7 +174,7 @@ export function DrawerCambioTipoProductivo({
               </Button>
               <Button
                 onClick={handleConfirmar}
-                disabled={!nuevoTipoId || pending || (requiereConfirmacion && !confirmadoCierre)}
+                disabled={!nuevoTipoId || pending || !!errorDestino || (requiereConfirmacion && !confirmadoCierre)}
               >
                 {pending ? 'Guardando…' : 'Confirmar cambio'}
               </Button>

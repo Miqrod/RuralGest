@@ -24,7 +24,9 @@ export interface RawAnimalRevision {
   id:                  string
   crotal:              string | null
   nombre:              string | null
-  estado_reproductivo: string
+  // Nullable como la columna: la query filtra vacia/cubierta, pero los tipos de
+  // supabase-js no reflejan ese filtro. filtrarEnRevision descarta los NULL.
+  estado_reproductivo: EstadoReproductivo | null
 }
 
 export interface RawCicloRevision {
@@ -54,6 +56,10 @@ export function filtrarEnRevision(
   const resultado: AnimalEnRevisionReproductiva[] = []
 
   for (const animal of animales) {
+    // Sin estado reproductivo no hay situación que revisar (animal fuera del dominio reproductivo)
+    const estado = animal.estado_reproductivo
+    if (!estado) continue
+
     const ciclo = cicloMap.get(animal.id)
     if (!ciclo) continue
 
@@ -66,7 +72,7 @@ export function filtrarEnRevision(
         id:                  animal.id,
         crotal:              animal.crotal,
         nombre:              animal.nombre,
-        estado_reproductivo: animal.estado_reproductivo as EstadoReproductivo,
+        estado_reproductivo: estado,
         dias_en_ciclo:       diasEnCiclo,
         fecha_inicio_ciclo:  ciclo.fecha_inicio as ISODate,
       })

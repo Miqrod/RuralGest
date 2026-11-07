@@ -199,12 +199,15 @@ Clasificación funcional que indica el destino productivo de un animal.
 
 Ejemplos:
 
-* Recría
-* Engorde
+* Cría (asignada por el parto; pasa a Recría con el destete)
+* Recría (fase de transición tras el destete; no se vuelve a ella)
+* Engorde (porcino: Cebo)
 * Reproductora
-* Semental
+* Semental (porcino: Verraco)
 
 No representa un estado biológico.
+
+Cría y Recría las asigna el sistema (parto y destete), no el usuario mediante un cambio manual. Ver `flujos/reproductivos/cambio_tipo_productivo.md` §1.1.
 
 ---
 

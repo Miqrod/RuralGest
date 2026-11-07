@@ -1,4 +1,4 @@
-import type { EstadoReproductivo } from '../../shared/domain/types'
+import type { EstadoReproductivo, EstadoVital, ResultadoCiclo } from '../../shared/domain/types'
 import type { CodigoEventoReproductivo } from './types'
 
 // ─── Distinción crítica de dominio ──────────────────────────────────────────
@@ -69,4 +69,33 @@ export function estadoPermiteEvento(
 ): boolean {
   if (estadoActual === null) return false
   return TRANSICIONES[codigoEvento].desde.includes(estadoActual)
+}
+
+// ─── Entradas sintéticas de cierre en el carrusel ─────────────────────────────
+//
+// Decide qué entrada de presentación (nunca persistida) añade el carrusel al
+// final de un ciclo cerrado sin evento propio que explique el cierre:
+//
+//   'salida'        → ciclo cerrado por venta/muerte: fecha_fin con resultado NULL
+//                     (convención de registrar_salida_animal) y animal no vivo.
+//   'cierre_manual' → ciclo cerrado por cambio de tipo productivo ANTES de que
+//                     existiera el evento CAMBIO_TIPO_PRODUCTIVO (compatibilidad).
+//                     Los ciclos nuevos ya traen el evento real y no la necesitan.
+//   null            → el ciclo no necesita entrada sintética.
+//
+// Tipo estructural (no CicloHistorial) para no acoplar el dominio a la capa de queries.
+export function tipoEntradaSinteticaCierre(
+  ciclo: {
+    fecha_fin: string | null
+    resultado: ResultadoCiclo | null
+    eventos:   { codigo: string }[]
+  },
+  estadoVital: EstadoVital,
+): 'salida' | 'cierre_manual' | null {
+  if (ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo') return 'salida'
+
+  const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
+  if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) return 'cierre_manual'
+
+  return null
 }

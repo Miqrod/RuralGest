@@ -17,6 +17,10 @@ export default async function EntradaAnimalPage() {
   // Solo instalaciones activas que admiten animales — el selector no debe ofrecer destinos inválidos
   const instalaciones = todasInstalaciones.filter((i) => i.activo && i.admite_animales)
 
+  // Cría no es un tipo de entrada válido: solo la asigna el parto (un animal comprado no
+  // tiene madre ni vínculo y nunca podría destetarse). El RPC también la rechaza.
+  const tiposEntrada = tiposProductivos.filter((t) => t.nombre !== 'Cría')
+
   return (
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
@@ -29,7 +33,7 @@ export default async function EntradaAnimalPage() {
         </Link>
       </div>
 
-      <FormEntradaCompra razas={razas} tiposProductivos={tiposProductivos} instalaciones={instalaciones} />
+      <FormEntradaCompra razas={razas} tiposProductivos={tiposEntrada} instalaciones={instalaciones} />
     </PageContainer>
   )
 }

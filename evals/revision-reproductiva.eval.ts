@@ -270,4 +270,17 @@ describe('EVAL: filtrarEnRevision — edge cases', () => {
     expect(resultado).toHaveLength(0)
   })
 
+  it('animal con estado_reproductivo NULL es ignorado aunque supere el umbral', () => {
+    // La query filtra vacia/cubierta, pero la función no debe depender de ello:
+    // sin estado reproductivo el animal está fuera del dominio reproductivo.
+    const resultado = filtrarEnRevision(
+      [{ ...animal('a1'), estado_reproductivo: null }, animal('a2')],
+      [ciclo('a1', 1, 80, HOY), ciclo('a2', 1, 80, HOY)],
+      UMBRAL,
+      HOY,
+    )
+    expect(resultado).toHaveLength(1)
+    expect(resultado[0].id).toBe('a2')
+  })
+
 })

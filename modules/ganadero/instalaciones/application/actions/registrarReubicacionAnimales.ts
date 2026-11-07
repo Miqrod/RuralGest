@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import type { RegistrarReubicacionAnimalesInput, ReubicacionResult } from '../../domain/types'
 import { rpcRegistrarReubicacion } from '../../infrastructure/repository'
 
@@ -13,7 +14,10 @@ export function validateRegistrarReubicacion(input: RegistrarReubicacionAnimales
     throw new Error('La lista de animales contiene identificadores duplicados')
   }
 
-  if (input.fecha > new Date().toISOString().slice(0, 10)) {
+  // Fecha local del servidor, no toISOString(): este último da el día UTC y,
+  // entre la medianoche de Madrid y la UTC, rechazaba la fecha de hoy como futura.
+  // La zona del servidor está garantizada por instrumentation.ts.
+  if (input.fecha > format(new Date(), 'yyyy-MM-dd')) {
     throw new Error('La fecha de reubicación no puede ser futura')
   }
 }

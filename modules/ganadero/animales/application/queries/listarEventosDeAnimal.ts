@@ -9,12 +9,14 @@ import { createServerClient } from '../../../../shared/db'
 //   EventoVirtual  → hito de presentación inyectado en la query layer (nunca persiste)
 //
 // Los eventos virtuales son ayudas visuales: indican al usuario puntos de inflexión
-// en la historia reproductiva (inicio de un nuevo ciclo tras un desenlace).
+// en la historia reproductiva (inicio de cada ciclo, sea cual sea su causa).
 // Se distinguen del resto mediante `virtual: true` para que la UI pueda renderizarlos
 // con un estilo diferenciado (más tenue, sin ID de hash, etc.).
 //
 // Tipos de evento virtual actuales:
-//   'NUEVO_CICLO' → marca el inicio de un ciclo reproductivo tras un desenlace (Parto, Aborto, Machorra)
+//   'NUEVO_CICLO' → marca el inicio de TODO ciclo reproductivo, C1 incluido:
+//                   tras un desenlace (Parto, Aborto, Machorra), al pasar a Reproductora
+//                   (cambio de tipo) o al dar de alta / comprar una reproductora.
 //
 // IMPORTANTE: nunca crear un tipo_evento 'INICIO_CICLO' en la tabla `tipo_evento` de la DB.
 // Estos hitos viven exclusivamente en la capa de presentación.
@@ -48,15 +50,37 @@ export interface EventoVirtual {
   created_at: string     // ciclo_reproductivo.created_at — el RPC lo inserta DESPUÉS del evento
                          // que lo origina, por lo que su timestamp es naturalmente posterior
   tipo_codigo: 'NUEVO_CICLO'
-  ciclo_numero: number   // número del ciclo que comienza (C2, C3…)
+  ciclo_numero: number   // número del ciclo que comienza (C1, C2…)
 }
 
 // Unión discriminada: el campo `virtual` permite al renderizador diferenciar sin castings.
 export type EventoEnHistorial = EventoReal | EventoVirtual
 
+// Genera un hito 'NUEVO_CICLO' por cada ciclo del animal, C1 incluido.
+//
+// Antes se excluía C1 ("no tiene un nuevo ciclo previo que señalizar"). Esa regla se pensó
+// para ciclos abiertos tras un desenlace y dejaba sin hito el C1 creado al pasar a
+// Reproductora: la misma acción mostraba hito en C2 (animal con ciclos previos) y no en
+// C1. Decisión 2026-11-07: todo ciclo muestra su inicio. En altas/compras de reproductoras
+// el hito C1 coincide en fecha con la Entrada: marca el inicio del seguimiento reproductivo.
+//
+// Lógica pura exportada para evals.
+export function generarHitosNuevoCiclo(
+  ciclos: { id: string; numero_ciclo: number; fecha_inicio: string; created_at: string }[],
+): EventoVirtual[] {
+  return ciclos.map(c => ({
+    virtual:      true  as const,
+    id:           `virtual-ciclo-${c.id}`,
+    fecha:        c.fecha_inicio as ISODate,
+    created_at:   c.created_at,
+    tipo_codigo:  'NUEVO_CICLO' as const,
+    ciclo_numero: c.numero_ciclo,
+  }))
+}
+
 // Devuelve todos los eventos del animal (reales + virtuales), del más reciente al más antiguo.
-// Los EventoVirtual 'NUEVO_CICLO' se inyectan aquí para C2, C3… y marcan el inicio de cada
-// nuevo ciclo en el log de historial. Nunca se persisten en la DB.
+// Los EventoVirtual 'NUEVO_CICLO' se inyectan aquí (uno por ciclo, ver generarHitosNuevoCiclo)
+// y marcan el inicio de cada ciclo en el log de historial. Nunca se persisten en la DB.
 export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHistorial[]> {
   const supabase = await createServerClient()
 
@@ -86,7 +110,7 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
 
   // Un solo query para todos los ciclos del animal:
   //   - mapeo ciclo_id → numero_ciclo para etiquetar eventos reproductivos (C1, C2…)
-  //   - generación de EventoVirtual 'NUEVO_CICLO' para ciclos C2, C3… (marca de inicio de ciclo)
+  //   - generación de EventoVirtual 'NUEVO_CICLO' para cada ciclo (marca de inicio de ciclo)
   const { data: todosCiclos } = await supabase
     .from('ciclo_reproductivo')
     .select('id, numero_ciclo, fecha_inicio, created_at')
@@ -95,16 +119,7 @@ export async function listarEventosDeAnimal(animalId: UUID): Promise<EventoEnHis
   const cicloNumero: Record<string, number> = {}
   for (const c of todosCiclos ?? []) cicloNumero[c.id] = c.numero_ciclo
 
-  const virtuales: EventoVirtual[] = (todosCiclos ?? [])
-    .filter(c => c.numero_ciclo >= 2)
-    .map(c => ({
-      virtual:      true  as const,
-      id:           `virtual-ciclo-${c.id}`,
-      fecha:        c.fecha_inicio as ISODate,
-      created_at:   c.created_at,
-      tipo_codigo:  'NUEVO_CICLO' as const,
-      ciclo_numero: c.numero_ciclo,
-    }))
+  const virtuales = generarHitosNuevoCiclo(todosCiclos ?? [])
 
   // Para DESTETE donde este animal es la madre: obtener crías destetadas en batch
   const desteteEventIdsMadre = rows

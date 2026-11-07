@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 
 import { crotalZodField, normalizeCrotal } from '@/modules/ganadero/animales/domain/IdentificationRules'
+import { validarTipoProductivoEntrada } from '@/modules/ganadero/animales/domain/rules'
 import { submitEntradaCompra } from '@/app/(main)/vacuno/animales/entrada/actions'
 import type { RazaOption } from '@/modules/ganadero/animales/application/queries/listarRazas'
 import type { TipoProductivoOption } from '@/modules/ganadero/animales/application/queries/listarTiposProductivos'
@@ -91,6 +92,15 @@ export function FormEntradaCompra({ razas, tiposProductivos, instalaciones }: Pr
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
+
+    // Coherencia sexo ↔ tipo (p.ej. macho → Reproductora). No va en el schema zod porque
+    // necesita el nombre del tipo, que llega por props. El RPC aplica la misma regla.
+    const tipoNombre = tiposProductivos.find((t) => t.id === values.tipo_productivo_id)?.nombre
+    const errorTipo = tipoNombre ? validarTipoProductivoEntrada(values.sexo, tipoNombre) : null
+    if (errorTipo) {
+      form.setError('tipo_productivo_id', { message: errorTipo })
+      return
+    }
 
     // Construimos el input de dominio a partir del estado del formulario.
     // Solo se incluye un campo de fecha de nacimiento, nunca ambos.

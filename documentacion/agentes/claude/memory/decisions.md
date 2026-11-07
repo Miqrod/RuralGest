@@ -282,6 +282,19 @@ El resto de cambios de tipo_productivo son manuales (decisión del ganadero).
 
 **El catálogo 'Cría' existe para vacuno y porcino.**
 
+**Transiciones manuales (decisión del usuario, 2026-11-07; migration `20261107000000`):**
+- **Cría no admite cambios manuales.** Su único cambio (→ Recría) lo hace el destete (`registrar_destete`,
+  `registrar_destete_lote`, destete implícito en `registrar_salida_animal`). Toda Cría viva tiene madre y
+  vínculo activo, así que siempre puede destetarse: ninguna queda atrapada.
+- **Recría nunca es destino de un cambio manual.** Es la fase de transición tras el destete, no un tipo
+  "comodín". Una vez el animal pasa a Reproductora / Semental / Engorde, no vuelve.
+- **Reactivación permitida:** Engorde → Reproductora / Semental, también para ex-reproductoras (ciclo nuevo
+  en VACÍA, historial intacto).
+- **Porcino:** Cebo = Engorde, Verraco = Semental.
+- **Compra:** `registrar_compra_animal` rechaza Cría como tipo de entrada (sin madre ni vínculo nunca podría
+  destetarse → Cría para siempre) y exige coherencia sexo ↔ tipo. Recría sí es un tipo de entrada válido.
+- Matriz completa en `documentacion/flujos/reproductivos/cambio_tipo_productivo.md` §4.1.
+
 ## Rol del animal en eventos compartidos: "Parto" vs "Nacimiento" / Destete en madre y cría
 
 Los eventos reproductivos pueden asociarse a múltiples animales mediante `evento_animales.rol`.
@@ -491,7 +504,11 @@ El log de eventos mezcla `EventoReal` (persistidos en DB) y `EventoVirtual` (iny
 **Discriminated union:** `EventoEnHistorial = EventoReal | EventoVirtual`. El campo `virtual: boolean` permite al renderizador diferenciar sin castings. El tipo canónico es `EventoEnHistorial` — el alias `EventoDeAnimal` fue eliminado en PRD013.
 
 **Tipos actuales de EventoVirtual:**
-- `'NUEVO_CICLO'` — señala el inicio de un ciclo reproductivo tras un desenlace (Parto, Aborto, Machorra). Solo se inyecta para `numero_ciclo >= 2` (el primer ciclo no tiene un "nuevo ciclo" previo que señalizar).
+- `'NUEVO_CICLO'` — señala el inicio de **todo** ciclo reproductivo, C1 incluido (decisión 2026-11-07, se generan en `generarHitosNuevoCiclo`).
+  - Antes solo se inyectaba para `numero_ciclo >= 2` ("el primer ciclo no tiene un nuevo ciclo previo que señalizar"). Esa regla se pensó para ciclos abiertos tras un desenlace (Parto, Aborto, Machorra) y no contemplaba el C1 creado al pasar a Reproductora: la misma acción mostraba hito en C2 y no en C1.
+  - Un C1 solo lo crean `registrar_compra_animal` (C1 = fecha de compra, junto a la Entrada) y `cambiar_tipo_productivo` (C1 = fecha del cambio). Siempre hay un evento real el mismo día y el hito aparece encima (ciclo con `clock_timestamp()`, evento con `now()`).
+  - La etiqueta fija "Nuevo ciclo · Vacía" es correcta para todo ciclo: los 6 RPCs que abren ciclos lo hacen en `vacia`.
+  - Las reproductoras del seed se insertan sin evento de Entrada, así que su hito C1 aparece sin evento que lo acompañe. Es una simplificación del seed; en el flujo real no ocurre.
 
 **Etiqueta ordinal CX (`ciclo_numero`):**
 - `ciclo_numero` es una etiqueta ordinal derivada de `numero_ciclo` en `ciclo_reproductivo` — nunca calculada en el momento del evento ni persistida en `evento`.
@@ -634,3 +651,64 @@ Terminología aprobada:
 - `getDesenlacesCriasPeriodo` — nombre canónico de la query
 - `DesenlacesCriasPeriodo` — tipo de dominio
 - `periodo` / `período` — rango temporal de análisis (ver patrón de "período" con acento en `patterns.md`)
+## Cambio de tipo productivo — validación del tipo destino en backend (2026-11-04)
+
+El RPC `cambiar_tipo_productivo` (migration `20261104000000`) valida el tipo destino antes de escribir nada: existe, misma especie que el animal, `activa = true`, ≠ `Cría`, y coherencia sexo ↔ tipo.
+
+Decisiones de dominio tomadas por el usuario:
+- **`Verraco` es el equivalente porcino de `Semental`**: solo machos. `Reproductora` solo hembras.
+- **Sexo sin identificar (`sexo = NULL`) bloquea los tipos ligados al sexo** (Reproductora, Semental, Verraco), con un mensaje que pide indicar el sexo primero. Los tipos no ligados al sexo siguen permitidos.
+- **Tipos inactivos del catálogo no son destino válido.**
+
+UX: con sexo NULL, los tipos ligados al sexo **sí** aparecen en el selector. Al elegir uno se muestra el bloqueo y "Confirmar" queda deshabilitado, para que el usuario entienda por qué no puede, en vez de que la opción desaparezca sin explicación.
+
+**Regla duplicada SQL ↔ TS:** el RPC es la fuente de verdad. `validarTipoProductivoDestino` (`animales/domain/rules.ts`) es un espejo solo para guiar la UI, protegido por `evals/cambio-tipo-productivo.eval.ts`. Si cambia una, cambiar la otra y mantener los mensajes alineados.
+
+## Zona horaria — instantes en TIMESTAMPTZ y BD en Europe/Madrid (2026-11-06)
+
+Migration `20261106000000_timestamptz_y_zona_horaria.sql`. Opción elegida por el usuario frente a
+una función explícita `hoy_explotacion()` en cada RPC.
+
+- **`CURRENT_DATE` significa "hoy en la explotación"** (Europe/Madrid), porque la BD tiene
+  `timezone = Europe/Madrid` a nivel de base de datos. Los RPCs nuevos pueden usar `CURRENT_DATE`
+  directamente. No hace falta un helper.
+- **Todo instante (`created_at`, `updated_at`, auditoría) se declara `TIMESTAMPTZ`**, nunca `TIMESTAMP`.
+  Con `TIMESTAMP` sin zona, `now()` guarda la hora de reloj de la sesión y depende de la zona configurada.
+- **Las fechas de negocio son fechas, no instantes.** `eventos.fecha` y `movimiento.fecha` siguen
+  siendo `TIMESTAMP` (siempre a medianoche, insertadas desde `DATE`) por compatibilidad: el código
+  las normaliza con `slice(0, 10)`. Las columnas nuevas de fecha de negocio deben ser `DATE`.
+- Motivo de la opción A: una sola configuración corrige los 10 RPCs con `CURRENT_DATE` (7 validan
+  "no futura", 3 registran la fecha del hecho) y los futuros, sin depender de que cada RPC use un helper.
+- Pendiente de despliegue: `TZ=Europe/Madrid` en el servidor Next.js (ver `deferred.md`).
+
+## Despliegue — Netlify como plataforma (2026-11-06)
+
+**Plataforma:** Netlify, con el adaptador oficial OpenNext para Next.js. La BD sigue en Supabase Cloud
+(proyecto `RuralGest`). Ya se había elegido en una investigación anterior que no llegó a documentarse;
+se registra aquí.
+
+**Uso:** propio, no comercial.
+
+**Plan:** empezar en **Free** (300 créditos/mes, límite estricto). Al agotarse, el sitio queda **en
+pausa hasta el mes siguiente**, sin recarga posible. Si algún mes se acerca al límite, pasar a
+**Personal** (9 $/mes, 1.000 créditos, recarga automática de 500 créditos por 5 $). Pro (20 $/mes) no
+es necesario. La gestión de `TZ` no depende del plan.
+
+**Qué consume créditos** (tabla oficial, nov 2026):
+- Despliegue de producción: 15 créditos. Es lo que más consume: 300 créditos ≈ 20 despliegues al mes.
+- Peticiones web: 2 por cada 10.000. Ancho de banda: 20 por GB. Cómputo de funciones: 10 por GB-hora.
+  Los tres son insignificantes con uso propio.
+
+**Estrategia de despliegue:** no desplegar a producción en cada push a `main`. Producción solo desde una
+rama dedicada (p.ej. `production`) o de forma manual con versiones cerradas. Según la tabla de Netlify,
+solo cobran los despliegues de producción.
+
+**Arquitectura en Netlify:** las páginas del servidor, las Server Actions y las rutas van en Netlify
+Functions (Node.js sobre AWS Lambda, UTC por defecto). `proxy.ts` va en una Edge Function. La
+salvaguarda de zona horaria de `instrumentation.ts` solo actúa en el runtime Node.js, a propósito.
+
+**`TZ=Europe/Madrid`:** se define como variable de entorno en la interfaz de Netlify, aplicada a todos
+los ámbitos (que es el comportamiento por defecto; limitar ámbitos es una función de Pro). AWS Lambda no
+reserva `TZ` y Netlify tampoco la lista como reservada. Aun así hay informes en el foro de que no tuvo
+efecto, y la documentación de Netlify no menciona `instrumentation.ts`. Se verifica en el primer
+despliegue (ver `deferred.md`).

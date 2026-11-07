@@ -1,6 +1,7 @@
 import type { UUID } from '../../../../shared/types'
 import type { Especie, Sexo } from '../../../shared/domain/types'
 import { createServerClient } from '../../../../shared/db'
+import { sexoRequeridoParaTipo } from '../../domain/rules'
 
 // Proyección mínima para poblar un Select de catálogo.
 export interface TipoProductivoOption {
@@ -23,8 +24,11 @@ export async function listarTiposProductivos(especie: Especie): Promise<TipoProd
 }
 
 // Devuelve los tipos productivos disponibles como destino de un cambio de tipo.
-// Excluye 'Cría' (nunca es destino válido de un cambio manual) y aplica
-// restricciones de sexo: hembras no pueden ser Semental, machos no pueden ser Reproductora.
+// Excluye 'Cría' y 'Recría' (nunca son destino de un cambio manual: las asignan el parto
+// y el destete) y los tipos cuyo sexo requerido no coincide con el del animal
+// (hembra ≠ Semental/Verraco, macho ≠ Reproductora).
+// Con sexo NULL los tipos ligados al sexo SÍ se devuelven: el drawer los bloquea al
+// seleccionarlos y explica que hay que identificar el sexo primero.
 // Se filtra en memoria: tipo_productivo es un catálogo pequeño (~5 filas).
 export async function getTiposProductivosDisponibles(
   especie: Especie,
@@ -39,9 +43,9 @@ export async function getTiposProductivosDisponibles(
     .order('nombre')
   if (error) throw error
 
-  const excluidos = new Set<string>(['Cría'])
-  if (sexo === 'hembra') excluidos.add('Semental')
-  if (sexo === 'macho')  excluidos.add('Reproductora')
-
-  return (data as TipoProductivoOption[]).filter(t => !excluidos.has(t.nombre))
+  return (data as TipoProductivoOption[]).filter(t => {
+    if (t.nombre === 'Cría' || t.nombre === 'Recría') return false
+    const requerido = sexoRequeridoParaTipo(t.nombre)
+    return !requerido || sexo === null || requerido === sexo
+  })
 }

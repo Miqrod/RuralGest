@@ -48,6 +48,7 @@ Si algún eval falla, el commit se cancela hasta que se corrija el problema.
 | `compra-animal.eval.ts` | `ganadero/animales` | Fecha de nacimiento obligatoria al comprar + traducción correcta de campos al RPC |
 | `salida-animal.eval.ts` | `ganadero/animales` | Solo animales vivos pueden salir + DESTETE implícito cierre_por_cria/cierre_por_salida + CAMBIO_UBICACION en salida + descripción (Alta)/(Baja) |
 | `parto.eval.ts` | `ganadero/reproductivo` | Elegibilidad para parto + coherencia numérica nacidos=vivos+muertos + ciclo con resultado fijado + herencia de ubicación en crías + nuevo ciclo VACÍA tras desenlace |
+| `cambio-tipo-productivo.eval.ts` | `ganadero/animales` + `ganadero/reproductivo` | Transiciones de tipo (Cría no admite cambios manuales, Recría nunca es destino, reactivación permitida, coherencia sexo↔tipo, bloqueo con sexo sin identificar) + tipo de entrada en compra (Recría sí, Cría no) + mensaje del drawer (bloqueo gestante / aviso cubierta-vacía) + entrada sintética de cierre en el carrusel (salida / cierre_manual legado). Lo que solo existe en SQL lo cubre `scripts/verify-cambiar-tipo.sql` |
 | `identificacion-animal.eval.ts` | `ganadero/animales` | Coherencia is_reproductora↔estado_reproductivo + criterios de identificación (crotal, sexo) |
 | `confirmacion-gestacion.eval.ts` | `ganadero/reproductivo` | Transiciones, elegibilidad, decisión de ciclo y proyección de fecha de parto para CONFIRMACION_GESTACION |
 | `transiciones-reproductivas.eval.ts` | `ganadero/reproductivo` | Todos los eventos (CUBRICION, PARTO, DESTETE, ABORTO): transiciones válidas e inválidas, evalCycleRules, buildSnapshot |
@@ -56,7 +57,7 @@ Si algún eval falla, el commit se cancela hasta que se corrija el problema.
 | `transacciones.eval.ts` | `financiero/transacciones` | Coherencia origen↔referencia (prevision→venta_id, factura→factura_id) + importe no negativo |
 | `eventos-ganadero.eval.ts` | `ganadero/eventos` | Inmutabilidad de eventos + tipo activo + motivo requerido cuando corresponde |
 | `lotes.eval.ts` | `ganadero/lotes` | Stock no negativo + solo lotes activos participan en movimientos |
-| `instalaciones.eval.ts` | `ganadero/instalaciones` | Mappers de lectura (historial, listado, animal en instalación) y escritura (crear, actualizar, reubicación RPC) |
+| `instalaciones.eval.ts` | `ganadero/instalaciones` | Mappers de lectura (historial, listado, animal en instalación) y escritura (crear, actualizar, reubicación RPC) + validación "fecha no futura" con el día local (regresión del toISOString/UTC, forzando TZ=Europe/Madrid) |
 
 **Resumen de cobertura**: 184 tests activos, todos pasan.
 

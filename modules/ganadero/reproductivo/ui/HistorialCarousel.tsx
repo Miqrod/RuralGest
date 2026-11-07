@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { formatFecha } from '@/lib/format'
 import type { CicloHistorial, EventoHistorial, CriaResumen, CriaDesteteResumen } from '../application/queries/getHistorialReproductivo'
 import type { ResultadoCiclo, EstadoVital } from '../../shared/domain/types'
+import { tipoEntradaSinteticaCierre } from '../domain/rules'
 import type { ISODate } from '@/modules/shared/types'
 import { DrawerIdentificacion } from '@/modules/ganadero/animales/ui/identificacion/DrawerIdentificacion'
 import { ConfirmMachorraModal } from './ConfirmMachorraModal'
@@ -238,17 +239,14 @@ function buildEntradasOrdenadas(
   const entradas: EntradaCiclo[] = agruparDestetes(ciclo.eventos)
     .map(ev => ({ tipo: 'real' as const, evento: ev }))
 
-  // Ciclo cerrado por salida del animal: fecha_fin existe pero resultado es NULL.
-  // Se inyecta una entrada de timeline en lugar de badge de resultado.
-  if (ciclo.fecha_fin && !ciclo.resultado && estadoVital !== 'vivo') {
-    entradas.push({ tipo: 'salida' as const, fecha: ciclo.fecha_fin, motivo: estadoVital as 'vendido' | 'muerto' })
-  } else {
-    // Entrada sintética de cierre_manual solo para ciclos sin evento CAMBIO_TIPO_PRODUCTIVO.
-    // Los ciclos nuevos tienen el evento real ligado al ciclo y no necesitan entrada sintética.
-    const tieneEventoCambioTipo = ciclo.eventos.some(e => e.codigo === 'CAMBIO_TIPO_PRODUCTIVO')
-    if (ciclo.resultado === 'cierre_manual' && ciclo.fecha_fin && !tieneEventoCambioTipo) {
-      entradas.push({ tipo: 'cierre_manual' as const, fecha: ciclo.fecha_fin })
-    }
+  // Qué entrada sintética de cierre corresponde (salida / cierre_manual legado / ninguna).
+  // La regla vive en el dominio para poder cubrirla con evals.
+  const sintetica = tipoEntradaSinteticaCierre(ciclo, estadoVital)
+  if (sintetica === 'salida') {
+    // Se inyecta una entrada de timeline en lugar de badge de resultado.
+    entradas.push({ tipo: 'salida' as const, fecha: ciclo.fecha_fin!, motivo: estadoVital as 'vendido' | 'muerto' })
+  } else if (sintetica === 'cierre_manual') {
+    entradas.push({ tipo: 'cierre_manual' as const, fecha: ciclo.fecha_fin! })
   }
 
   // Ordenar cronológicamente solo si hay entradas sintéticas

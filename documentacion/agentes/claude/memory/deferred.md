@@ -262,6 +262,101 @@ sin un segundo caso de uso real que lo justifique.
 
 Cuando: cuando el usuario lo solicite.
 
+## FECHA SELECCIONABLE EN CAMBIO DE TIPO PRODUCTIVO
+
+Decisión vigente (usuario, 2026-11-06): **no se permite elegir la fecha**. El cambio de tipo
+productivo se registra con la fecha del momento en que se aplica (`cambiar_tipo_productivo` no
+recibe `p_fecha`). Se considera una decisión de gestión que se registra al tomarla. Lo mismo
+aplica hoy a `registrar_machorra`.
+
+Efecto aceptado: si el ganadero registra el cambio días después de decidirlo, el evento
+`CAMBIO_TIPO_PRODUCTIVO`, el `fecha_fin` del ciclo cerrado (`cierre_manual`) y el `fecha_inicio`
+del ciclo nuevo quedan con la fecha del registro, no con la de la decisión.
+
+Si se reabre, habrá que definir antes:
+- Al cerrar ciclo: fecha ≥ último evento reproductivo del ciclo (como Aborto).
+- Al abrir ciclo: fecha ≥ `fecha_fin` del ciclo anterior.
+- Si se permite una fecha anterior a `animal.fecha_entrada`.
+- Si Machorra adopta el mismo criterio, para mantener la coherencia entre ambos flujos.
+
+Independiente del problema de zona horaria (`CURRENT_DATE` en UTC), que es un bug y no una decisión.
+
+Cuándo: si en la práctica se detectan cambios de tipo registrados con retraso.
+
+## DESPLIEGUE — ZONA HORARIA DEL SERVIDOR NEXT.JS (`TZ=Europe/Madrid`)
+
+La BD ya trabaja en `Europe/Madrid` (migration `20261106000000`), pero el servidor Node también
+calcula "hoy" con `new Date()` en unos 10 sitios. Entre ellos:
+- `getRevisionReproductiva`: días en ciclo.
+- `getOffspringFollowUp`, `getCurrentReproductiveSituation`, `domain/periodo.ts`: periodos de analítica.
+- `ReproductiveProjection`: días hasta el parto.
+- `SeccionOrigen`, `vacuno/animales/[id]/page.tsx:68`: edad y fechas de la ficha.
+- `registrarMachorra`, `registrarReubicacionAnimales`: "hoy" para validar (ya usan fecha local, no `toISOString()`).
+
+Las plataformas de despliegue suelen correr en UTC. Sin `TZ`, entre la medianoche de Madrid y la
+UTC el servidor calcularía el día anterior. No se guardan datos erróneos: las fechas persistidas las
+calcula la BD o el navegador. El efecto son cálculos y validaciones de servidor desfasados un día en
+esa franja.
+
+**Salvaguarda ya implementada (2026-11-06): `instrumentation.ts`.** En producción y runtime
+Node.js, si la zona del servidor no es `Europe/Madrid`, `register()` lanza un error. Verificado con
+`next build` + `next start`:
+- `TZ=UTC` → el proceso sigue vivo, pero **todas las peticiones devuelven HTTP 500** y el log
+  muestra "Zona horaria del servidor: "UTC". Debe ser "Europe/Madrid". Define la variable de
+  entorno TZ=Europe/Madrid en el despliegue."
+- `TZ=Europe/Madrid` → HTTP 200.
+- `next build` en UTC funciona: la comprobación solo actúa en tiempo de ejecución.
+El olvido no puede pasar desapercibido. Corregirlo después es definir `TZ` y redesplegar, sin
+reparar datos.
+
+**Plataforma decidida: Netlify** (ver `decisions.md` → "Despliegue — Netlify como plataforma").
+
+Pasos para el primer despliegue en Netlify, en este orden:
+1. **Comprobar que la salvaguarda se ejecuta en Netlify.** Desplegar una vista previa (no producción)
+   **sin** definir `TZ`. Resultado esperado: HTTP 500 y en el log de la función el mensaje
+   "Zona horaria del servidor: "UTC". Debe ser "Europe/Madrid"…".
+   - Si responde 200, el adaptador de Netlify no ejecuta `instrumentation.ts` y la salvaguarda no
+     protege. Pasar al plan B.
+2. **Definir `TZ=Europe/Madrid`** en Netlify (Site configuration → Environment variables, todos los
+   ámbitos) y volver a desplegar la vista previa. Resultado esperado: HTTP 200.
+   - Si sigue dando 500 con "UTC", `TZ` no llega a las funciones. Pasar al plan B.
+3. Comprobar la BD de destino: `SHOW timezone` en Supabase Cloud debe devolver `Europe/Madrid`
+   (lo fija la migration `20261106000000` al aplicarse con `supabase db push`).
+4. Solo entonces, primer despliegue a producción, desde la rama dedicada (ver `decisions.md`).
+
+**Plan B** (si falla el paso 1 o el 2): no depender de la zona del servidor. Crear una función
+`hoyExplotacion()` que calcule la fecha con `Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' })`,
+usarla en los ~10 sitios anteriores y retirar la comprobación de `instrumentation.ts` (o dejarla solo como
+aviso). Hay una alternativa rápida, pero menos explícita: asignar `process.env.TZ = 'Europe/Madrid'` al
+principio de `register()`, ya que Node aplica el cambio en caliente. Solo sirve si el paso 1 confirma que
+`register()` se ejecuta.
+
+**Opcional:** `scripts/predeploy-check.sh` enganchado a `prebuild` para comprobar las variables
+obligatorias, `evals` y `tsc` antes de cada compilación. No sustituye a los pasos 1–2: la compilación de
+Netlify corre en otro entorno que las funciones.
+
+Cuándo: al preparar el primer despliegue.
+
+## ORDEN DEL HISTORIAL EN LA HORA REPETIDA DEL CAMBIO DE HORARIO
+
+`listarEventosDeAnimal.ts:178` y `animales/infrastructure/repository.ts:63` desempatan por
+`created_at` con `localeCompare` (comparación de texto). Desde la migration `20261106000000`,
+PostgREST devuelve `created_at` como `timestamptz` en hora de Madrid con su desfase
+(`…+01:00` / `…+02:00`).
+
+Efecto: si dos eventos con la misma `fecha` se crean dentro de la hora que se repite al pasar a
+horario de invierno (último domingo de octubre, 02:00–03:00), el texto `02:15+01:00` se ordena
+antes que `02:30+02:00` aunque sea posterior. Se considera aceptable: requiere dos registros esa
+noche y en esa hora concreta.
+
+Por qué NO se cambió a `Date.parse`: trunca a milisegundos. El evento usa `now()` y el ciclo
+creado por el mismo RPC usa `clock_timestamp()`; pueden diferir en menos de 1 ms (medido: 6 ms en
+local). Al truncarse empatarían y el hito "Nuevo ciclo" podría quedar por debajo del evento que
+lo causa. `localeCompare` conserva los microsegundos.
+
+Cuándo: si se observa un orden incorrecto real. La solución sería comparar instantes con
+precisión de microsegundos (p.ej. ordenar en la query SQL en lugar de en TS).
+
 ## DISCARDED HOOKS
 
 Not needed: `useLocalStorage`, `usePrevious`, `useAsync`, `useMediaQuery`.
