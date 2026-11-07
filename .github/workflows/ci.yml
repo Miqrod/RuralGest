@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main, dev]
 
+# Dos jobs independientes y en paralelo:
+#   · test  → ¿funciona nuestro código? (tests + evals de dominio)
+#   · audit → ¿hay vulnerabilidades conocidas en las dependencias?
+# Antes la auditoría era un paso previo a los tests en el mismo job: cuando se
+# publicaba un aviso nuevo en un paquete externo, el job se detenía ahí y los tests
+# y evals no llegaban a ejecutarse (ocurrió entre 2026-09-30 y 2026-11-07).
+# Separados, un fallo de auditoría ya no oculta el estado del código.
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,11 +29,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Security audit
-        run: npm audit --audit-level=high
-
       - name: Run tests
         run: npm run test
 
       - name: Run evals
         run: npm run evals
+
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Security audit
+        run: npm audit --audit-level=high
