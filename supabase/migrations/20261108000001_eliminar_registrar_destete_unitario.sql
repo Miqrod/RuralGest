@@ -1,0 +1,20 @@
+-- =============================================================================
+-- Eliminar registrar_destete (destete de una sola cría)
+--
+-- Motivo (decisión 2026-11-08):
+--   Desde PRD013-fix (20260902205339) todo destete pasa por el RPC que acepta una
+--   o varias crías, hoy registrar_destete_crias. La UI lo usa también para una
+--   sola cría. registrar_destete quedó sin llamadores: ni la aplicación, ni otros
+--   RPCs (el destete implícito de registrar_salida_animal tiene su propia lógica),
+--   ni el seed.
+--
+--   Mantener las dos funciones obligaba a replicar cada cambio de reglas del
+--   destete en ambas, con el riesgo de actualizar solo una.
+--
+-- Sin pérdida de reglas: la versión vigente (20260830220931) valida exactamente
+-- lo mismo que registrar_destete_crias: cría existente, etapa Cría, viva, vínculo
+-- materno activo, fecha no futura y no anterior al nacimiento; mismo evento
+-- DESTETE con ciclo_id histórico, misma transición Cría → Recría y mismo cierre
+-- de ciclo con resultado IS NOT NULL.
+-- =============================================================================
+DROP FUNCTION registrar_destete(UUID, DATE, TEXT);

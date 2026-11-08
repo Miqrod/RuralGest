@@ -57,19 +57,7 @@ export interface RegistrarPartoResult {
   criasIds: UUID[]
 }
 
-export interface RegistrarDesteteInput {
-  cria_id:        UUID
-  fecha:          ISODate
-  observaciones?: string
-}
-
-export interface RegistrarDesteteResult {
-  eventoId:      UUID
-  // true cuando el ciclo quedó cerrado (última cría destetada) — la UI puede refrescar la madre
-  cicloCerrado:  boolean
-}
-
-// Destete atómico de múltiples crías en una única transacción Postgres.
+// Destete atómico de una o varias crías en una única transacción Postgres.
 // Si cualquier cría no es elegible, toda la operación hace rollback.
 export interface RegistrarDesteteCriasInput {
   cria_ids:       UUID[]   // mínimo 1 elemento

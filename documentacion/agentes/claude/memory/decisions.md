@@ -275,7 +275,7 @@ Permite distinguir en el censo cuántos animales son lactantes (Cría) y cuánto
 estrictamente en fase de recría post-destete (Recría). Son fases productivas distintas.
 
 **Transición automática en el destete:**
-El RPC `registrar_destete` (implementado en PRD010) actualiza `tipo_productivo_id` de cada cría
+El RPC de destete (`registrar_destete` en PRD010; hoy `registrar_destete_crias`) actualiza `tipo_productivo_id` de cada cría
 de 'Cría' → 'Recría' como parte de la misma transacción del evento.
 Esta es la única transición de tipo_productivo que el sistema realiza automáticamente.
 El resto de cambios de tipo_productivo son manuales (decisión del ganadero).
@@ -283,8 +283,8 @@ El resto de cambios de tipo_productivo son manuales (decisión del ganadero).
 **El catálogo 'Cría' existe para vacuno y porcino.**
 
 **Transiciones manuales (decisión del usuario, 2026-11-07; migration `20261107000000`):**
-- **Cría no admite cambios manuales.** Su único cambio (→ Recría) lo hace el destete (`registrar_destete`,
-  `registrar_destete_crias`, destete implícito en `registrar_salida_animal`). Toda Cría viva tiene madre y
+- **Cría no admite cambios manuales.** Su único cambio (→ Recría) lo hace el destete (`registrar_destete_crias`,
+  destete implícito en `registrar_salida_animal`). Toda Cría viva tiene madre y
   vínculo activo, así que siempre puede destetarse: ninguna queda atrapada.
 - **Recría nunca es destino de un cambio manual.** Es la fase de transición tras el destete, no un tipo
   "comodín". Una vez el animal pasa a Reproductora / Semental / Engorde, no vuelve.
@@ -307,7 +307,7 @@ El `rol` determina cómo se muestra el evento en la ficha de cada animal partici
 Este patrón se implementa en `EventosList`: la descripción del evento depende del `tipo_codigo` Y del `rol` del animal en ese evento. La query `listarEventosDeAnimal` selecciona `rol` de `evento_animales` para que la UI pueda hacer esta distinción.
 
 **DESTETE (implementado en PRD010):**
-El RPC `registrar_destete` inserta en `evento_animales`:
+El RPC de destete (hoy `registrar_destete_crias`) inserta en `evento_animales`:
 - La madre con `rol = 'madre'`
 - Cada cría destetada con `rol = 'cria'`
 
@@ -753,3 +753,16 @@ Destetar varias crías a la vez no es destetar un lote: son crías elegidas una 
 llevaría a confundir ambos conceptos justo cuando se diseñen los lotes.
 
 **Cómo aplicar:** "lote" solo aparece en nombres que operen realmente sobre la entidad `lote`.
+
+## Destete — eliminado el RPC de una sola cría `registrar_destete` (2026-11-08)
+
+**Decisión (usuario):** se elimina `registrar_destete` (migration `20261108000001`). Todo destete,
+de una o varias crías, pasa por `registrar_destete_crias`.
+
+**Por qué:** desde PRD013-fix no lo llamaba nadie. Las validaciones y efectos son los mismos que los de
+`registrar_destete_crias`, así que no se pierde ninguna regla. Mantener las dos funciones obligaba a
+replicar cada cambio y abría la puerta a que divergieran.
+
+**Cómo aplicar:** las decisiones de PRD010 y PRD013 que mencionan `registrar_destete` (un evento por cría,
+validación temporal, cierre con `resultado IS NOT NULL`) siguen vigentes; hoy las implementa
+`registrar_destete_crias`. Patrón general en patterns.md, «RPC atómico para operaciones sobre varias entidades».

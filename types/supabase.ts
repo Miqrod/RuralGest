@@ -1288,10 +1288,6 @@ export type Database = {
         }
         Returns: string
       }
-      registrar_destete: {
-        Args: { p_cria_id: string; p_fecha: string; p_observaciones?: string }
-        Returns: Json
-      }
       registrar_destete_crias: {
         Args: {
           p_cria_ids: string[]

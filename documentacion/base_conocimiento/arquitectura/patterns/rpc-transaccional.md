@@ -289,7 +289,7 @@ Aplica a cualquier operación que combine evento + entidad + snapshot:
 - Salida por venta o muerte (`registrar_salida_animal`) 
 - Parto (`registrar_parto_animal`) 
 - Cubrición (`registrar_cubricion`) 
-- Destete (`registrar_destete`) 
+- Destete (`registrar_destete_crias`) 
 - Evento sanitario (`registrar_evento_sanitario`) 
 
 ---

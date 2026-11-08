@@ -363,7 +363,7 @@ const { data, error } = await supabase.rpc('registrar_<evento>_<objetos>', { p_<
 **Reglas:**
 - Los efectos secundarios que dependen del estado post-loop (ej: comprobar si quedan vínculos activos) se evalúan DESPUÉS del `FOREACH`, no dentro.
 - Nombre: `registrar_<evento>_<objeto en plural>` (ej. `registrar_destete_crias`, `registrar_reubicacion_animales`), nunca con "lote": ese término está reservado para la entidad `lote` (ver decisions.md, «Nomenclatura de operaciones sobre uno o varios animales»). Los tipos TS siguen el mismo nombre (`RegistrarDesteteCriasInput`).
-- Mantener la función individual para operaciones de una sola entidad; la operación sobre varias es una adición, no un reemplazo.
+- Si la operación sobre varias acepta también una sola entidad, NO se mantiene una función individual paralela: duplicaría las reglas y tarde o temprano divergirían (ej. `registrar_destete`, eliminado en `20261108000001`).
 
 Los campos opcionales del RPC usan `undefined` (no `null`) según la convención del tipo generado.
 

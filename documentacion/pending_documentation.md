@@ -826,9 +826,9 @@ Cada test genera UUIDs únicos, inserta datos mínimos necesarios y ejecuta `cle
 ### Escenarios prioritarios a cubrir
 
 1. `registrar_parto` → crías creadas con `estado_vinculo_materno = 'activo'`
-2. `registrar_destete` cría 1 de 2 → ciclo de parto sigue abierto (`fecha_fin IS NULL`)
-3. `registrar_destete` última cría → ciclo de parto se cierra (`fecha_fin = fecha del destete`); el `estado_reproductivo` de la madre no cambia (ya es `VACÍA` desde el parto, o el que tenga en su ciclo actual)
-4. `registrar_destete` de cría ya destetada → RPC lanza error
+2. `registrar_destete_crias` con 1 de 2 crías → ciclo de parto sigue abierto (`fecha_fin IS NULL`)
+3. `registrar_destete_crias` con la última cría → ciclo de parto se cierra (`fecha_fin = fecha del destete`); el `estado_reproductivo` de la madre no cambia (ya es `VACÍA` desde el parto, o el que tenga en su ciclo actual)
+4. `registrar_destete_crias` con una cría ya destetada → RPC lanza error
 5. `registrar_salida_animal` (muerte) de cría con vínculo activo → vínculo finaliza, ciclo se evalúa
 
 ### Esfuerzo estimado
@@ -1136,7 +1136,7 @@ Los RPCs `registrar_parto`, `registrar_aborto` y `registrar_machorra` añaden un
 
 **Razón:** el `resultado` de un ciclo es un hecho histórico inmutable. Una vez que un ciclo tiene parto, aborto o machorra, no puede sobrescribirse aunque el ciclo siga con `fecha_fin IS NULL`. Esto protege contra doble ejecución y condiciones de carrera.
 
-Complementariamente, `registrar_destete` usa `AND resultado IS NOT NULL` para el cierre de ciclo: solo cierra ciclos que ya tienen un resultado reproductivo fijado por `registrar_parto`. Evita cerrar accidentalmente ciclos en curso.
+Complementariamente, el destete (hoy `registrar_destete_crias`) usa `AND resultado IS NOT NULL` para el cierre de ciclo: solo cierra ciclos que ya tienen un resultado reproductivo fijado por `registrar_parto`. Evita cerrar accidentalmente ciclos en curso.
 
 ### 3. Eliminación de alias de compatibilidad `EventoDeAnimal`
 
