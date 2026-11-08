@@ -23,7 +23,10 @@ echo ""
 echo "Migrations que definen '$FUNCION' (orden cronológico):"
 echo "────────────────────────────────────────────────────────"
 
-RESULTADOS=$(grep -rn "CREATE OR REPLACE FUNCTION ${FUNCION}" "$MIGRATIONS_DIR" 2>/dev/null | sort)
+# El nombre debe ir seguido de "(" (con espacios opcionales): sin esta frontera,
+# buscar "registrar_destete" coincidía también con "registrar_destete_crias" y el
+# script señalaba como base la migration de OTRA función.
+RESULTADOS=$(grep -rnE "CREATE OR REPLACE FUNCTION ${FUNCION}[[:space:]]*\(" "$MIGRATIONS_DIR" 2>/dev/null | sort || true)
 
 if [[ -z "$RESULTADOS" ]]; then
   echo "  (ninguna — función nueva)"
