@@ -333,21 +333,21 @@ export function mapCompraInputToRpcArgs(input: RegistrarCompraAnimalInput) {
 export type CompraRpcArgs = { p_especie: string; p_crotal: string | null; ... }
 ```
 
-## RPC lote para operaciones multi-entidad atómicas
+## RPC atómico para operaciones sobre varias entidades
 
 Cuando una acción del usuario afecta a N entidades del mismo tipo (ej: destetar varias crías a la vez), la atomicidad debe garantizarse en Postgres, no en el caller.
 
 **Patrón:**
 ```sql
--- RPC lote: una transacción para todo el array
-CREATE OR REPLACE FUNCTION registrar_x_lote(p_ids UUID[], ...) RETURNS JSONB AS $$
+-- Un único RPC: una transacción para todo el array
+CREATE OR REPLACE FUNCTION registrar_<evento>_<objetos>(p_<objeto>_ids UUID[], ...) RETURNS JSONB AS $$
 DECLARE v_id UUID;
 BEGIN
-  FOREACH v_id IN ARRAY p_ids LOOP
+  FOREACH v_id IN ARRAY p_<objeto>_ids LOOP
     -- validar y procesar cada entidad
   END LOOP;
   -- efectos secundarios post-bucle (ej: cierre de ciclo)
-  RETURN jsonb_build_object('procesados', p_ids);
+  RETURN jsonb_build_object('procesados', p_<objeto>_ids);
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
@@ -357,13 +357,13 @@ for (const id of input.ids) {
   const blockers = getDomainBlockers(await getEntityById(id))
   if (blockers.length) throw new Error(...)
 }
-const { data, error } = await supabase.rpc('registrar_x_lote', { p_ids: input.ids })
+const { data, error } = await supabase.rpc('registrar_<evento>_<objetos>', { p_<objeto>_ids: input.ids })
 ```
 
 **Reglas:**
 - Los efectos secundarios que dependen del estado post-loop (ej: comprobar si quedan vínculos activos) se evalúan DESPUÉS del `FOREACH`, no dentro.
-- Los tipos de dominio para `Input` y `Result` del lote son independientes de los de la unidad individual (`RegistrarXInput` vs `RegistrarXLoteInput`).
-- Mantener la función individual para operaciones de una sola entidad; el lote es una adición, no un reemplazo.
+- Nombre: `registrar_<evento>_<objeto en plural>` (ej. `registrar_destete_crias`, `registrar_reubicacion_animales`), nunca con "lote": ese término está reservado para la entidad `lote` (ver decisions.md, «Nomenclatura de operaciones sobre uno o varios animales»). Los tipos TS siguen el mismo nombre (`RegistrarDesteteCriasInput`).
+- Mantener la función individual para operaciones de una sola entidad; la operación sobre varias es una adición, no un reemplazo.
 
 Los campos opcionales del RPC usan `undefined` (no `null`) según la convención del tipo generado.
 

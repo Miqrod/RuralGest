@@ -255,12 +255,12 @@ ya han quedado persistidas sin rollback.
 **Causa:** operar a nivel de "unidad individual" cuando la acción del usuario es semánticamente
 atómica sobre un grupo.
 
-**Solución:** RPC lote en Postgres que envuelve todas las N operaciones en una única transacción.
+**Solución:** un único RPC en Postgres que recibe el array de ids y envuelve todas las N operaciones en una única transacción.
 El caller pasa el array completo; si alguna falla, Postgres hace rollback de todo.
 
 **Ejemplo concreto (PRD013-fix):**
 - ❌ `for (const criaId of criaIds) await supabase.rpc('registrar_destete', { p_cria_id })`
-- ✅ `await supabase.rpc('registrar_destete_lote', { p_cria_ids: criaIds })`
+- ✅ `await supabase.rpc('registrar_destete_crias', { p_cria_ids: criaIds })`
 
 **Regla:** cuando el usuario realiza una acción sobre N elementos del mismo tipo en una misma
 pantalla, la atomicidad debe garantizarse en la capa de base de datos, no en la de aplicación.

@@ -7,11 +7,11 @@ import { registrarCubricion } from '@/modules/ganadero/reproductivo/application/
 import { confirmarGestacion } from '@/modules/ganadero/reproductivo/application/actions/confirmarGestacion'
 import { identificarAnimal } from '@/modules/ganadero/animales/application/identificarAnimal'
 import { registrarParto } from '@/modules/ganadero/reproductivo/application/actions/registrarParto'
-import { registrarDesteteLote } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
+import { registrarDesteteCrias } from '@/modules/ganadero/reproductivo/application/actions/registrarDestete'
 import { registrarAborto } from '@/modules/ganadero/reproductivo/application/actions/registrarAborto'
 import { registrarMachorra } from '@/modules/ganadero/reproductivo/application/actions/registrarMachorra'
 import { cambiarTipoProductivo } from '@/modules/ganadero/animales/application/actions/cambiarTipoProductivo'
-import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteLoteResult } from '@/modules/ganadero/reproductivo/domain/types'
+import type { TipoCubricion, RegistrarPartoInput, RegistrarPartoResult, RegistrarDesteteCriasResult } from '@/modules/ganadero/reproductivo/domain/types'
 import type { AnimalIdentificationStatus } from '@/modules/ganadero/animales/domain/IdentificationRules'
 
 // Extrae el mensaje de error tanto de Error nativo como de PostgrestError (Supabase),
@@ -104,20 +104,20 @@ export async function submitRegistrarParto(
   }
 }
 
-export async function submitRegistrarDesteteLote(
+export async function submitRegistrarDesteteCrias(
   criaIds: string[],
   madreId: string,
   fecha: string,
   observaciones?: string,
-): Promise<{ result: RegistrarDesteteLoteResult } | { error: string }> {
+): Promise<{ result: RegistrarDesteteCriasResult } | { error: string }> {
   try {
-    const result = await registrarDesteteLote({ cria_ids: criaIds, fecha, observaciones })
+    const result = await registrarDesteteCrias({ cria_ids: criaIds, fecha, observaciones })
     // Revalidar todas las fichas afectadas: cada cría + la madre
     for (const criaId of criaIds) revalidatePath(`/vacuno/animales/${criaId}`)
     revalidatePath(`/vacuno/animales/${madreId}`)
     return { result }
   } catch (err) {
-    console.error('[submitRegistrarDesteteLote]', err)
+    console.error('[submitRegistrarDesteteCrias]', err)
     return { error: extractMessage(err, 'Error al registrar el destete') }
   }
 }

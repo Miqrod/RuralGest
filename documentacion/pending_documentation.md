@@ -1161,9 +1161,9 @@ Ver sección "ReproductiveEngine — CANCELADO POR AHORA" en PRD009 (decisiones 
 
 El flujo anterior llamaba a `registrar_destete` una vez por cría desde el cliente (for loop en `FormDestete.tsx`). Si fallaba la N-ésima cría, las anteriores ya estaban committed y el sistema quedaba en estado parcial inconsistente.
 
-### Solución: `registrar_destete_lote`
+### Solución: `registrar_destete_crias`
 
-Nuevo RPC `registrar_destete_lote(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` que procesa el destete de múltiples crías en una **única transacción Postgres**. Si cualquier cría no es elegible, `RAISE EXCEPTION` y Postgres hace rollback automático de toda la operación.
+Nuevo RPC `registrar_destete_crias(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` (originalmente `registrar_destete_lote`; renombrado el 2026-11-08 en la migration `20261108000000` porque no opera sobre lotes) que procesa el destete de una o varias crías en una **única transacción Postgres**. Si cualquier cría no es elegible, `RAISE EXCEPTION` y Postgres hace rollback automático de toda la operación.
 
 ### Invariante crítico de dominio: ciclo_id histórico
 
@@ -1171,9 +1171,9 @@ El `ciclo_id` de cada evento DESTETE es el **histórico de la cría** — obteni
 
 Esto significa que el destete NO pertenece al ciclo reproductivo activo de la madre. Pertenece al ciclo del parto que originó a cada cría. Ambos ciclos pueden coexistir con `fecha_fin IS NULL` simultáneamente: es correcto y esperado.
 
-### Cierre de ciclo al final del lote
+### Cierre de ciclo al final de la operación
 
-La evaluación de cierre de ciclo (¿quedan vínculos activos?) se hace **después de procesar todas las crías** del lote, no tras cada una individualmente. Esto garantiza que si se destetan 2 crías del mismo ciclo, la cuenta de activos sea correcta antes de decidir si cerrar.
+La evaluación de cierre de ciclo (¿quedan vínculos activos?) se hace **después de procesar todas las crías** de la operación, no tras cada una individualmente. Esto garantiza que si se destetan 2 crías del mismo ciclo, la cuenta de activos sea correcta antes de decidir si cerrar.
 
 Solo cierra ciclos con `AND resultado IS NOT NULL AND fecha_fin IS NULL`: el ciclo de parto debe tener ya su resultado fijado por `registrar_parto` antes de que el destete pueda cerrarlo.
 
@@ -1182,12 +1182,12 @@ Solo cierra ciclos con `AND resultado IS NOT NULL AND fecha_fin IS NULL`: el cic
 | Capa | Antes | Después |
 |---|---|---|
 | `FormDestete.tsx` | `for` loop, N llamadas al Server Action | Una sola llamada con array de IDs |
-| `registrarDesteteLote` (action) | — | Pre-valida cada cría en TS, una sola llamada `supabase.rpc` |
-| `registrar_destete_lote` (RPC) | — | FOREACH interno, transacción única |
+| `registrarDesteteCrias` (action) | — | Pre-valida cada cría en TS, una sola llamada `supabase.rpc` |
+| `registrar_destete_crias` (RPC) | — | FOREACH interno, transacción única |
 
 ### Documentación permanente prevista
 
-- `documentacion/flujos/reproductivos/destete.md` — añadir sección de destete en lote, invariante del ciclo_id histórico, cierre al final del lote
+- `documentacion/flujos/reproductivos/destete.md` — añadir sección de destete de varias crías, invariante del ciclo_id histórico, cierre al final de la operación
 
 ---
 

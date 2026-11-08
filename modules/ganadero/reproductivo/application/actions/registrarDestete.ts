@@ -1,21 +1,21 @@
 import { getAnimalById } from '../../../animales/infrastructure/repository'
 import { getWeaningBlockers } from '../../domain/rules/ReproductiveEligibilityRules'
 import { createServerClient } from '../../../../shared/db'
-import type { RegistrarDesteteLoteInput, RegistrarDesteteLoteResult } from '../../domain/types'
+import type { RegistrarDesteteCriasInput, RegistrarDesteteCriasResult } from '../../domain/types'
 
 // Registra el destete de una o varias crías en una única transacción atómica.
 //
 // Pipeline:
 //   Contexto  → carga cada cría desde la DB
 //   Reglas    → getWeaningBlockers por cría (fail-fast antes de tocar la DB)
-//   RPC       → registrar_destete_lote ejecuta todo en una transacción Postgres
+//   RPC       → registrar_destete_crias ejecuta todo en una transacción Postgres
 //
 // Si cualquier cría no es elegible (pre-validación TS) o falla en el RPC,
 // ninguna queda aplicada. El cicloCerrado del resultado refleja si el ciclo
 // histórico de la(s) cría(s) quedó cerrado tras el destete.
-export async function registrarDesteteLote(
-  input: RegistrarDesteteLoteInput,
-): Promise<RegistrarDesteteLoteResult> {
+export async function registrarDesteteCrias(
+  input: RegistrarDesteteCriasInput,
+): Promise<RegistrarDesteteCriasResult> {
   // 1. Cargar todas las crías y aplicar reglas de elegibilidad antes de la DB
   for (const criaId of input.cria_ids) {
     const cria = await getAnimalById(criaId)
@@ -34,12 +34,12 @@ export async function registrarDesteteLote(
 
   // 2. Persistir: el RPC gestiona todo en una única transacción atómica
   const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('registrar_destete_lote', {
+  const { data, error } = await supabase.rpc('registrar_destete_crias', {
     p_cria_ids:      input.cria_ids,
     p_fecha:         input.fecha,
     p_observaciones: input.observaciones ?? undefined,
   })
   if (error) throw error
 
-  return data as unknown as RegistrarDesteteLoteResult
+  return data as unknown as RegistrarDesteteCriasResult
 }

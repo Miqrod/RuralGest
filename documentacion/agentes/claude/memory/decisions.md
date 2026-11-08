@@ -284,7 +284,7 @@ El resto de cambios de tipo_productivo son manuales (decisión del ganadero).
 
 **Transiciones manuales (decisión del usuario, 2026-11-07; migration `20261107000000`):**
 - **Cría no admite cambios manuales.** Su único cambio (→ Recría) lo hace el destete (`registrar_destete`,
-  `registrar_destete_lote`, destete implícito en `registrar_salida_animal`). Toda Cría viva tiene madre y
+  `registrar_destete_crias`, destete implícito en `registrar_salida_animal`). Toda Cría viva tiene madre y
   vínculo activo, así que siempre puede destetarse: ninguna queda atrapada.
 - **Recría nunca es destino de un cambio manual.** Es la fase de transición tras el destete, no un tipo
   "comodín". Una vez el animal pasa a Reproductora / Semental / Engorde, no vuelve.
@@ -564,11 +564,11 @@ Los RPCs `registrar_parto`, `registrar_compra_animal` y `registrar_salida_animal
 
 Esta cadena no es visible en la UI — el usuario no registra una reubicación explícita. Un desarrollador que añada un nuevo RPC de ciclo de vida debe incluir el `CAMBIO_UBICACION` correspondiente si el evento implica un movimiento físico.
 
-## PRD013-fix — Destete múltiple: atomicidad vía RPC lote
+## PRD013-fix — Destete de varias crías: atomicidad vía un único RPC
 
 **Problema:** el destete de N crías se implementaba como un `for` loop en el cliente que llamaba N veces al RPC `registrar_destete`. Si la cría K fallaba, las crías 1…K-1 ya habían quedado destetadas sin rollback posible.
 
-**Decisión:** nuevo RPC `registrar_destete_lote(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` que procesa todas las crías en una única transacción Postgres. Si cualquier cría falla, ninguna queda aplicada.
+**Decisión:** nuevo RPC `registrar_destete_crias(p_cria_ids UUID[], p_fecha DATE, p_observaciones TEXT)` (creado como `registrar_destete_lote`; renombrado el 2026-11-08, ver «Nomenclatura de operaciones sobre uno o varios animales») que procesa todas las crías en una única transacción Postgres. Si cualquier cría falla, ninguna queda aplicada.
 
 **Invariante crítico — ciclo_id histórico:**
 El evento DESTETE de cada cría se asocia al `ciclo_id` del ciclo en que nació (el de su parto), NO al ciclo reproductivo que pueda tener abierto la madre en ese momento.
@@ -576,9 +576,9 @@ Resolución: `parto_evento_id → eventos.ciclo_id` (el ciclo histórico del par
 Esta regla preserve la trazabilidad animal → evento → ciclo sin corrupción temporal.
 
 **Timing de cierre de ciclo:**
-La comprobación de si el ciclo queda sin vínculos activos se hace DESPUÉS de procesar todas las crías del lote. El cierre a mitad del bucle produciría counts incorrectos.
+La comprobación de si el ciclo queda sin vínculos activos se hace DESPUÉS de procesar todas las crías de la operación. El cierre a mitad del bucle produciría counts incorrectos.
 
-**Regla:** cualquier operación que afecte a N entidades de la misma familia en una sola acción del usuario debe ser un RPC lote, nunca N llamadas seriales desde la capa de aplicación.
+**Regla:** cualquier operación que afecte a N entidades de la misma familia en una sola acción del usuario debe ser un único RPC que reciba el array de ids, nunca N llamadas seriales desde la capa de aplicación.
 
 ## PRD analítica — Proyecciones analíticas: contratos de dominio, no entidades de BD
 
@@ -734,3 +734,22 @@ viera su banner de éxito. El aviso amarillo solo se muestra cuando está pendie
 
 **HTML:** en el widget, la fila es un `<button>` (abre el drawer) y el enlace a la madre es un elemento
 hermano, no anidado. Un enlace dentro de un botón no es HTML válido.
+
+## Nomenclatura de operaciones sobre uno o varios animales (2026-11-08)
+
+**Decisión (usuario):** las operaciones que el usuario aplica a uno o varios animales seleccionados
+individualmente se nombran `registrar_<evento>_<objeto en plural>`, con el array como `p_<objeto>_ids UUID[]`:
+
+- `registrar_reubicacion_animales(p_animal_ids, ...)`
+- `registrar_machorra_animales(p_animal_ids)`
+- `registrar_destete_crias(p_cria_ids, ...)` — antes `registrar_destete_lote` (migration `20261108000000`)
+
+En TS se sigue el mismo patrón: `registrarDesteteCrias`, `RegistrarDesteteCriasInput/Result`.
+No se usan adjetivos como "lote", "múltiple" o "masivo": la misma operación sirve para uno o para varios.
+
+**Por qué:** **lote** es un concepto de dominio reservado para la agrupación productiva de animales
+(entidad `lote`, `tipo_lote_enum`). En vacuno todavía no existe y se definirá al trabajar con porcino.
+Destetar varias crías a la vez no es destetar un lote: son crías elegidas una a una. Un nombre con "lote"
+llevaría a confundir ambos conceptos justo cuando se diseñen los lotes.
+
+**Cómo aplicar:** "lote" solo aparece en nombres que operen realmente sobre la entidad `lote`.

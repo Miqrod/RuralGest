@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { submitRegistrarDesteteLote } from '@/app/(main)/vacuno/animales/[id]/actions'
+import { submitRegistrarDesteteCrias } from '@/app/(main)/vacuno/animales/[id]/actions'
 import { formatFecha } from '@/lib/format'
 import type { CriaParaDesteteItem } from '../application/queries/getCriasParaDestete'
 
@@ -85,9 +85,9 @@ export function FormDestete({
     if (!pendingValues) return
     setIsSubmitting(true)
 
-    // Una única llamada al Server Action: el RPC registrar_destete_lote garantiza
+    // Una única llamada al Server Action: el RPC registrar_destete_crias garantiza
     // atomicidad total. Si alguna cría no es elegible, ninguna queda aplicada.
-    const res = await submitRegistrarDesteteLote(
+    const res = await submitRegistrarDesteteCrias(
       pendingValues.criaIds,
       madreId,
       pendingValues.fecha,

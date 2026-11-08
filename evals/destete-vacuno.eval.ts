@@ -113,13 +113,13 @@ describe('EVAL: Destete — getWeaningBlockers', () => {
 // Cuando se finaliza el último vínculo de un ciclo con resultado='parto',
 // el RPC actualiza fecha_fin de ese ciclo (historia paralela, no reproductiva).
 
-// ── Comportamiento en lote (pre-validación de la action) ──────────────────────
+// ── Destete de varias crías (pre-validación de la action) ─────────────────────
 //
-// registrarDesteteLote aplica getWeaningBlockers a cada cría ANTES de llamar al RPC.
+// registrarDesteteCrias aplica getWeaningBlockers a cada cría ANTES de llamar al RPC.
 // Si alguna falla, lanza error y ninguna llega al RPC (fail-fast).
-// La atomicidad entre crías elegibles la garantiza el RPC registrar_destete_lote.
+// La atomicidad entre crías elegibles la garantiza el RPC registrar_destete_crias.
 
-describe('EVAL: Destete en lote — pre-validación de la action', () => {
+describe('EVAL: Destete de varias crías — pre-validación de la action', () => {
 
   const CRIA_2: CriaParaDestete = {
     tipo_productivo_nombre: 'Cría',
@@ -128,35 +128,35 @@ describe('EVAL: Destete en lote — pre-validación de la action', () => {
     madre_id:               'uuid-madre',
   }
 
-  it('lote de 2 crías válidas: ninguna tiene bloqueadores', () => {
-    const lote = [CRIA_ELEGIBLE, CRIA_2]
-    const todosElegibles = lote.every(c => canWean(c))
+  it('2 crías válidas: ninguna tiene bloqueadores', () => {
+    const crias = [CRIA_ELEGIBLE, CRIA_2]
+    const todosElegibles = crias.every(c => canWean(c))
     expect(todosElegibles).toBe(true)
   })
 
-  it('lote mixto (1ª válida, 2ª ya destetada): la 2ª bloquea el lote completo', () => {
-    const lote: CriaParaDestete[] = [
+  it('selección mixta (1ª válida, 2ª ya destetada): la 2ª bloquea la operación completa', () => {
+    const crias: CriaParaDestete[] = [
       CRIA_ELEGIBLE,
       { ...CRIA_2, tipo_productivo_nombre: 'Recría', estado_vinculo_materno: 'finalizado' },
     ]
     // La action itera en orden; el primer bloqueador que encuentre detiene la operación
-    const primerError = lote.flatMap(c => getWeaningBlockers(c))[0]
+    const primerError = crias.flatMap(c => getWeaningBlockers(c))[0]
     expect(primerError).toBeDefined()
     expect(primerError).toMatch(/ya haya sido destetado/)
   })
 
-  it('lote mixto (1ª muerta, 2ª válida): la 1ª bloquea antes de llegar a la 2ª', () => {
-    const lote: CriaParaDestete[] = [
+  it('selección mixta (1ª muerta, 2ª válida): la 1ª bloquea antes de llegar a la 2ª', () => {
+    const crias: CriaParaDestete[] = [
       { ...CRIA_ELEGIBLE, estado_vital: 'muerto' },
       CRIA_2,
     ]
-    const primerError = lote.flatMap(c => getWeaningBlockers(c))[0]
+    const primerError = crias.flatMap(c => getWeaningBlockers(c))[0]
     expect(primerError).toMatch(/muerto/)
   })
 
-  it('lote de 3 crías, todas válidas: cero bloqueadores en total', () => {
-    const lote: CriaParaDestete[] = [CRIA_ELEGIBLE, CRIA_2, { ...CRIA_2 }]
-    const bloqueadores = lote.flatMap(c => getWeaningBlockers(c))
+  it('3 crías, todas válidas: cero bloqueadores en total', () => {
+    const crias: CriaParaDestete[] = [CRIA_ELEGIBLE, CRIA_2, { ...CRIA_2 }]
+    const bloqueadores = crias.flatMap(c => getWeaningBlockers(c))
     expect(bloqueadores).toHaveLength(0)
   })
 
