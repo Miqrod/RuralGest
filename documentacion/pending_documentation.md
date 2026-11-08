@@ -29,35 +29,6 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 
 ---
 
-## ⚠️ Documentación permanente desactualizada — prioridad alta
-
-Los siguientes documentos contienen información que fue correcta al escribirse pero que quedó obsoleta tras el PRD-CORRECTIVO (eliminación de `LACTANTE` como estado reproductivo):
-
-> `modelo_reproductivo.md` y `flujos/reproductivos/parto.md` ya están corregidos (commit ac05c30): solo mencionan `LACTANTE` para afirmar que no es un estado del modelo.
-
-### `documentacion/base_conocimiento/dominios/reproductivo.md`
-
-- Sección "Estado actual del dominio" (línea 573): lista "estado reproductivo `LACTANTE`" como parte del dominio implementado. Debe eliminarse.
-
-### Origen del cambio
-
-El PRD-CORRECTIVO (previo a PRD011) redefinió el modelo:
-
-```text
-Modelo ANTIGUO (documentado, no implementado):
-  PARTO → madre = LACTANTE → ciclo abierto hasta destete
-
-Modelo REAL implementado (desde PRD-CORRECTIVO):
-  PARTO → ciclo actual resultado='parto' (abierto para destetes)
-         → madre = VACÍA (estado_reproductivo)
-         → nuevo ciclo VACÍA creado
-  LACTANTE eliminado de estado_reproductivo_enum (migration 20260817000000)
-```
-
-La lactación y los vínculos madre-cría son una **historia paralela de maternidad** que puede coexistir con ciclos reproductivos posteriores. No determinan el estado reproductivo de la madre.
-
----
-
 ## PRD008 - Corrección del flujo "Confirmación de Gestación sin Cubrición previa"
 
 ### Motivo de la decisión
@@ -131,8 +102,8 @@ Ambos pueden evolucionar hacia:
 ```text
 CUBIERTA
 → GESTANTE
-→ LACTANTE
-→ finalización del ciclo
+→ Parto (madre pasa a VACÍA y se abre un nuevo ciclo)
+→ cierre del ciclo de parto con el último destete
 ```
 
 La diferencia pertenece a la historia registrada, no a una arquitectura o ciclo alternativo.
@@ -855,8 +826,8 @@ Cada test genera UUIDs únicos, inserta datos mínimos necesarios y ejecuta `cle
 ### Escenarios prioritarios a cubrir
 
 1. `registrar_parto` → crías creadas con `estado_vinculo_materno = 'activo'`
-2. `registrar_destete` cría 1 de 2 → ciclo sigue abierto, madre sigue `lactante`
-3. `registrar_destete` última cría → ciclo se cierra, madre pasa a `vacía`
+2. `registrar_destete` cría 1 de 2 → ciclo de parto sigue abierto (`fecha_fin IS NULL`)
+3. `registrar_destete` última cría → ciclo de parto se cierra (`fecha_fin = fecha del destete`); el `estado_reproductivo` de la madre no cambia (ya es `VACÍA` desde el parto, o el que tenga en su ciclo actual)
 4. `registrar_destete` de cría ya destetada → RPC lanza error
 5. `registrar_salida_animal` (muerte) de cría con vínculo activo → vínculo finaliza, ciclo se evalúa
 

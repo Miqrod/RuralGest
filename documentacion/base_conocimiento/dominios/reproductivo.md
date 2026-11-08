@@ -570,7 +570,7 @@ Actualmente el dominio contempla:
 * Parto;
 * creación de las crías asociadas al Parto;
 * relación genealógica madre-cría mediante `madre_id`;
-* estado reproductivo `LACTANTE`;
+* paso de la madre a `VACÍA` tras el Parto, con apertura inmediata de un nuevo ciclo;
 * gestión de la dependencia funcional madre-cría mediante `estado_vinculo_materno`.
 
 Las funcionalidades implementadas reutilizan los componentes:
