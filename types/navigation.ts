@@ -12,7 +12,7 @@ export interface NavItem {
   // Muestra un título de sección encima de este ítem dentro de un acordeón
   sectionLabel?: string
   // Override del cálculo de active state. Si se omite, usa pathname.startsWith(href).
-  // Útil cuando un ítem comparte prefijo con un hermano (ej. /instalaciones vs /instalaciones/reubicaciones).
+  // Útil cuando un ítem comparte prefijo con un hermano (ej. /instalaciones vs /instalaciones/reubicar-animales).
   isActive?: (pathname: string) => boolean
 }
 

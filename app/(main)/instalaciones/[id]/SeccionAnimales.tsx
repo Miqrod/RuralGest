@@ -115,7 +115,7 @@ export function SeccionAnimales({ instalacion, animales, destinos }: Props) {
 
   function handleCancel() {
     // Resetea selección y vuelve al paso 1 sin cambiar de tab —
-    // igual que en /instalaciones/reubicaciones.
+    // igual que en /instalaciones/reubicar-animales.
     setFlowKey((k) => k + 1)
   }
 

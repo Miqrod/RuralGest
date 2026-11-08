@@ -81,7 +81,7 @@ export const NAV_ITEMS: NavItem[] = [
         icon: List,
         world: 'default',
         // Activo en lista (/instalaciones) y detalle (/instalaciones/[id]),
-        // pero NO en ítems hermanos como /instalaciones/reubicaciones.
+        // pero NO en ítems hermanos como /instalaciones/reubicar-animales.
         isActive: (p: string) =>
           p === '/instalaciones' ||
           (p.startsWith('/instalaciones/') && !p.startsWith('/instalaciones/reubicar-animales')),

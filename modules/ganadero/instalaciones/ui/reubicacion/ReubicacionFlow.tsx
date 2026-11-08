@@ -97,7 +97,7 @@ interface Props {
   // El módulo no importa de la capa app; la página pasa la acción como prop.
   submitReubicacion: (input: RegistrarReubicacionAnimalesInput) => Promise<{ error: string } | null>
   // Padding aplicado al wrapper del paso 2. Útil cuando el componente se monta
-  // flush contra un borde (ej. ficha de instalación). En /instalaciones/reubicaciones
+  // flush contra un borde (ej. ficha de instalación). En /instalaciones/reubicar-animales
   // el contenedor padre ya aporta el padding, así que se omite.
   classNamePaso2?: string
 }
