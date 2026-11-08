@@ -17,11 +17,11 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 | PRD | Estado | Documentación pendiente |
 |-----|--------|-------------------------|
 | PRD008 | ⏳ | Corrección del flujo de Confirmación de Gestación sin Cubrición previa |
-| PRD009 | ⏳ | Parto, crías, identificación, genealogía, historial reproductivo — **⚠️ parto.md tiene 16 referencias a LACTANTE que son erróneas** |
+| PRD009 | ⏳ | Parto, crías, identificación, genealogía, historial reproductivo |
 | PRD010 | ⏳ | Finalización del ciclo reproductivo, dependencia funcional madre-cría y flujo de Destete |
 | PRD011 | ⏳ | Flujo de Aborto, RPC registrar_aborto como patrón de referencia |
 | PRD012 | ⏳ | Machorra, invariante resultado='parto' AND fecha_fin IS NULL, validación temporal en DatePicker |
-| PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal — **⚠️ modelo_reproductivo.md sigue listando LACTANTE como estado válido** |
+| PRD-correctivo | ⏳ | Cambio de tipo productivo, entradas virtuales vs reales, salida de animal |
 | PRD013 | ⏳ | Consolidación dominio reproductivo, inmutabilidad de resultado, arquitectura UI→Query→Repository |
 | PRD013-fix | ⏳ | Destete múltiple atómico, invariante ciclo_id histórico en DESTETE |
 | PRD014 | ⏳ | Concepto de Instalación, `CAMBIO_UBICACION` como tipo de evento, ubicación como dimensión del animal, integración de ubicación en el ciclo de vida (parto, compra, salida) |
@@ -33,31 +33,7 @@ Una vez una decisión haya sido incorporada a la documentación permanente, debe
 
 Los siguientes documentos contienen información que fue correcta al escribirse pero que quedó obsoleta tras el PRD-CORRECTIVO (eliminación de `LACTANTE` como estado reproductivo):
 
-### `documentacion/base_conocimiento/modelo/modelo_reproductivo.md`
-
-- **Tabla de estados (sección "Estados definidos por el modelo")**: sigue listando `LACTANTE` como estado válido con la descripción "Existe un parto registrado y el ciclo reproductivo permanece abierto hasta el destete". Debe eliminarse y reemplazarse por una nota sobre la historia paralela de maternidad.
-- **Caso 4 "Registro de un parto"**: dice "el estado pasa a **LACTANTE**". Debe decir que el estado pasa a **VACÍA** y se crea un nuevo ciclo.
-- **Descripción del estado LACTANTE en sección conceptual** (línea 489): debe eliminarse.
-
-### `documentacion/flujos/reproductivos/parto.md`
-
-Contiene 16 referencias a `LACTANTE` como estado post-parto de la madre. Todo el documento asume que después del parto la madre entra en `LACTANTE` y el ciclo permanece abierto. El comportamiento real implementado es:
-
-```text
-PARTO
-  ↓
-ciclo actual: resultado = 'parto', fecha_fin = NULL (abierto hasta último destete)
-  ↓
-madre: estado_reproductivo = 'vacia'
-  ↓
-nuevo ciclo en VACÍA creado inmediatamente
-```
-
-El documento debe reescribirse para reflejar esta separación entre historia reproductiva (ciclos) e historia de maternidad (vínculos madre-cría). En particular:
-
-- Las invariantes que dicen `estado_reproductivo = LACTANTE` son incorrectas.
-- La tabla de consecuencias dice "Estado reproductivo → `LACTANTE`", debe decir "Estado reproductivo → `VACÍA` + nuevo ciclo".
-- El diagrama principal del flujo tiene `LACTANTE` como nodo de la madre.
+> `modelo_reproductivo.md` y `flujos/reproductivos/parto.md` ya están corregidos (commit ac05c30): solo mencionan `LACTANTE` para afirmar que no es un estado del modelo.
 
 ### `documentacion/base_conocimiento/dominios/reproductivo.md`
 
